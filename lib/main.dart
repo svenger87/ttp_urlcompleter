@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'WIM Profilnummer',
       theme: ThemeData(
-        primaryColor: Color(0xFF104382), // Set the primary color
+        primaryColor: const Color(0xFF104382),
         primarySwatch: Colors.blue,
       ),
       home: const NumberInputPage(),
@@ -32,7 +32,29 @@ class _NumberInputPageState extends State<NumberInputPage> {
   final TextEditingController _numberController = TextEditingController();
 
   void _openUrlWithNumber() async {
-    final String number = _numberController.text;
+    final String number = _numberController.text.trim();
+
+    if (number.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Profilnummer darf nicht leer sein.'),
+            content: const Text('Geben Sie bitte eine Profilnummer ein.'),
+            actions: [
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
     final url = 'http://wim-solution.sip.local:8081/$number';
 
     if (await canLaunch(url)) {
@@ -54,10 +76,10 @@ class _NumberInputPageState extends State<NumberInputPage> {
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Image.asset('assets/leuchtturm.png'), // Replace with your logo asset
+          child: Image.asset('assets/leuchtturm.png'),
         ),
         title: const Text('WIM Profilnummer'),
-        backgroundColor: Theme.of(context).primaryColor, // Set app bar color
+        backgroundColor: Theme.of(context).primaryColor,
       ),
       body: Center(
         child: Padding(
@@ -68,13 +90,18 @@ class _NumberInputPageState extends State<NumberInputPage> {
               TextField(
                 controller: _numberController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Profilnummer eingeben'),
+                decoration: const InputDecoration(
+                  labelText: 'Profilnummer eingeben',
+                  hintText: 'Geben Sie eine Profilnummer ein',
+                ),
               ),
               const SizedBox(height: 16.0),
-              ElevatedButton(
+              TextButton(
                 onPressed: _openUrlWithNumber,
-                style: ElevatedButton.styleFrom(
-                  primary: Theme.of(context).primaryColor, // Set button color
+                style: TextButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                ).copyWith(
+                  foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
                 ),
                 child: const Text('Profilverzeichnis öffnen'),
               ),
