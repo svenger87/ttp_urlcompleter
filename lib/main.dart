@@ -56,6 +56,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
     }
 
     final url = 'http://wim-solution.sip.local:8081/$number';
+    //final url = 'http://google.de/$number';
 
     if (await canLaunch(url)) {
       await launch(url);
@@ -89,7 +90,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             children: <Widget>[
               TextField(
                 controller: _numberController,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.text,
                 decoration: const InputDecoration(
                   labelText: 'Profilnummer eingeben',
                   hintText: 'Geben Sie eine Profilnummer ein',

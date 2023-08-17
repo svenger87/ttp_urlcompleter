@@ -1,5 +1,5 @@
 name: ttp_urlcompleter
-description: A new Flutter project.
+description: App to make a businessprocess a bit more convienient.
 publish_to: 'none'
 version: 0.1.0
 
@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   url_launcher: ^6.0.0
+  flutter_launcher_icons: "^0.13.1"
 
 dev_dependencies:
   flutter_test:
