@@ -55,8 +55,8 @@ class _NumberInputPageState extends State<NumberInputPage> {
       return;
     }
 
-    //final url = 'http://wim-solution.sip.local:8081/$number';
-    final url = 'google.de/$number';
+    final url = 'http://wim-solution.sip.local:8081/$number';
+    //final url = 'http://google.de/$number';
 
     if (await canLaunch(url)) {
       await launch(url);
