@@ -56,7 +56,6 @@ class _NumberInputPageState extends State<NumberInputPage> {
     }
 
     final url = 'http://wim-solution.sip.local:8081/$number';
-    //final url = 'http://google.de/$number';
 
     if (await canLaunch(url)) {
       await launch(url);
@@ -85,28 +84,29 @@ class _NumberInputPageState extends State<NumberInputPage> {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              TextField(
-                controller: _numberController,
-                keyboardType: TextInputType.text,
-                decoration: const InputDecoration(
-                  labelText: 'Profilnummer eingeben',
-                  hintText: 'Geben Sie eine Profilnummer ein',
+          child: Form(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                TextFormField(
+                  controller: _numberController,
+                  keyboardType: TextInputType.text,
+                  decoration: const InputDecoration(
+                    labelText: 'Profilnummer eingeben',
+                    hintText: 'Geben Sie eine Profilnummer ein',
+                  ),
+                  onFieldSubmitted: (_) => _openUrlWithNumber(),
                 ),
-              ),
-              const SizedBox(height: 16.0),
-              TextButton(
-                onPressed: _openUrlWithNumber,
-                style: TextButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                ).copyWith(
-                  foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
+                const SizedBox(height: 16.0),
+                ElevatedButton(
+                  onPressed: _openUrlWithNumber,
+                  style: ElevatedButton.styleFrom(
+                    primary: Theme.of(context).primaryColor,
+                  ),
+                  child: const Text('Profilverzeichnis öffnen'),
                 ),
-                child: const Text('Profilverzeichnis öffnen'),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
