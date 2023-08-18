@@ -54,9 +54,9 @@ android {
     signingConfigs {
         release {
             storeFile file('/Users/svenrosema/Documents/') // Path to your keystore file
-            storePassword 'your_keystore_password'
+            storePassword 'Salamander1!'
             keyAlias 'your_key_alias'
-            keyPassword 'your_key_password'
+            keyPassword 'Salamander1!'
         }
     }
 
