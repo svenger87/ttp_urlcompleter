@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.app.ttp_urlcompleter"
+    namespace "com.example.ttp_urlcompleter"
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
@@ -42,7 +42,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.app.ttp_urlcompleter"
+        applicationId "com.example.ttp_urlcompleter"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdkVersion flutter.minSdkVersion
@@ -53,9 +53,9 @@ android {
 
     signingConfigs {
         release {
-            storeFile file('/Users/svenrosema/Documents/') // Path to your keystore file
+            storeFile file('/Users/svenrosema/Documents/Android_Keystore') // Path to your keystore file
             storePassword 'Salamander1!'
-            keyAlias 'your_key_alias'
+            keyAlias 'ttpsigningkey'
             keyPassword 'Salamander1!'
         }
     }
