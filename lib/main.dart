@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:vibration/vibration.dart';
-import 'dart:async';
+import 'dart:async'; // Import Timer class
 
 void main() {
   runApp(const MyApp());
@@ -32,49 +32,19 @@ class NumberInputPage extends StatefulWidget {
 }
 
 class _NumberInputPageState extends State<NumberInputPage> {
-  final TextEditingController _numberController = TextEditingController();
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
+  final TextEditingController _numberController = TextEditingController();
 
   QRViewController? controller;
   bool scanEnabled = true;
-
-  void _openUrlWithNumber() async {
-    final String number = _numberController.text.trim();
-
-    if (number.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Profilnummer darf nicht leer sein.'),
-            content: const Text('Geben Sie bitte eine Profilnummer ein.'),
-            actions: [
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
-      return;
-    }
-
-    final url = 'http://wim-solution.sip.local:8081/$number';
-
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      print('Konnte nicht starten $url');
-    }
-  }
+  bool hasScanned = false;
+  Timer? scanTimer; // Timer to re-enable the scanner
 
   @override
   void dispose() {
     controller?.dispose(); // Dispose QR code controller
     _numberController.dispose();
+    scanTimer?.cancel(); // Cancel the timer when disposing
     super.dispose();
   }
 
@@ -82,79 +52,99 @@ class _NumberInputPageState extends State<NumberInputPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset('assets/leuchtturm.png'),
-        ),
         title: const Text('WIM Profilnummer'),
         backgroundColor: Theme.of(context).primaryColor,
       ),
-      body: Column(
-        children: [
-          Container(
-            height: MediaQuery.of(context).size.height * 0.4, // Adjust the height as needed
-            child: QRView(
-              key: qrKey,
-              onQRViewCreated: _onQRViewCreated,
-              overlay: QrScannerOverlayShape(
-                borderRadius: 10,
-                borderColor: Theme.of(context).primaryColor,
-                borderLength: 30,
-                borderWidth: 10,
-                cutOutSize: MediaQuery.of(context).size.width * 0.6, // Adjust the size as needed
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Container(
+              height: MediaQuery.of(context).size.height * 0.4,
+              child: QRView(
+                key: qrKey,
+                onQRViewCreated: _onQRViewCreated,
+                overlay: QrScannerOverlayShape(
+                  borderRadius: 10,
+                  borderColor: Theme.of(context).primaryColor,
+                  borderLength: 30,
+                  borderWidth: 10,
+                  cutOutSize: MediaQuery.of(context).size.width * 0.6,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  TextFormField(
-                    controller: _numberController,
-                    keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(
-                      labelText: 'Profilnummer eingeben',
-                      hintText: 'Geben Sie eine Profilnummer ein',
-                    ),
-                    onFieldSubmitted: (_) => _openUrlWithNumber(),
-                  ),
-                  const SizedBox(height: 16.0),
-                  ElevatedButton(
-                    onPressed: _openUrlWithNumber,
-                    style: ElevatedButton.styleFrom(
-                      primary: Theme.of(context).primaryColor,
-                    ),
-                    child: const Text('Profilverzeichnis öffnen'),
-                  ),
-                ],
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: hasScanned || _numberController.text.isNotEmpty
+                    ? _openUrlWithNumber
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  primary: Theme.of(context).primaryColor,
+                ),
+                child: const Text('Profilverzeichnis öffnen'),
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextFormField(
+                controller: _numberController,
+                keyboardType: TextInputType.text,
+                decoration: const InputDecoration(
+                  labelText: 'Profilnummer eingeben',
+                  hintText: 'Geben Sie eine Profilnummer ein',
+                ),
+                onChanged: (_) {
+                  setState(() {
+                    hasScanned = false;
+                  });
+                },
+                onFieldSubmitted: (_) => _openUrlWithNumber(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
-    controller.scannedDataStream.listen((scanData) {
-  if (scanEnabled) {
-    setState(() {
-      _numberController.text = scanData.code!;
-      scanEnabled = false; // Disable further scans
-    });
 
-    // Trigger haptic feedback
-    Vibration.vibrate(duration: 50); // Adjust duration as needed
-    Future.delayed(Duration(seconds: 5), () {
+    controller.scannedDataStream.listen((scanData) {
+      if (scanEnabled && !hasScanned) {
         setState(() {
-          _numberController.clear(); // Clear the input field
-          scanEnabled = true; // Enable scanning again
+          scanEnabled = false;
+          hasScanned = true;
+          _numberController.text = scanData.code!;
         });
-      });
+
+        Vibration.vibrate(duration: 50);
+
+        _openUrlWithNumber();
+
+        // Start the timer to re-enable the scanner after 10 seconds
+        scanTimer = Timer(Duration(seconds: 10), () {
+          setState(() {
+            hasScanned = false;
+          });
+        });
+
+        scanEnabled = true;
+      }
+    });
+  }
+
+  void _openUrlWithNumber() async {
+    final String number = _numberController.text.trim();
+
+    if (number.isNotEmpty) {
+      final url = 'http://wim-solution.sip.local:8081/$number';
+
+      if (await canLaunch(url)) {
+        await launch(url);
+      } else {
+        print('Konnte nicht starten $url');
+      }
     }
-  });
-}
+  }
 }
