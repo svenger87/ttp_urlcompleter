@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   url_launcher: ^6.1.12
   flutter_launcher_icons: "^0.13.1"
+  qr_code_scanner: ^1.0.1
+  vibration: ^1.7.5
+  device_info_plus: ^9.0.3
 
 dev_dependencies:
   flutter_test:
