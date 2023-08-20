@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:vibration/vibration.dart';
-import 'dart:async'; // Import Timer class
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'dart:io';
 
 void main() {
   runApp(const MyApp());
@@ -38,13 +40,13 @@ class _NumberInputPageState extends State<NumberInputPage> {
   QRViewController? controller;
   bool scanEnabled = true;
   bool hasScanned = false;
-  Timer? scanTimer; // Timer to re-enable the scanner
+  Timer? scanTimer;
 
   @override
   void dispose() {
-    controller?.dispose(); // Dispose QR code controller
+    controller?.dispose();
     _numberController.dispose();
-    scanTimer?.cancel(); // Cancel the timer when disposing
+    scanTimer?.cancel();
     super.dispose();
   }
 
@@ -55,23 +57,42 @@ class _NumberInputPageState extends State<NumberInputPage> {
         title: const Text('WIM Profilnummer'),
         backgroundColor: Theme.of(context).primaryColor,
       ),
+      drawer: _buildDrawer(),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Container(
-              height: MediaQuery.of(context).size.height * 0.4,
-              child: QRView(
-                key: qrKey,
-                onQRViewCreated: _onQRViewCreated,
-                overlay: QrScannerOverlayShape(
-                  borderRadius: 10,
-                  borderColor: Theme.of(context).primaryColor,
-                  borderLength: 30,
-                  borderWidth: 10,
-                  cutOutSize: MediaQuery.of(context).size.width * 0.6,
+            if (!kIsWeb && !Platform.isMacOS && !Platform.isWindows)
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.4,
+                child: QRView(
+                  key: qrKey,
+                  onQRViewCreated: _onQRViewCreated,
+                  overlay: QrScannerOverlayShape(
+                    borderRadius: 10,
+                    borderColor: Theme.of(context).primaryColor,
+                    borderLength: 30,
+                    borderWidth: 10,
+                    cutOutSize: MediaQuery.of(context).size.width * 0.6,
+                  ),
                 ),
               ),
-            ),
+            if (Platform.isMacOS)
+              Container(
+                alignment: Alignment.center,
+                width: MediaQuery.of(context).size.width * 0.6,
+                height: MediaQuery.of(context).size.width * 0.6,
+                child: QRView(
+                  key: qrKey,
+                  onQRViewCreated: _onQRViewCreated,
+                  overlay: QrScannerOverlayShape(
+                    borderRadius: 10,
+                    borderColor: Theme.of(context).primaryColor,
+                    borderLength: 30,
+                    borderWidth: 10,
+                    cutOutSize: MediaQuery.of(context).size.width * 0.6 * 0.6,
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
@@ -79,7 +100,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                     ? _openUrlWithNumber
                     : null,
                 style: ElevatedButton.styleFrom(
-                  primary: Theme.of(context).primaryColor,
+                  backgroundColor: Theme.of(context).primaryColor,
                 ),
                 child: const Text('Profilverzeichnis öffnen'),
               ),
@@ -108,30 +129,37 @@ class _NumberInputPageState extends State<NumberInputPage> {
   }
 
   void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
+    if (!kIsWeb && !Platform.isMacOS && !Platform.isWindows) {
+      this.controller = controller;
 
-    controller.scannedDataStream.listen((scanData) {
-      if (scanEnabled && !hasScanned) {
-        setState(() {
-          scanEnabled = false;
-          hasScanned = true;
-          _numberController.text = scanData.code!;
-        });
-
-        Vibration.vibrate(duration: 50);
-
-        _openUrlWithNumber();
-
-        // Start the timer to re-enable the scanner after 10 seconds
-        scanTimer = Timer(Duration(seconds: 10), () {
+      controller.scannedDataStream.listen((scanData) async {
+        if (scanEnabled && !hasScanned) {
           setState(() {
-            hasScanned = false;
+            scanEnabled = false;
+            hasScanned = true;
           });
-        });
 
-        scanEnabled = true;
-      }
-    });
+          Vibration.vibrate(duration: 50);
+
+          final scannedUrl = scanData.code!;
+          if (await canLaunch(scannedUrl)) {
+            await launch(scannedUrl);
+          } else {
+            if (kDebugMode) {
+              print('Could not launch $scannedUrl');
+            }
+          }
+
+          scanTimer = Timer(const Duration(seconds: 10), () {
+            setState(() {
+              hasScanned = false;
+            });
+          });
+
+          scanEnabled = true;
+        }
+      });
+    }
   }
 
   void _openUrlWithNumber() async {
@@ -143,7 +171,87 @@ class _NumberInputPageState extends State<NumberInputPage> {
       if (await canLaunch(url)) {
         await launch(url);
       } else {
-        print('Konnte nicht starten $url');
+        if (kDebugMode) {
+          print('Could not launch $url');
+        }
+      }
+    }
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Linkliste',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () {
+                    final Uri emailUri = Uri(
+                      scheme: 'mailto',
+                      path: 'srosema@ttp-papenburg.de',
+                    );
+                    _openUrl(emailUri.toString());
+                  },
+                  child: Text(
+                    '© Sven Rosema\nsrosema@ttp-papenburg.de',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: Image.asset('assets/leuchtturm_blue.png', width: 36, height: 36),
+            title: const Text('Intranet'),
+            onTap: () {
+              _openUrl('http://lurchiweb.sip.local');
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: Image.asset('assets/ac.png', width: 36, height: 36),
+            title: const Text('ActiveCollab'),
+            onTap: () {
+              _openUrl('https://olymp.sip.de');
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: Image.asset('assets/bookstack.png', width: 36, height: 36),
+            title: const Text('ttp Wiki'),
+            onTap: () {
+              _openUrl('http://bookstack.sip.local');
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openUrl(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      if (kDebugMode) {
+        print('Konnte nicht starten. $url');
       }
     }
   }
