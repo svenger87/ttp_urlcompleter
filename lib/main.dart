@@ -1,10 +1,11 @@
+// ignore_for_file: library_private_types_in_public_api, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:vibration/vibration.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
-import 'dart:io';
 
 void main() {
   runApp(const MyApp());
@@ -38,7 +39,6 @@ class _NumberInputPageState extends State<NumberInputPage> {
   final TextEditingController _numberController = TextEditingController();
 
   QRViewController? controller;
-  bool scanEnabled = true;
   bool hasScanned = false;
   Timer? scanTimer;
 
@@ -61,7 +61,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            if (!kIsWeb && !Platform.isMacOS && !Platform.isWindows)
+            if (!kIsWeb)
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.4,
                 child: QRView(
@@ -73,23 +73,6 @@ class _NumberInputPageState extends State<NumberInputPage> {
                     borderLength: 30,
                     borderWidth: 10,
                     cutOutSize: MediaQuery.of(context).size.width * 0.6,
-                  ),
-                ),
-              ),
-            if (Platform.isMacOS)
-              Container(
-                alignment: Alignment.center,
-                width: MediaQuery.of(context).size.width * 0.6,
-                height: MediaQuery.of(context).size.width * 0.6,
-                child: QRView(
-                  key: qrKey,
-                  onQRViewCreated: _onQRViewCreated,
-                  overlay: QrScannerOverlayShape(
-                    borderRadius: 10,
-                    borderColor: Theme.of(context).primaryColor,
-                    borderLength: 30,
-                    borderWidth: 10,
-                    cutOutSize: MediaQuery.of(context).size.width * 0.6 * 0.6,
                   ),
                 ),
               ),
@@ -129,37 +112,32 @@ class _NumberInputPageState extends State<NumberInputPage> {
   }
 
   void _onQRViewCreated(QRViewController controller) {
-    if (!kIsWeb && !Platform.isMacOS && !Platform.isWindows) {
-      this.controller = controller;
+    this.controller = controller;
 
-      controller.scannedDataStream.listen((scanData) async {
-        if (scanEnabled && !hasScanned) {
-          setState(() {
-            scanEnabled = false;
-            hasScanned = true;
-          });
+    controller.scannedDataStream.listen((scanData) async {
+      if (!hasScanned) {
+        setState(() {
+          hasScanned = true;
+        });
 
-          Vibration.vibrate(duration: 50);
+        Vibration.vibrate(duration: 50);
 
-          final scannedUrl = scanData.code!;
-          if (await canLaunch(scannedUrl)) {
-            await launch(scannedUrl);
-          } else {
-            if (kDebugMode) {
-              print('Could not launch $scannedUrl');
-            }
+        final scannedUrl = scanData.code!;
+        if (await canLaunch(scannedUrl)) {
+          await launch(scannedUrl);
+        } else {
+          if (kDebugMode) {
+            print('Could not launch $scannedUrl');
           }
-
-          scanTimer = Timer(const Duration(seconds: 10), () {
-            setState(() {
-              hasScanned = false;
-            });
-          });
-
-          scanEnabled = true;
         }
-      });
-    }
+
+        scanTimer = Timer(const Duration(seconds: 10), () {
+          setState(() {
+            hasScanned = false;
+          });
+        });
+      }
+    });
   }
 
   void _openUrlWithNumber() async {
@@ -206,7 +184,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                     );
                     _openUrl(emailUri.toString());
                   },
-                  child: Text(
+                  child: const Text(
                     '© Sven Rosema\nsrosema@ttp-papenburg.de',
                     style: TextStyle(
                       color: Colors.white,
