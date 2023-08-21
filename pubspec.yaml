@@ -1,7 +1,7 @@
 name: ttp_urlcompleter
 description: App to make a businessprocess a bit more convienient.
 publish_to: 'none'
-version: 0.1.1
+version: 0.1.1+2
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -20,6 +20,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  msix: ^3.16.1
 
 flutter:
   uses-material-design: true
@@ -29,3 +30,10 @@ flutter:
     - assets/bookstack.png
     - assets/leuchtturm_blue.png
   
+msix_config:
+  display_name: WIM Profilauswahl
+  publisher_display_name: ttp Papenburg GmbH
+  identity_name: com.app.ttpurlcompleter
+  msix_version: 1.0.1.1
+  logo_path: assets\icon\AppIcon.png
+  capabilities: internetClient, location, microphone, webcam
