@@ -200,7 +200,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
             title: const Text('Produktionsplan'),
             onTap: () {
-              _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN.pdf');
+              _openUrl('https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
               Navigator.pop(context);
             },
           ),
