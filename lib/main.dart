@@ -181,12 +181,12 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   onTap: () {
                     final Uri emailUri = Uri(
                       scheme: 'mailto',
-                      path: 'srosema@ttp-papenburg.de',
+                      path: 'it-support@ttp-papenburg.de',
                     );
                     _openUrl(emailUri.toString());
                   },
                   child: const Text(
-                    '© Sven Rosema\nsrosema@ttp-papenburg.de',
+                    'it-support@ttp-papenburg.de',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -195,6 +195,14 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 ),
               ],
             ),
+          ),
+          ListTile(
+            leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+            title: const Text('Produktionsplan'),
+            onTap: () {
+              _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN.pdf');
+              Navigator.pop(context);
+            },
           ),
           ListTile(
             leading: Image.asset('assets/leuchtturm_blue.png', width: 36, height: 36),
