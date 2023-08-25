@@ -1,5 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api, deprecated_member_use
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
@@ -198,9 +200,25 @@ class _NumberInputPageState extends State<NumberInputPage> {
           ),
           ListTile(
             leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
-            title: const Text('Produktionsplan'),
+            title: const Text('Produktionsplan 1W'),
             onTap: () {
-              _openUrl('https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
+              if (Platform.isAndroid) {
+                _openUrl('https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp'); // Android link
+              } else {
+                _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH'); // iOS and other devices link
+              }
+              Navigator.pop(context);
+            },
+          )         ,
+          ListTile(
+            leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+            title: const Text('Produktionsplan 3W'),
+            onTap: () {
+              if (Platform.isAndroid) {
+                _openUrl('https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm'); // Android link
+              } else {
+                _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH'); // iOS and other devices link
+              }
               Navigator.pop(context);
             },
           ),
