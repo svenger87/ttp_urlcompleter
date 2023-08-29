@@ -179,9 +179,11 @@ class _NumberInputPageState extends State<NumberInputPage> {
     final Uri uri = Uri.parse(item);
     final String profileNumber = uri.pathSegments.last;
 
+    final completeUrl = 'http://wim-solution.sip.local:8081/$profileNumber';
+
     setState(() {
-      if (!recentItems.contains(profileNumber)) {
-        recentItems.insert(0, profileNumber);
+      if (!recentItems.contains(completeUrl)) {
+        recentItems.insert(0, completeUrl);
         if (recentItems.length > 10) {
           recentItems.removeLast();
         }
@@ -313,74 +315,31 @@ class _NumberInputPageState extends State<NumberInputPage> {
     );
   }
 
-Widget _buildRecentItemsDrawer(BuildContext context) {
-  return Drawer(
-    elevation: 16.0,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        DrawerHeader(
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor,
-          ),
-          child: const Text(
-            'Zuletzt benutzt',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: recentItems.length + 1, // +1 for the Clear Recents button
-            itemBuilder: (context, index) {
-              if (index < recentItems.length) {
-                final recentUrl = 'http://wim-solution.sip.local:8081/${recentItems[index]}';
+  Widget _buildRecentItemsDrawer(BuildContext context) {
+    return Drawer(
+      elevation: 16.0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const DrawerHeader(child: null),
+          Expanded(
+            child: ListView.builder(
+              itemCount: recentItems.length,
+              itemBuilder: (context, index) {
                 return ListTile(
                   title: Text(recentItems[index]),
                   onTap: () {
-                    _openUrl(recentUrl); // Open the URL directly
+                    _openUrl(recentItems[index]);
                     Navigator.pop(context);
                   },
                 );
-              } else {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextButton(
-                    onPressed: () {
-                      _clearRecentItems();
-                      Navigator.pop(context);
-                    },
-                    style: TextButton.styleFrom(
-                      primary: Theme.of(context).primaryColor,
-                    ),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.delete, color: Colors.red),
-                        SizedBox(width: 8.0),
-                        Text('Zuletzt benutzte löschen', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            },
+              },
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
-void _clearRecentItems() {
-  setState(() {
-    recentItems.clear();
-  });
-
-  _saveRecentItems();
-}
-
+        ],
+      ),
+    );
+  }
 
   void _openUrl(String url) async {
     if (await canLaunch(url)) {
