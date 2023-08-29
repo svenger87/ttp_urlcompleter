@@ -18,7 +18,7 @@
         </intent>
     </queries>
     <application
-        android:label="WIM Profilauswahl"
+        android:label="ttp App"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:usesCleartextTraffic="true">
