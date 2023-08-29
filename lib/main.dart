@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
@@ -355,8 +357,8 @@ Widget _buildRecentItemsDrawer(BuildContext context) {
                     style: TextButton.styleFrom(
                       primary: Theme.of(context).primaryColor,
                     ),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.delete, color: Colors.red),
                         SizedBox(width: 8.0),
                         Text('Zuletzt benutzte löschen', style: TextStyle(color: Colors.red)),
