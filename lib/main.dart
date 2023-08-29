@@ -159,69 +159,94 @@ class _NumberInputPageState extends State<NumberInputPage> {
     }
   }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Linkliste',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {
-                    final Uri emailUri = Uri(
-                      scheme: 'mailto',
-                      path: 'it-support@ttp-papenburg.de',
-                    );
-                    _openUrl(emailUri.toString());
-                  },
-                  child: const Text(
-                    'it-support@ttp-papenburg.de',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+Widget _buildDrawer() {
+  return Drawer(
+    child: ListView(
+      padding: EdgeInsets.zero,
+      children: <Widget>[
+        DrawerHeader(
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start, // Align content at the top
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 0.0),
+                    child: Image.asset(
+                      'assets/leuchtturm.png',
+                      width: 36,
+                      height: 36,
                     ),
                   ),
-                ),
-              ],
-            ),
+                  const Text(
+                    'Linkliste',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 35), // Add some space between Linkliste and email
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      final Uri emailUri = Uri(
+                        scheme: 'mailto',
+                        path: 'it-support@ttp-papenburg.de',
+                      );
+                      _openUrl(emailUri.toString());
+                    },
+                    child: const Text(
+                      '  it-support@ttp-papenburg.de',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ListTile(
-            leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
-            title: const Text('Produktionsplan 1W'),
-            onTap: () {
-              if (Platform.isAndroid) {
-                _openUrl('https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp'); // Android link
-              } else {
-                _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH'); // iOS and other devices link
-              }
-              Navigator.pop(context);
-            },
-          )         ,
-          ListTile(
-            leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
-            title: const Text('Produktionsplan 3W'),
-            onTap: () {
-              if (Platform.isAndroid) {
-                _openUrl('https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm'); // Android link
-              } else {
-                _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH'); // iOS and other devices link
-              }
-              Navigator.pop(context);
-            },
-          ),
+        ),
+          ExpansionTile(
+  leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+  title: const Text('Produktionspläne'),
+  children: [
+    ListTile(
+      leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+      title: const Text('Produktionsplan 1W'),
+      onTap: () {
+        if (Platform.isAndroid) {
+          _openUrl('https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp'); // Android link
+        } else {
+          _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH'); // iOS and other devices link
+        }
+        Navigator.pop(context);
+      },
+    ),
+    ListTile(
+      leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+      title: const Text('Produktionsplan 3W'),
+      onTap: () {
+        if (Platform.isAndroid) {
+          _openUrl('https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm'); // Android link
+        } else {
+          _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH'); // iOS and other devices link
+        }
+        Navigator.pop(context);
+      },
+    ),
+  ],
+),
           ListTile(
             leading: Image.asset('assets/leuchtturm_blue.png', width: 36, height: 36),
             title: const Text('Intranet'),
