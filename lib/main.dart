@@ -40,6 +40,8 @@ class NumberInputPage extends StatefulWidget {
 class _NumberInputPageState extends State<NumberInputPage> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   final TextEditingController _numberController = TextEditingController();
+  // Create a GlobalKey for the Scaffold
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   QRViewController? controller;
   bool hasScanned = false;
@@ -72,9 +74,18 @@ class _NumberInputPageState extends State<NumberInputPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey, // Assign the GlobalKey to the Scaffold
       appBar: AppBar(
         title: const Text('WIM Profilnummer'),
         backgroundColor: Theme.of(context).primaryColor,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history), // Use history icon here
+            onPressed: () {
+              _scaffoldKey.currentState?.openEndDrawer(); // Use the scaffoldKey to open endDrawer
+            },
+          ),
+        ],
       ),
       drawer: _buildDrawer(context),
       endDrawer: _buildRecentItemsDrawer(context),
@@ -304,7 +315,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
           ),
           ListTile(
             leading: Image.asset('assets/bookstack.png', width: 36, height: 36),
-            title: const Text('ttp Wiki'),
+            title: const Text('ttpedia'),
             onTap: () {
               _openUrl('http://bookstack.sip.local');
               Navigator.pop(context);
