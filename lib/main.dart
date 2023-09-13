@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WIM Profilnummer',
+      title: 'ttp App',
       theme: ThemeData(
         primaryColor: const Color(0xFF104382),
         primarySwatch: Colors.blue,
@@ -172,10 +172,10 @@ class _NumberInputPageState extends State<NumberInputPage> {
   }
 
   void _openUrlWithNumber() async {
-    final String number = _numberController.text.trim();
+    final String number = _numberController.text.trim().toUpperCase();
 
     if (number.isNotEmpty) {
-      final url = 'http://wim-solution.sip.local:8081/$number';
+      final url = 'https://wim-solution.sip.local:8081/$number';
 
       if (await canLaunch(url)) {
         await launch(url);
@@ -349,7 +349,7 @@ Widget _buildRecentItemsDrawer(BuildContext context) {
             itemCount: recentItems.length + 1, // +1 for the Clear Recents button
             itemBuilder: (context, index) {
               if (index < recentItems.length) {
-                final recentUrl = 'http://wim-solution.sip.local:8081/${recentItems[index]}';
+                final recentUrl = 'https://wim-solution.sip.local:8081/${recentItems[index]}';
                 return ListTile(
                   title: Text(recentItems[index]),
                   onTap: () {
