@@ -32,7 +32,7 @@ flutter:
     - assets/bookstack.png
     - assets/leuchtturm_blue.png
     - assets/productionplan.png
-    - assets/anbauteile.csv
+    - assets/anbauteile.json
   
 msix_config:
   display_name: WIM Profilauswahl

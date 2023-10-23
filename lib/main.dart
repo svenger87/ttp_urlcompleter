@@ -322,7 +322,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
               Navigator.pop(context);
             },
           ),
-          ConverterModule(), // Add the ConverterModule entry
+          const ConverterModule(), // Add the ConverterModule entry
         ],
       ),
       

@@ -1,7 +1,7 @@
 ﻿[
     {
         "Neue_Bezeichnung": "EA-50/ME60/S1",
-        "Alte_Bezeichnung": "so wie 200.01.001.01.115 aber D=300 und teilkreis d=220 M16",
+        "Alte_Bezeichnung": "so wie 200.01.001.01.115",
         "Beschreibung": "Anbauteile",
         "Bauteilgruppe": "Extruderadapter"
     },
@@ -49,7 +49,7 @@
     },
     {
         "Neue_Bezeichnung": "LS-50/50/S4",
-        "Alte_Bezeichnung": "so wie 200.01.011.01.075 nur mit 3,3mm Bohrung",
+        "Alte_Bezeichnung": "so wie 200.01.011.01.075",
         "Beschreibung": "Anbauteile",
         "Bauteilgruppe": "Lochscheibe"
     },
@@ -67,7 +67,7 @@
     },
     {
         "Neue_Bezeichnung": "Roe-20/15/",
-        "Alte_Bezeichnung": "so wie 200.01.014.02.054 nur 100mm und d=15 statt 20mm",
+        "Alte_Bezeichnung": "so wie 200.01.014.02.054",
         "Beschreibung": "Anbauteile",
         "Bauteilgruppe": "Roehrchen"
     },
