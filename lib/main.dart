@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'converter_module.dart'; // Import the converter module logic
 
 void main() {
   runApp(const MyApp());
@@ -321,8 +322,10 @@ class _NumberInputPageState extends State<NumberInputPage> {
               Navigator.pop(context);
             },
           ),
+          ConverterModule(), // Add the ConverterModule entry
         ],
       ),
+      
     );
   }
 

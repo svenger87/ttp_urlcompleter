@@ -16,6 +16,7 @@ dependencies:
   device_info_plus: ^9.0.3
   platform: ^3.1.1
   shared_preferences: ^2.2.0
+  flutter_dropdown: ^1.0.1+hotfix.1
 
 dev_dependencies:
   flutter_test:
@@ -31,6 +32,7 @@ flutter:
     - assets/bookstack.png
     - assets/leuchtturm_blue.png
     - assets/productionplan.png
+    - assets/anbauteile.csv
   
 msix_config:
   display_name: WIM Profilauswahl
