@@ -474,8 +474,8 @@
 				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = NH3LGH252S;
 				ENABLE_BITCODE = NO;
-				FLUTTER_BUILD_NAME = 0.2.1;
-				FLUTTER_BUILD_NUMBER = 12;
+				FLUTTER_BUILD_NAME = 0.3.2;
+				FLUTTER_BUILD_NUMBER = 17;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ttp App";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
@@ -483,7 +483,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.3.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ttp.ttpurlcompleter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -667,8 +667,8 @@
 				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = NH3LGH252S;
 				ENABLE_BITCODE = NO;
-				FLUTTER_BUILD_NAME = 0.2.1;
-				FLUTTER_BUILD_NUMBER = 12;
+				FLUTTER_BUILD_NAME = 0.3.2;
+				FLUTTER_BUILD_NUMBER = 17;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ttp App";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
@@ -676,7 +676,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.3.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ttp.ttpurlcompleter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -699,8 +699,8 @@
 				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = NH3LGH252S;
 				ENABLE_BITCODE = NO;
-				FLUTTER_BUILD_NAME = 0.2.1;
-				FLUTTER_BUILD_NUMBER = 12;
+				FLUTTER_BUILD_NAME = 0.3.2;
+				FLUTTER_BUILD_NUMBER = 17;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ttp App";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
@@ -708,7 +708,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.3.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ttp.ttpurlcompleter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
