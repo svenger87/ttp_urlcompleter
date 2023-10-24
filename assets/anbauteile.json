@@ -7,19 +7,19 @@
  },
  {
    "Neue_Bezeichnung": "EA-50/ME90/S1",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Extruderadapter"
  },
  {
    "Neue_Bezeichnung": "HK-3.0/CE5/S2",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Heimkopf"
  },
  {
    "Neue_Bezeichnung": "HK-3.0/CE5/S3",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Heimkopf"
  },
@@ -43,7 +43,7 @@
  },
  {
    "Neue_Bezeichnung": "HK-4.0/ME60/S1",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Heimkopf"
  },
@@ -55,13 +55,13 @@
  },
  {
    "Neue_Bezeichnung": "RÖ-12/12/S15",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Röhrchen"
  },
  {
    "Neue_Bezeichnung": "RÖ-12/12/S17",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Röhrchen"
  },
@@ -73,13 +73,13 @@
  },
  {
    "Neue_Bezeichnung": "VR-H",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Verschraubungsringe"
  },
  {
    "Neue_Bezeichnung": "VR-Y",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Verschraubungsringe"
  },
@@ -90,34 +90,34 @@
    "Bauteilgruppe": "Zwischenhülse"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.001.01.060 1 ",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Extruderanschluss"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.014.01.179",
    "Beschreibung": "Anbauteile",
-   "Bauteilgruppe": ""
+   "Bauteilgruppe": "Nicht vorhanden"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.014.01.154",
    "Beschreibung": "Anbauteile",
-   "Bauteilgruppe": ""
+   "Bauteilgruppe": "Nicht vorhanden"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.014.01.155",
    "Beschreibung": "Anbauteile",
-   "Bauteilgruppe": ""
+   "Bauteilgruppe": "Nicht vorhanden"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.014.01.179",
    "Beschreibung": "Anbauteile",
-   "Bauteilgruppe": ""
+   "Bauteilgruppe": "Nicht vorhanden"
  },
  {
    "Neue_Bezeichnung": "AH-78/103,5",
@@ -153,19 +153,19 @@
    "Neue_Bezeichnung": "BÖ-12/12",
    "Alte_Bezeichnung": "200.01.014.01.016",
    "Beschreibung": "Anbauteile",
-   "Bauteilgruppe": "Bombe "
+   "Bauteilgruppe": "Bombe"
  },
  {
    "Neue_Bezeichnung": "BO-20/20",
    "Alte_Bezeichnung": "200.01.014.01.017",
    "Beschreibung": "Anbauteile",
-   "Bauteilgruppe": "Bombe "
+   "Bauteilgruppe": "Bombe"
  },
  {
    "Neue_Bezeichnung": "BO-20/20/S1",
    "Alte_Bezeichnung": "200.01.014.01.004",
    "Beschreibung": "Anbauteile",
-   "Bauteilgruppe": "Bombe "
+   "Bauteilgruppe": "Bombe"
  },
  {
    "Neue_Bezeichnung": "BP-80/80",
@@ -290,13 +290,13 @@
  {
    "Neue_Bezeichnung": "CA-8/Stork",
    "Alte_Bezeichnung": "200.01.014.03.011",
-   "Beschreibung": "",
+   "Beschreibung": "Nicht vorhanden",
    "Bauteilgruppe": "Coex-Anschluss"
  },
  {
    "Neue_Bezeichnung": "CA-8/Stork/S1",
    "Alte_Bezeichnung": "200.01.014.03.010",
-   "Beschreibung": "",
+   "Beschreibung": "Nicht vorhanden",
    "Bauteilgruppe": "Coex-Anschluss"
  },
  {
@@ -1267,7 +1267,7 @@
  },
  {
    "Neue_Bezeichnung": "VR-220/90x3",
-   "Alte_Bezeichnung": "",
+   "Alte_Bezeichnung": "Nicht vorhanden",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Verschraubungsringe"
  },
@@ -1422,51 +1422,51 @@
    "Bauteilgruppe": "Zwischenhülse"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.011.01.021",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Aufnahmehülse"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.011.01.027",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Aufnahmehülse"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.014.02.036 1",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Coexröhrhen"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.014.02.095 1",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Röhrchen"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.014.02.150 1",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Röhrchen"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.012.01.001",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Torpedo"
  },
  {
-   "Neue_Bezeichnung": "",
+   "Neue_Bezeichnung": "Nicht vorhanden",
    "Alte_Bezeichnung": "200.01.009.01.008",
    "Beschreibung": "Anbauteile",
    "Bauteilgruppe": "Verschraubungsringe"
  },
  {
-   "Neue_Bezeichnung": "",
-   "Alte_Bezeichnung": "",
-   "Beschreibung": "",
-   "Bauteilgruppe": ""
+   "Neue_Bezeichnung": "Nicht vorhanden",
+   "Alte_Bezeichnung": "Nicht vorhanden",
+   "Beschreibung": "Nicht vorhanden",
+   "Bauteilgruppe": "Nicht vorhanden"
  }
 ]

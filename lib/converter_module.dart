@@ -234,11 +234,8 @@ class PDFViewerPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Container(
-        color: const Color(0xFF104382), // Set background color of the window
-        child: PdfView(
-          controller: pdfController,
-        ),
+      body: PdfView(
+        controller: pdfController,
       ),
     );
   }
