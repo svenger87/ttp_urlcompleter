@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:pdfx/pdfx.dart';
+import 'package:flutter/services.dart';
 
 class ConverterModule extends StatefulWidget {
   const ConverterModule({super.key});
@@ -53,55 +55,55 @@ class _ConverterModuleState extends State<ConverterModule> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    const Text('Neue Bezeichnung'),
-    Align(
-      alignment: Alignment.centerLeft,
-      child: DropdownButton<String>(
-        value: selectedNeueBezeichnung,
-        onChanged: (String? newValue) {
-          setState(() {
-            selectedNeueBezeichnung = newValue;
-          });
-          _showTranslationResultDialog(context, selectedNeueBezeichnung);
-        },
-        itemHeight: null, // Allows the dropdown to be as tall as the content
-        items: anbauteileData
-            .map((item) => DropdownMenuItem<String>(
-                  value: item['Neue_Bezeichnung'],
-                  child: Text(item['Neue_Bezeichnung']!),
-                ))
-            .toList(),
-      ),
-    ),
-  ],
-),
-Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    const Text('Alte Bezeichnung'),
-    Align(
-      alignment: Alignment.centerLeft,
-      child: DropdownButton<String>(
-        value: selectedAlteBezeichnung,
-        onChanged: (String? newValue) {
-          setState(() {
-            selectedAlteBezeichnung = newValue;
-          });
-          _showTranslationResultDialog(context, selectedAlteBezeichnung);
-        },
-        itemHeight: null, // Allows the dropdown to be as tall as the content
-        items: anbauteileData
-            .map((item) => DropdownMenuItem<String>(
-                  value: item['Alte_Bezeichnung'],
-                  child: Text(item['Alte_Bezeichnung']!),
-                ))
-            .toList(),
-      ),
-    ),
-  ],
-),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Neue Bezeichnung'),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: DropdownButton<String>(
+                    value: selectedNeueBezeichnung,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedNeueBezeichnung = newValue;
+                      });
+                      _showTranslationResultDialog(context, selectedNeueBezeichnung);
+                    },
+                    itemHeight: null, // Allows the dropdown to be as tall as the content
+                    items: anbauteileData
+                        .map((item) => DropdownMenuItem<String>(
+                              value: item['Neue_Bezeichnung'],
+                              child: Text(item['Neue_Bezeichnung']!),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Alte Bezeichnung'),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: DropdownButton<String>(
+                    value: selectedAlteBezeichnung,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedAlteBezeichnung = newValue;
+                      });
+                      _showTranslationResultDialog(context, selectedAlteBezeichnung);
+                    },
+                    itemHeight: null, // Allows the dropdown to be as tall as the content
+                    items: anbauteileData
+                        .map((item) => DropdownMenuItem<String>(
+                              value: item['Alte_Bezeichnung'],
+                              child: Text(item['Alte_Bezeichnung']!),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       );
@@ -109,7 +111,7 @@ Column(
   );
 }
 
-  void _showTranslationResultDialog(BuildContext context, String? selectedValue) {
+  void _showTranslationResultDialog(BuildContext context, String? selectedValue) async {
   if (selectedValue == null) {
     return;
   }
@@ -125,6 +127,10 @@ Column(
       "Bauteilgruppe": "Nicht gefunden",
     });
 
+  final pdfFileName = "${item["Alte_Bezeichnung"]}.pdf";
+  final pdfExists = await _pdfFileExists(pdfFileName);
+
+  // ignore: use_build_context_synchronously
   showDialog(
     context: context,
     builder: (BuildContext context) {
@@ -150,11 +156,24 @@ Column(
                 ],
               ),
             ),
+            if (pdfExists)
+              ElevatedButton(
+                onPressed: () {
+                  _openPDFFile(pdfFileName);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF104382), // Set button background color
+                ),
+                child: const Text('PDF Zeichnung öffnen'),
+              ),
           ],
         ),
         actions: <Widget>[
           TextButton(
-            child: const Text('Schließen'),
+            child: const Text(
+              'Schließen',
+              style: TextStyle(color: Color(0xFF104382)), // Set text color
+            ),
             onPressed: () {
               Navigator.of(context).pop();
             },
@@ -164,4 +183,63 @@ Column(
     },
   );
 }
+
+Future<bool> _pdfFileExists(String pdfFileName) async {
+  try {
+    final ByteData data = await rootBundle.load('assets/wzabt_pdfs/$pdfFileName');
+    // ignore: unnecessary_null_comparison
+    return data != null;
+  } catch (error) {
+    return false; // An error occurred, indicating that the PDF file does not exist
+  }
+}
+
+Future<void> _openPDFFile(String pdfFileName) async {
+  try {
+    final pdfController = PdfController(
+      document: PdfDocument.openAsset('assets/wzabt_pdfs/$pdfFileName'),
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PDFViewerPage(pdfController),
+      ),
+    );
+  } catch (error) {
+    // ignore: avoid_print
+    print('Error: $error');
+  }
+}
+}
+
+class PDFViewerPage extends StatelessWidget {
+  final PdfController pdfController;
+
+  const PDFViewerPage(this.pdfController, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Zeichnung Anbauteil'),
+        backgroundColor: const Color(0xFF104382), // Set app bar color
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            color: const Color(0xFF104382), // Set button color
+            onPressed: () {
+              Navigator.pop(context); // Close the PDF view and return to the previous screen
+            },
+          ),
+        ],
+      ),
+      body: Container(
+        color: const Color(0xFF104382), // Set background color of the window
+        child: PdfView(
+          controller: pdfController,
+        ),
+      ),
+    );
+  }
 }
