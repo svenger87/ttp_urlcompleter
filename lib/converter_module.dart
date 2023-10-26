@@ -27,17 +27,22 @@ class _ConverterModuleState extends State<ConverterModule> {
   }
 
   Future<void> loadAnbauteileData() async {
-    final String data = await DefaultAssetBundle.of(context).loadString('assets/anbauteile.json');
-    final Map<String, dynamic> jsonData = json.decode(data);
+  final String data = await DefaultAssetBundle.of(context).loadString('assets/anbauteile.json');
+  final Map<String, dynamic> jsonData = json.decode(data);
 
-    anbauteileData = jsonData.entries.map((entry) => {
-      'id': entry.key,
-      'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
-      'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
-      'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
-      'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
-    }).toList();
-  }
+  anbauteileData = jsonData.entries
+      .where((entry) =>
+          entry.value['Neue_Bezeichnung'] != null && entry.value['Neue_Bezeichnung'] != '' &&
+          entry.value['Alte_Bezeichnung'] != null && entry.value['Alte_Bezeichnung'] != '')
+      .map((entry) => {
+        'id': entry.key,
+        'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
+        'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
+        'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
+        'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
+      })
+      .toList();
+}
 
   @override
   Widget build(BuildContext context) {
