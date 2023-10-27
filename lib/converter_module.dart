@@ -30,18 +30,13 @@ class _ConverterModuleState extends State<ConverterModule> {
   final String data = await DefaultAssetBundle.of(context).loadString('assets/anbauteile.json');
   final Map<String, dynamic> jsonData = json.decode(data);
 
-  anbauteileData = jsonData.entries
-      .where((entry) =>
-          entry.value['Neue_Bezeichnung'] != null && entry.value['Neue_Bezeichnung'] != '' &&
-          entry.value['Alte_Bezeichnung'] != null && entry.value['Alte_Bezeichnung'] != '')
-      .map((entry) => {
-        'id': entry.key,
-        'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
-        'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
-        'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
-        'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
-      })
-      .toList();
+  anbauteileData = jsonData.entries.map((entry) => {
+    'id': entry.key,
+    'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
+    'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
+    'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
+    'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
+  }).toList();
 }
 
   @override
@@ -80,11 +75,12 @@ class _ConverterModuleState extends State<ConverterModule> {
                       },
                       itemHeight: null, // Allows the dropdown to be as tall as the content
                       items: anbauteileData
-                          .map((item) => DropdownMenuItem<String>(
-                                value: item['Neue_Bezeichnung'],
-                                child: Text(item['Neue_Bezeichnung']!),
-                              ))
-                          .toList(),
+                        .where((item) => item['Neue_Bezeichnung'].isNotEmpty) // Filter for items with non-empty Neue_Bezeichnung
+                        .map((item) => DropdownMenuItem<String>(
+                          value: item['Neue_Bezeichnung'],
+                          child: Text(item['Neue_Bezeichnung']!),
+                        ))
+                        .toList(),
                     ),
                   ),
                 ],
@@ -105,11 +101,12 @@ class _ConverterModuleState extends State<ConverterModule> {
                       },
                       itemHeight: null, // Allows the dropdown to be as tall as the content
                       items: anbauteileData
-                          .map((item) => DropdownMenuItem<String>(
-                                value: item['Alte_Bezeichnung'],
-                                child: Text(item['Alte_Bezeichnung']!),
-                              ))
-                          .toList(),
+                        .where((item) => item['Alte_Bezeichnung'].isNotEmpty) // Filter for items with non-empty Alte_Bezeichnung
+                        .map((item) => DropdownMenuItem<String>(
+                          value: item['Alte_Bezeichnung'],
+                          child: Text(item['Alte_Bezeichnung']!),
+                        ))
+                        .toList(),
                     ),
                   ),
                 ],
