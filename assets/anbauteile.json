@@ -265,7 +265,7 @@
    },
    "45": {
       "Neue_Bezeichnung": "CA-30/ZE45",
-      "Alte_Bezeichnung": "200.01.014.03.018 A",
+      "Alte_Bezeichnung": "200.01.014.03.018A",
       "Beschreibung": "Anbauteile",
       "Bauteilgruppe": "Coex-Anschluss"
    },
@@ -277,7 +277,7 @@
    },
    "47": {
       "Neue_Bezeichnung": "CA-40/ZE45",
-      "Alte_Bezeichnung": "200.01.014.03.018 B",
+      "Alte_Bezeichnung": "200.01.014.03.018B",
       "Beschreibung": "Anbauteile",
       "Bauteilgruppe": "Coex-Anschluss"
    },
@@ -679,7 +679,7 @@
    },
    "114": {
       "Neue_Bezeichnung": "HK-KL/CE5",
-      "Alte_Bezeichnung": "Kugelkopf Klein",
+      "Alte_Bezeichnung": "Kugelkopf_Klein",
       "Beschreibung": "Anbauteile",
       "Bauteilgruppe": "Heimkopf"
    },
@@ -1147,7 +1147,7 @@
    },
    "192": {
       "Neue_Bezeichnung": "RÖ-30/8/A",
-      "Alte_Bezeichnung": "200.01.014.02.033 A",
+      "Alte_Bezeichnung": "200.01.014.02.033A",
       "Beschreibung": "Anbauteile",
       "Bauteilgruppe": "Röhrchen"
    },
@@ -1177,7 +1177,7 @@
    },
    "197": {
       "Neue_Bezeichnung": "RÖ-8/8/S2",
-      "Alte_Bezeichnung": "200.01.014.02.154 A",
+      "Alte_Bezeichnung": "200.01.014.02.154A",
       "Beschreibung": "Anbauteile",
       "Bauteilgruppe": "Röhrchen"
    },
