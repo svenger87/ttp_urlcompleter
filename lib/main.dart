@@ -77,7 +77,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
     return Scaffold(
       key: _scaffoldKey, // Assign the GlobalKey to the Scaffold
       appBar: AppBar(
-        title: const Text('WIM Profilnummer'),
+        title: const Text('ttp App'),
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
@@ -235,7 +235,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                       ),
                     ),
                     const Text(
-                      'Linkliste',
+                      'Tools & Links',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 30,
