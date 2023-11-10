@@ -1,7 +1,8 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:flutter/services.dart';
 
@@ -14,7 +15,8 @@ class ConverterModule extends StatefulWidget {
 }
 
 class _ConverterModuleState extends State<ConverterModule> {
-  static const IconData translateRounded = IconData(0xf0250, fontFamily: 'MaterialIcons');
+  static const IconData translateRounded =
+      IconData(0xf0250, fontFamily: 'MaterialIcons');
 
   List<Map<String, dynamic>> anbauteileData = [];
   String? selectedNeueBezeichnung;
@@ -27,17 +29,20 @@ class _ConverterModuleState extends State<ConverterModule> {
   }
 
   Future<void> loadAnbauteileData() async {
-  final String data = await DefaultAssetBundle.of(context).loadString('assets/anbauteile.json');
-  final Map<String, dynamic> jsonData = json.decode(data);
+    final String data = await DefaultAssetBundle.of(context)
+        .loadString('assets/anbauteile.json');
+    final Map<String, dynamic> jsonData = json.decode(data);
 
-  anbauteileData = jsonData.entries.map((entry) => {
-    'id': entry.key,
-    'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
-    'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
-    'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
-    'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
-  }).toList();
-}
+    anbauteileData = jsonData.entries
+        .map((entry) => {
+              'id': entry.key,
+              'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
+              'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
+              'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
+              'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
+            })
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,25 +68,32 @@ class _ConverterModuleState extends State<ConverterModule> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Neue Bezeichnung'),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: DropdownButton<String>(
-                      value: selectedNeueBezeichnung,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedNeueBezeichnung = newValue;
-                        });
-                        _showTranslationResultDialog(context, selectedNeueBezeichnung);
-                      },
-                      itemHeight: null, // Allows the dropdown to be as tall as the content
-                      items: anbauteileData
-                        .where((item) => item['Neue_Bezeichnung'].isNotEmpty) // Filter for items with non-empty Neue_Bezeichnung
-                        .map((item) => DropdownMenuItem<String>(
-                          value: item['Neue_Bezeichnung'],
-                          child: Text(item['Neue_Bezeichnung']!),
-                        ))
-                        .toList(),
+                  TypeAheadField<String>(
+                    textFieldConfiguration: TextFieldConfiguration(
+                      decoration: InputDecoration(),
                     ),
+                    suggestionsCallback: (pattern) async {
+                      return anbauteileData
+                          .where((item) =>
+                              item['Neue_Bezeichnung']
+                                  .toLowerCase()
+                                  .contains(pattern.toLowerCase()) &&
+                              item['Neue_Bezeichnung'].isNotEmpty)
+                          .map((item) => item['Neue_Bezeichnung'] as String)
+                          .toList();
+                    },
+                    itemBuilder: (context, suggestion) {
+                      return ListTile(
+                        title: Text(suggestion),
+                      );
+                    },
+                    onSuggestionSelected: (suggestion) {
+                      setState(() {
+                        selectedNeueBezeichnung = suggestion;
+                      });
+                      _showTranslationResultDialog(
+                          context, selectedNeueBezeichnung);
+                    },
                   ),
                 ],
               ),
@@ -89,25 +101,32 @@ class _ConverterModuleState extends State<ConverterModule> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Alte Bezeichnung'),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: DropdownButton<String>(
-                      value: selectedAlteBezeichnung,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedAlteBezeichnung = newValue;
-                        });
-                        _showTranslationResultDialog(context, selectedAlteBezeichnung);
-                      },
-                      itemHeight: null, // Allows the dropdown to be as tall as the content
-                      items: anbauteileData
-                        .where((item) => item['Alte_Bezeichnung'].isNotEmpty) // Filter for items with non-empty Alte_Bezeichnung
-                        .map((item) => DropdownMenuItem<String>(
-                          value: item['Alte_Bezeichnung'],
-                          child: Text(item['Alte_Bezeichnung']!),
-                        ))
-                        .toList(),
+                  TypeAheadField<String>(
+                    textFieldConfiguration: TextFieldConfiguration(
+                      decoration: InputDecoration(),
                     ),
+                    suggestionsCallback: (pattern) async {
+                      return anbauteileData
+                          .where((item) =>
+                              item['Alte_Bezeichnung']
+                                  .toLowerCase()
+                                  .contains(pattern.toLowerCase()) &&
+                              item['Alte_Bezeichnung'].isNotEmpty)
+                          .map((item) => item['Alte_Bezeichnung'] as String)
+                          .toList();
+                    },
+                    itemBuilder: (context, suggestion) {
+                      return ListTile(
+                        title: Text(suggestion),
+                      );
+                    },
+                    onSuggestionSelected: (suggestion) {
+                      setState(() {
+                        selectedAlteBezeichnung = suggestion;
+                      });
+                      _showTranslationResultDialog(
+                          context, selectedAlteBezeichnung);
+                    },
                   ),
                 ],
               ),
@@ -118,7 +137,8 @@ class _ConverterModuleState extends State<ConverterModule> {
     );
   }
 
-  void _showTranslationResultDialog(BuildContext context, String? selectedValue) async {
+  void _showTranslationResultDialog(
+      BuildContext context, String? selectedValue) async {
     if (selectedValue == null) {
       return;
     }
@@ -132,7 +152,8 @@ class _ConverterModuleState extends State<ConverterModule> {
         "Alte_Bezeichnung": "Nicht gefunden",
         "Beschreibung": "Nicht gefunden",
         "Bauteilgruppe": "Nicht gefunden",
-      });
+      },
+    );
 
     final pdfFileName = "${item["Alte_Bezeichnung"]}.pdf";
     final pdfExists = await _pdfFileExists(pdfFileName);
@@ -169,7 +190,7 @@ class _ConverterModuleState extends State<ConverterModule> {
                     _openPDFFile(pdfFileName);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF104382), // Set button background color
+                    backgroundColor: const Color(0xFF104382),
                   ),
                   child: const Text('PDF Zeichnung öffnen'),
                 ),
@@ -179,7 +200,7 @@ class _ConverterModuleState extends State<ConverterModule> {
             TextButton(
               child: const Text(
                 'Schließen',
-                style: TextStyle(color: Color(0xFF104382)), // Set text color
+                style: TextStyle(color: Color(0xFF104382)),
               ),
               onPressed: () {
                 Navigator.of(context).pop();
@@ -193,7 +214,8 @@ class _ConverterModuleState extends State<ConverterModule> {
 
   Future<bool> _pdfFileExists(String pdfFileName) async {
     try {
-      final ByteData data = await rootBundle.load('assets/wzabt_pdfs/$pdfFileName');
+      final ByteData data =
+          await rootBundle.load('assets/wzabt_pdfs/$pdfFileName');
       // ignore: unnecessary_null_comparison
       return data != null;
     } catch (error) {
@@ -214,6 +236,7 @@ class _ConverterModuleState extends State<ConverterModule> {
         ),
       );
     } catch (error) {
+      // ignore: avoid_print
       print('Error: $error');
     }
   }
@@ -229,13 +252,13 @@ class PDFViewerPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Zeichnung Anbauteil'),
-        backgroundColor: const Color(0xFF104382), // Set app bar color
+        backgroundColor: const Color(0xFF104382),
         actions: [
           IconButton(
             icon: const Icon(Icons.close),
-            color: const Color(0xFF104382), // Set button color
+            color: const Color(0xFF104382),
             onPressed: () {
-              Navigator.pop(context); // Close the PDF view and return to the previous screen
+              Navigator.pop(context);
             },
           ),
         ],

@@ -18,6 +18,7 @@ dependencies:
   shared_preferences: ^2.2.0
   flutter_dropdown: ^1.0.1+hotfix.1
   pdfx: ^2.4.0
+  flutter_typeahead: ^4.8.0
 
 dev_dependencies:
   flutter_test:
