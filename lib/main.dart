@@ -83,7 +83,8 @@ class _NumberInputPageState extends State<NumberInputPage> {
           IconButton(
             icon: const Icon(Icons.history), // Use history icon here
             onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer(); // Use the scaffoldKey to open endDrawer
+              _scaffoldKey.currentState
+                  ?.openEndDrawer(); // Use the scaffoldKey to open endDrawer
             },
           ),
         ],
@@ -269,29 +270,36 @@ class _NumberInputPageState extends State<NumberInputPage> {
             ),
           ),
           ExpansionTile(
-            leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+            leading:
+                Image.asset('assets/productionplan.png', width: 36, height: 36),
             title: const Text('Produktionspläne'),
             children: [
               ListTile(
-                leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+                leading: Image.asset('assets/productionplan.png',
+                    width: 36, height: 36),
                 title: const Text('Produktionsplan 1W'),
                 onTap: () {
                   if (Platform.isAndroid) {
-                    _openUrl('https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
+                    _openUrl(
+                        'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
                   } else {
-                    _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH');
+                    _openUrl(
+                        'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH');
                   }
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: Image.asset('assets/productionplan.png', width: 36, height: 36),
+                leading: Image.asset('assets/productionplan.png',
+                    width: 36, height: 36),
                 title: const Text('Produktionsplan 3W'),
                 onTap: () {
                   if (Platform.isAndroid) {
-                    _openUrl('https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm');
+                    _openUrl(
+                        'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm');
                   } else {
-                    _openUrl('http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH');
+                    _openUrl(
+                        'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH');
                   }
                   Navigator.pop(context);
                 },
@@ -299,7 +307,8 @@ class _NumberInputPageState extends State<NumberInputPage> {
             ],
           ),
           ListTile(
-            leading: Image.asset('assets/leuchtturm_blue.png', width: 36, height: 36),
+            leading: Image.asset('assets/leuchtturm_blue.png',
+                width: 36, height: 36),
             title: const Text('Intranet'),
             onTap: () {
               _openUrl('http://lurchiweb.sip.local');
@@ -325,78 +334,79 @@ class _NumberInputPageState extends State<NumberInputPage> {
           const ConverterModule(), // Add the ConverterModule entry
         ],
       ),
-      
     );
   }
 
-Widget _buildRecentItemsDrawer(BuildContext context) {
-  return Drawer(
-    elevation: 16.0,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        DrawerHeader(
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor,
-          ),
-          child: const Text(
-            'Zuletzt benutzt',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
+  Widget _buildRecentItemsDrawer(BuildContext context) {
+    return Drawer(
+      elevation: 16.0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+            ),
+            child: const Text(
+              'Zuletzt benutzt',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: recentItems.length + 1, // +1 for the Clear Recents button
-            itemBuilder: (context, index) {
-              if (index < recentItems.length) {
-                final recentUrl = 'https://wim-solution.sip.local:8081/${recentItems[index]}';
-                return ListTile(
-                  title: Text(recentItems[index]),
-                  onTap: () {
-                    _openUrl(recentUrl); // Open the URL directly
-                    Navigator.pop(context);
-                  },
-                );
-              } else {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextButton(
-                    onPressed: () {
-                      _clearRecentItems();
+          Expanded(
+            child: ListView.builder(
+              itemCount:
+                  recentItems.length + 1, // +1 for the Clear Recents button
+              itemBuilder: (context, index) {
+                if (index < recentItems.length) {
+                  final recentUrl =
+                      'https://wim-solution.sip.local:8081/${recentItems[index]}';
+                  return ListTile(
+                    title: Text(recentItems[index]),
+                    onTap: () {
+                      _openUrl(recentUrl); // Open the URL directly
                       Navigator.pop(context);
                     },
-                    style: TextButton.styleFrom(
-                      primary: Theme.of(context).primaryColor,
+                  );
+                } else {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: TextButton(
+                      onPressed: () {
+                        _clearRecentItems();
+                        Navigator.pop(context);
+                      },
+                      style: TextButton.styleFrom(
+                        primary: Theme.of(context).primaryColor,
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          SizedBox(width: 8.0),
+                          Text('Zuletzt benutzte löschen',
+                              style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
                     ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.delete, color: Colors.red),
-                        SizedBox(width: 8.0),
-                        Text('Zuletzt benutzte löschen', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            },
+                  );
+                }
+              },
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-void _clearRecentItems() {
-  setState(() {
-    recentItems.clear();
-  });
+  void _clearRecentItems() {
+    setState(() {
+      recentItems.clear();
+    });
 
-  _saveRecentItems();
-}
-
+    _saveRecentItems();
+  }
 
   void _openUrl(String url) async {
     if (await canLaunch(url)) {

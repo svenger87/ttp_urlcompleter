@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, prefer_adjacent_string_concatenation, prefer_interpolation_to_compose_strings, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'dart:convert';
@@ -158,58 +158,99 @@ class _ConverterModuleState extends State<ConverterModule> {
     final pdfFileName = "${item["Alte_Bezeichnung"]}.pdf";
     final pdfExists = await _pdfFileExists(pdfFileName);
 
-    // ignore: use_build_context_synchronously
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Übersetzte Anbauteile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Ausgewähltes Bauteil: $selectedValue',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Neue Bezeichnung: ${item["Neue_Bezeichnung"]}'),
-                    Text('Alte Bezeichnung: ${item["Alte_Bezeichnung"]}'),
-                    Text('Beschreibung: ${item["Beschreibung"]}'),
-                    Text('Bauteilgruppe: ${item["Bauteilgruppe"]}'),
-                  ],
-                ),
-              ),
-              if (pdfExists)
-                ElevatedButton(
-                  onPressed: () {
-                    _openPDFFile(pdfFileName);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF104382),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Übersetzte Anbauteile'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ausgewähltes Bauteil: $selectedValue',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  child: const Text('PDF Zeichnung öffnen'),
-                ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text(
-                'Schließen',
-                style: TextStyle(color: Color(0xFF104382)),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildCopyableField(
+                          label: 'Neue Bezeichnung',
+                          value: item['Neue_Bezeichnung'],
+                        ),
+                        _buildCopyableField(
+                          label: 'Alte Bezeichnung',
+                          value: item['Alte_Bezeichnung'],
+                        ),
+                        _buildCopyableField(
+                          label: 'Beschreibung',
+                          value: item['Beschreibung'],
+                        ),
+                        _buildCopyableField(
+                          label: 'Bauteilgruppe',
+                          value: item['Bauteilgruppe'],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (pdfExists)
+                    ElevatedButton(
+                      onPressed: () {
+                        _openPDFFile(pdfFileName);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF104382),
+                      ),
+                      child: const Text('PDF Zeichnung öffnen'),
+                    ),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text(
+                        'Schließen',
+                        style: TextStyle(color: Color(0xFF104382)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+            );
+          },
         );
       },
     );
+  }
+
+  Widget _buildCopyableField({required String label, required String value}) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            '$label: $value',
+            style: const TextStyle(fontSize: 16.0),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.content_copy),
+          onPressed: () {
+            _copyToClipboard(value);
+            setState(() {});
+          },
+        ),
+      ],
+    );
+  }
+
+  void _copyToClipboard(String data) {
+    Clipboard.setData(ClipboardData(text: data));
+    // You can show a snackbar or toast here to inform the user that the data has been copied.
   }
 
   Future<bool> _pdfFileExists(String pdfFileName) async {
