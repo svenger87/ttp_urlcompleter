@@ -331,7 +331,13 @@ class _NumberInputPageState extends State<NumberInputPage> {
               Navigator.pop(context);
             },
           ),
-          const ConverterModule(), // Add the ConverterModule entry
+          const ExpansionTile(
+            leading: Icon(Icons.handyman), // You can customize the icon
+            title: Text('Tools'),
+            children: [
+              ConverterModule(),
+            ],
+          ),
         ],
       ),
     );
