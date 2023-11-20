@@ -1,7 +1,7 @@
 name: ttp_urlcompleter
 description: App to make a businessprocess a bit more convienient.
 publish_to: 'none'
-version: 0.3.3+24
+version: 0.3.5+26
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -19,6 +19,7 @@ dependencies:
   flutter_dropdown: ^1.0.1+hotfix.1
   pdfx: ^2.4.0
   flutter_typeahead: ^4.8.0
+  flutter_zxing: ^1.4.1
 
 dev_dependencies:
   flutter_test:

@@ -8,7 +8,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'converter_module.dart'; // Import the converter module logic
+import 'converter_module.dart';
 
 void main() {
   runApp(const MyApp());
@@ -41,7 +41,6 @@ class NumberInputPage extends StatefulWidget {
 class _NumberInputPageState extends State<NumberInputPage> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   final TextEditingController _numberController = TextEditingController();
-  // Create a GlobalKey for the Scaffold
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   QRViewController? controller;
@@ -75,16 +74,25 @@ class _NumberInputPageState extends State<NumberInputPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey, // Assign the GlobalKey to the Scaffold
+      key: _scaffoldKey,
       appBar: AppBar(
-        title: const Text('ttp App'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/leuchtturm.png',
+              height: 36,
+              width: 36,
+            ),
+            const SizedBox(width: 2),
+            const Text('ttp App'),
+          ],
+        ),
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
-            icon: const Icon(Icons.history), // Use history icon here
+            icon: const Icon(Icons.history),
             onPressed: () {
-              _scaffoldKey.currentState
-                  ?.openEndDrawer(); // Use the scaffoldKey to open endDrawer
+              _scaffoldKey.currentState?.openEndDrawer();
             },
           ),
         ],
@@ -239,7 +247,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                       'Tools & Links',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 30,
+                        fontSize: 24,
                       ),
                     ),
                   ],
@@ -260,7 +268,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                         '  it-support@ttp-papenburg.de',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 17,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -332,7 +340,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             },
           ),
           const ExpansionTile(
-            leading: Icon(Icons.handyman), // You can customize the icon
+            leading: Icon(Icons.handyman),
             title: Text('Tools'),
             children: [
               ConverterModule(),
@@ -363,8 +371,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount:
-                  recentItems.length + 1, // +1 for the Clear Recents button
+              itemCount: recentItems.length + 1,
               itemBuilder: (context, index) {
                 if (index < recentItems.length) {
                   final recentUrl =
@@ -372,7 +379,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   return ListTile(
                     title: Text(recentItems[index]),
                     onTap: () {
-                      _openUrl(recentUrl); // Open the URL directly
+                      _openUrl(recentUrl);
                       Navigator.pop(context);
                     },
                   );
