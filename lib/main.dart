@@ -199,51 +199,65 @@ class _NumberInputPageState extends State<NumberInputPage> {
   }
 
   void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
+  this.controller = controller;
 
-    controller.scannedDataStream.listen((scanData) async {
-      if (!hasScanned) {
-        setState(() {
-          hasScanned = true;
-        });
+  controller.scannedDataStream.listen((scanData) async {
+    if (!hasScanned) {
+      setState(() {
+        hasScanned = true;
+      });
 
-        Vibration.vibrate(duration: 50);
+      Vibration.vibrate(duration: 50);
 
-        final scannedUrl = scanData.code!;
-        if (await canLaunch(scannedUrl)) {
-          await launch(scannedUrl);
-          _addRecentItem(scannedUrl);
-        } else {
-          if (kDebugMode) {
-            print('Could not launch $scannedUrl');
-          }
-        }
-
-        scanTimer = Timer(const Duration(seconds: 10), () {
-          setState(() {
-            hasScanned = false;
-          });
-        });
+      final scannedUrl = scanData.code!;
+      if (Platform.isWindows) {
+        _openUrl(scannedUrl);
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WebViewModule(url: scannedUrl),
+          ),
+        );
+        _addRecentItem(scannedUrl);
       }
-    });
-  }
+
+      scanTimer = Timer(const Duration(seconds: 10), () {
+        setState(() {
+          hasScanned = false;
+        });
+      });
+    }
+  });
+}
 
   void _openUrlWithNumber() async {
-    final String number = _numberController.text.trim().toUpperCase();
+  final String number = _numberController.text.trim().toUpperCase();
 
-    if (number.isNotEmpty) {
-      final url = 'https://wim-solution.sip.local:8081/$number';
+  if (number.isNotEmpty) {
+    final url = 'https://wim-solution.sip.local:8081/$number';
 
-      if (await canLaunch(url)) {
-        await launch(url);
-        _addRecentItem(url);
+    if (await canLaunch(url)) {
+      if (Platform.isWindows) {
+        _openUrl(url);
       } else {
-        if (kDebugMode) {
-          print('Could not launch $url');
-        }
+        // ignore: use_build_context_synchronously
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WebViewModule(url: url),
+          ),
+        );
+        _addRecentItem(url);
+      }
+    } else {
+      if (kDebugMode) {
+        print('Could not launch $url');
       }
     }
   }
+}
+
 
   void _addRecentItem(String item) {
     final Uri uri = Uri.parse(item);
