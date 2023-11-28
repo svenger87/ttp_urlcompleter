@@ -151,13 +151,17 @@ class _NumberInputPageState extends State<NumberInputPage> {
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WebViewModule(
-                          url: 'http://172.24.1.30:8080/ikoffice/root/'),
-                    ),
-                  );
+                  const url = 'http://172.24.1.30:8080/ikoffice/root/';
+                  if (Platform.isWindows) {
+                    _openUrl(url);
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewModule(url: url),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
@@ -165,19 +169,22 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 child: const Text('PZE'),
               ),
             ),
-
-            // Link 2: http://ikoffice.sip.local:8080/ikoffice/root/login/bde
+            // Link 2: Linienkonfiguration
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WebViewModule(
-                          url: 'http://172.24.1.30:8080/ikoffice/root/'),
-                    ),
-                  );
+                  const url = 'http://172.24.1.30:8080/ikoffice/root/';
+                  if (Platform.isWindows) {
+                    _openUrl(url);
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewModule(url: url),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
@@ -326,31 +333,33 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 leading: Image.asset('assets/productionplan.png',
                     width: 36, height: 36),
                 title: const Text('Produktionsplan 1W'),
-                onTap: () {
-                  if (Platform.isAndroid) {
-                    _openUrl(
-                        'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
-                  } else {
-                    _openUrl(
-                        'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH');
-                  }
-                  Navigator.pop(context);
-                },
+                onTap: () => Platform.isWindows
+                    ? _openUrl(
+                        'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH')
+                    : Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WebViewModule(
+                              url:
+                                  'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf'),
+                        ),
+                      ),
               ),
               ListTile(
                 leading: Image.asset('assets/productionplan.png',
                     width: 36, height: 36),
                 title: const Text('Produktionsplan 3W'),
-                onTap: () {
-                  if (Platform.isAndroid) {
-                    _openUrl(
-                        'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm');
-                  } else {
-                    _openUrl(
-                        'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH');
-                  }
-                  Navigator.pop(context);
-                },
+                onTap: () => Platform.isWindows
+                    ? _openUrl(
+                        'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH')
+                    : Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WebViewModule(
+                              url:
+                                  'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf'),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -358,26 +367,41 @@ class _NumberInputPageState extends State<NumberInputPage> {
             leading: Image.asset('assets/leuchtturm_blue.png',
                 width: 36, height: 36),
             title: const Text('Intranet'),
-            onTap: () {
-              _openUrl('http://lurchiweb.sip.local');
-              Navigator.pop(context);
-            },
+            onTap: () => Platform.isWindows
+                ? _openUrl('http://lurchiweb.sip.local')
+                : Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(
+                          url: 'http://lurchiweb.sip.local'),
+                    ),
+                  ),
           ),
           ListTile(
             leading: Image.asset('assets/ac.png', width: 36, height: 36),
             title: const Text('ActiveCollab'),
-            onTap: () {
-              _openUrl('https://olymp.sip.de');
-              Navigator.pop(context);
-            },
+            onTap: () => Platform.isWindows
+                ? _openUrl('https://olymp.sip.de')
+                : Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const WebViewModule(url: 'https://olymp.sip.de'),
+                    ),
+                  ),
           ),
           ListTile(
             leading: Image.asset('assets/bookstack.png', width: 36, height: 36),
             title: const Text('ttpedia'),
-            onTap: () {
-              _openUrl('http://bookstack.sip.local');
-              Navigator.pop(context);
-            },
+            onTap: () => Platform.isWindows
+                ? _openUrl('http://bookstack.sip.local')
+                : Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(
+                          url: 'http://bookstack.sip.local'),
+                    ),
+                  ),
           ),
           const ExpansionTile(
             leading: Icon(Icons.handyman),
