@@ -199,51 +199,65 @@ class _NumberInputPageState extends State<NumberInputPage> {
   }
 
   void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
+  this.controller = controller;
 
-    controller.scannedDataStream.listen((scanData) async {
-      if (!hasScanned) {
-        setState(() {
-          hasScanned = true;
-        });
+  controller.scannedDataStream.listen((scanData) async {
+    if (!hasScanned) {
+      setState(() {
+        hasScanned = true;
+      });
 
-        Vibration.vibrate(duration: 50);
+      Vibration.vibrate(duration: 50);
 
-        final scannedUrl = scanData.code!;
-        if (await canLaunch(scannedUrl)) {
-          await launch(scannedUrl);
-          _addRecentItem(scannedUrl);
-        } else {
-          if (kDebugMode) {
-            print('Could not launch $scannedUrl');
-          }
-        }
-
-        scanTimer = Timer(const Duration(seconds: 10), () {
-          setState(() {
-            hasScanned = false;
-          });
-        });
+      final scannedUrl = scanData.code!;
+      if (Platform.isWindows) {
+        _openUrl(scannedUrl);
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WebViewModule(url: scannedUrl),
+          ),
+        );
+        _addRecentItem(scannedUrl);
       }
-    });
-  }
+
+      scanTimer = Timer(const Duration(seconds: 10), () {
+        setState(() {
+          hasScanned = false;
+        });
+      });
+    }
+  });
+}
 
   void _openUrlWithNumber() async {
-    final String number = _numberController.text.trim().toUpperCase();
+  final String number = _numberController.text.trim().toUpperCase();
 
-    if (number.isNotEmpty) {
-      final url = 'https://wim-solution.sip.local:8081/$number';
+  if (number.isNotEmpty) {
+    final url = 'https://wim-solution.sip.local:8081/$number';
 
-      if (await canLaunch(url)) {
-        await launch(url);
-        _addRecentItem(url);
+    if (await canLaunch(url)) {
+      if (Platform.isWindows) {
+        _openUrl(url);
       } else {
-        if (kDebugMode) {
-          print('Could not launch $url');
-        }
+        // ignore: use_build_context_synchronously
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WebViewModule(url: url),
+          ),
+        );
+        _addRecentItem(url);
+      }
+    } else {
+      if (kDebugMode) {
+        print('Could not launch $url');
       }
     }
   }
+}
+
 
   void _addRecentItem(String item) {
     final Uri uri = Uri.parse(item);
@@ -448,44 +462,53 @@ class _NumberInputPageState extends State<NumberInputPage> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: recentItems.length + 1,
-              itemBuilder: (context, index) {
-                if (index < recentItems.length) {
-                  final recentUrl =
-                      'https://wim-solution.sip.local:8081/${recentItems[index]}';
-                  return ListTile(
-                    title: Text(recentItems[index]),
-                    onTap: () {
-                      _openUrl(recentUrl);
-                      Navigator.pop(context);
-                    },
-                  );
-                } else {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: TextButton(
-                      onPressed: () {
-                        _clearRecentItems();
-                        Navigator.pop(context);
-                      },
-                      style: TextButton.styleFrom(
-                        primary: Theme.of(context).primaryColor,
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red),
-                          SizedBox(width: 8.0),
-                          Text('Zuletzt benutzte löschen',
-                              style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-              },
+  child: ListView.builder(
+    itemCount: recentItems.length + 1,
+    itemBuilder: (context, index) {
+      if (index < recentItems.length) {
+        final recentUrl =
+            'https://wim-solution.sip.local:8081/${recentItems[index]}';
+        return ListTile(
+          title: Text(recentItems[index]),
+          onTap: () {
+            if (Platform.isWindows) {
+              _openUrl(recentUrl);
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WebViewModule(url: recentUrl),
+                ),
+              );
+            }
+            // Navigator.pop(context); // Remove this line or adjust its placement based on your navigation requirements.
+          },
+        );
+      } else {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: TextButton(
+            onPressed: () {
+              _clearRecentItems();
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(
+              primary: Theme.of(context).primaryColor,
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.delete, color: Colors.red),
+                SizedBox(width: 8.0),
+                Text('Zuletzt benutzte löschen',
+                    style: TextStyle(color: Colors.red)),
+              ],
             ),
           ),
+        );
+      }
+    },
+  ),
+),
         ],
       ),
     );
