@@ -37,6 +37,7 @@ flutter:
     - assets/productionplan.png
     - assets/anbauteile.json
     - assets/wzabt_pdfs/
+    - assets/IKOffice.ico
   
 msix_config:
   display_name: WIM Profilauswahl
