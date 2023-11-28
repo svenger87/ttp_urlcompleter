@@ -330,36 +330,60 @@ class _NumberInputPageState extends State<NumberInputPage> {
             title: const Text('Produktionspläne'),
             children: [
               ListTile(
-                leading: Image.asset('assets/productionplan.png',
-                    width: 36, height: 36),
+                leading: Image.asset(
+                  'assets/productionplan.png',
+                  width: 36,
+                  height: 36,
+                ),
                 title: const Text('Produktionsplan 1W'),
-                onTap: () => Platform.isWindows
-                    ? _openUrl(
-                        'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH')
-                    : Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const WebViewModule(
-                              url:
-                                  'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf'),
+                onTap: () {
+                  if (Platform.isAndroid) {
+                    _openUrl(
+                        'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
+                  } else if (Platform.isWindows) {
+                    _openUrl(
+                        'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH');
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewModule(
+                          url:
+                              'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH',
                         ),
                       ),
+                    );
+                  }
+                  Navigator.pop(context);
+                },
               ),
               ListTile(
-                leading: Image.asset('assets/productionplan.png',
-                    width: 36, height: 36),
+                leading: Image.asset(
+                  'assets/productionplan.png',
+                  width: 36,
+                  height: 36,
+                ),
                 title: const Text('Produktionsplan 3W'),
-                onTap: () => Platform.isWindows
-                    ? _openUrl(
-                        'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH')
-                    : Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const WebViewModule(
-                              url:
-                                  'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf'),
+                onTap: () {
+                  if (Platform.isAndroid) {
+                    _openUrl(
+                        'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm');
+                  } else if (Platform.isWindows) {
+                    _openUrl(
+                        'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH');
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewModule(
+                          url:
+                              'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH',
                         ),
                       ),
+                    );
+                  }
+                  Navigator.pop(context);
+                },
               ),
             ],
           ),
