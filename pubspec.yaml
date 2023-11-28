@@ -19,7 +19,7 @@ dependencies:
   flutter_dropdown: ^1.0.1+hotfix.1
   pdfx: ^2.4.0
   flutter_typeahead: ^4.8.0
-  flutter_zxing: ^1.4.1
+  webview_flutter: ^3.0.4
 
 dev_dependencies:
   flutter_test:

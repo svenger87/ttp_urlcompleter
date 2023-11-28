@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'converter_module.dart';
+import 'webview_module.dart';
 
 void main() {
   runApp(const MyApp());
@@ -143,6 +144,45 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   });
                 },
                 onFieldSubmitted: (_) => _openUrlWithNumber(),
+              ),
+            ),
+            // Link 1: PZE
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(
+                          url: 'http://172.24.1.30:8080/ikoffice/root/'),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                ),
+                child: const Text('PZE'),
+              ),
+            ),
+
+            // Link 2: http://ikoffice.sip.local:8080/ikoffice/root/login/bde
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(
+                          url: 'http://172.24.1.30:8080/ikoffice/root/'),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                ),
+                child: const Text('Linienkonfiguration'),
               ),
             ),
           ],
@@ -423,7 +463,11 @@ class _NumberInputPageState extends State<NumberInputPage> {
 
   void _openUrl(String url) async {
     if (await canLaunch(url)) {
-      await launch(url);
+      await launch(
+        url,
+        enableJavaScript: true,
+        forceWebView: true,
+      );
     } else {
       if (kDebugMode) {
         print('Could not launch $url');
