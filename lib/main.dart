@@ -72,20 +72,6 @@ class _NumberInputPageState extends State<NumberInputPage> {
     super.dispose();
   }
 
-  double _calculateCutOutSize(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
-    // Choose a desired ratio (adjust as needed)
-    double cutOutRatio = 0.8;
-
-    // Calculate the size based on the minimum of width and height
-    double cutOutSize =
-        cutOutRatio * (screenWidth < screenHeight ? screenWidth : screenHeight);
-
-    return cutOutSize;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,7 +115,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                     borderColor: Theme.of(context).primaryColor,
                     borderLength: 30,
                     borderWidth: 10,
-                    cutOutSize: _calculateCutOutSize(context),
+                    cutOutSize: MediaQuery.of(context).size.shortestSide * 0.8,
                   ),
                 ),
               ),
