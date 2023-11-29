@@ -151,47 +151,79 @@ class _NumberInputPageState extends State<NumberInputPage> {
             // Link 1: PZE
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  const url = 'http://172.24.1.30:8080/ikoffice/root/';
-                  if (Platform.isWindows) {
-                    _openUrl(url);
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WebViewModule(url: url),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () {
+                    const url = 'http://172.24.1.30:8080/ikoffice/root/';
+                    if (Platform.isWindows) {
+                      _openUrl(url);
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WebViewModule(url: url),
+                        ),
+                      );
+                    }
+                  },
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/IKOffice.ico',
+                        width: 72,
+                        height: 72,
                       ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
+                      const SizedBox(width: 16),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('PZE'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Text('PZE'),
               ),
             ),
-            // Link 2: Linienkonfiguration
+
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  const url = 'http://172.24.1.30:8080/ikoffice/root/';
-                  if (Platform.isWindows) {
-                    _openUrl(url);
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WebViewModule(url: url),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () {
+                    const url = 'http://172.24.1.30:8080/ikoffice/root/';
+                    if (Platform.isWindows) {
+                      _openUrl(url);
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WebViewModule(url: url),
+                        ),
+                      );
+                    }
+                  },
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/IKOffice.ico',
+                        width: 72,
+                        height: 72,
                       ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
+                      const SizedBox(width: 16),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Linienkonfiguration'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Text('Linienkonfiguration'),
               ),
             ),
           ],
