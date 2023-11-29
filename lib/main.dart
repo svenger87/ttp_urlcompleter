@@ -77,13 +77,13 @@ class _NumberInputPageState extends State<NumberInputPage> {
     double screenHeight = MediaQuery.of(context).size.height;
 
     // Choose a desired ratio (adjust as needed)
-    double cutOutRatio = 0.6;
+    double cutOutRatio = 0.8;
 
-    // Calculate the size based on the ratio
-    double cutOutSize = screenWidth * cutOutRatio;
+    // Calculate the size based on the minimum of width and height
+    double cutOutSize =
+        cutOutRatio * (screenWidth < screenHeight ? screenWidth : screenHeight);
 
-    // Ensure that the cut-out size does not exceed the screen height
-    return cutOutSize > screenHeight ? screenHeight : cutOutSize;
+    return cutOutSize;
   }
 
   @override
