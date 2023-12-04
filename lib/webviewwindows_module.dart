@@ -93,7 +93,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
       );
     } else {
       return Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(0),
         child: Column(
           children: [
             Card(
