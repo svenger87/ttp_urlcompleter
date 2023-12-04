@@ -1,4 +1,4 @@
-// ignore_for_file: library_private_types_in_public_api, deprecated_member_use
+// ignore_for_file: library_private_types_in_public_api, deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'converter_module.dart';
 import 'webview_module.dart';
+import 'webviewwindows_module.dart';
 
 void main() {
   runApp(const MyApp());
@@ -157,7 +158,14 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   onTap: () {
                     const url = 'http://172.24.1.30:8080/ikoffice/root/';
                     if (Platform.isWindows) {
-                      _openUrl(url);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WebViewWindowsModule(
+                            initialUrl: url,
+                          ),
+                        ),
+                      );
                     } else {
                       Navigator.push(
                         context,
@@ -196,7 +204,14 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   onTap: () {
                     const url = 'http://172.24.1.30:8080/ikoffice/root/';
                     if (Platform.isWindows) {
-                      _openUrl(url);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WebViewWindowsModule(
+                            initialUrl: url,
+                          ),
+                        ),
+                      );
                     } else {
                       Navigator.push(
                         context,
@@ -267,17 +282,22 @@ class _NumberInputPageState extends State<NumberInputPage> {
 
   void _openUrlWithNumber() async {
     final String number = _numberController.text.trim().toUpperCase();
+    final BuildContext currentContext = context;
 
     if (number.isNotEmpty) {
       final url = 'https://wim-solution.sip.local:8081/$number';
 
       if (await canLaunch(url)) {
         if (Platform.isWindows) {
-          _openUrl(url);
-        } else {
-          // ignore: use_build_context_synchronously
           Navigator.push(
-            context,
+            currentContext, // Use the locally stored BuildContext
+            MaterialPageRoute(
+              builder: (context) => WebViewWindowsModule(initialUrl: url),
+            ),
+          );
+        } else {
+          Navigator.push(
+            currentContext, // Use the locally stored BuildContext
             MaterialPageRoute(
               builder: (context) => WebViewModule(url: url),
             ),
@@ -351,12 +371,20 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         final Uri emailUri = Uri(
                           scheme: 'mailto',
                           path: 'it-support@ttp-papenburg.de',
                         );
-                        _openUrl(emailUri.toString());
+
+                        if (await canLaunch(emailUri.toString())) {
+                          await launch(emailUri.toString());
+                        } else {
+                          // Handle error, if any
+                          if (kDebugMode) {
+                            print('Could not launch email client');
+                          }
+                        }
                       },
                       child: const Text(
                         '  it-support@ttp-papenburg.de',
@@ -383,21 +411,32 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   height: 36,
                 ),
                 title: const Text('Produktionsplan 1W'),
-                onTap: () => Platform.isAndroid
-                    ? _openUrl(
-                        'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp')
-                    : Platform.isWindows
-                        ? _openUrl(
-                            'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH')
-                        : Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const WebViewModule(
-                                url:
-                                    'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH',
-                              ),
-                            ),
-                          ),
+                onTap: () {
+                  if (Platform.isAndroid) {
+                    _openUrl(
+                        'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
+                  } else if (Platform.isWindows) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewWindowsModule(
+                          initialUrl:
+                              'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH',
+                        ),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewModule(
+                          url:
+                              'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH',
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
               ListTile(
                 leading: Image.asset(
@@ -406,21 +445,32 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   height: 36,
                 ),
                 title: const Text('Produktionsplan 3W'),
-                onTap: () => Platform.isAndroid
-                    ? _openUrl(
-                        'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm')
-                    : Platform.isWindows
-                        ? _openUrl(
-                            'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH')
-                        : Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const WebViewModule(
-                                url:
-                                    'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH',
-                              ),
-                            ),
-                          ),
+                onTap: () {
+                  if (Platform.isAndroid) {
+                    _openUrl(
+                        'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm');
+                  } else if (Platform.isWindows) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewWindowsModule(
+                          initialUrl:
+                              'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH',
+                        ),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewModule(
+                          url:
+                              'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH',
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ],
           ),
@@ -428,41 +478,78 @@ class _NumberInputPageState extends State<NumberInputPage> {
             leading: Image.asset('assets/leuchtturm_blue.png',
                 width: 36, height: 36),
             title: const Text('Intranet'),
-            onTap: () => Platform.isWindows
-                ? _openUrl('http://lurchiweb.sip.local')
-                : Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WebViewModule(
-                          url: 'http://lurchiweb.sip.local'),
+            onTap: () {
+              if (Platform.isWindows) {
+                // Use the Windows module
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewWindowsModule(
+                        initialUrl: 'http://lurchiweb.sip.local'),
+                  ),
+                );
+              } else {
+                // Use the existing WebViewModule for other platforms
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewModule(
+                      url: 'http://lurchiweb.sip.local',
                     ),
                   ),
+                );
+              }
+            },
           ),
           ListTile(
             leading: Image.asset('assets/ac.png', width: 36, height: 36),
             title: const Text('ActiveCollab'),
-            onTap: () => Platform.isWindows
-                ? _openUrl('https://olymp.sip.de')
-                : Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const WebViewModule(url: 'https://olymp.sip.de'),
+            onTap: () {
+              if (Platform.isWindows) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewWindowsModule(
+                      initialUrl: 'https://olymp.sip.de',
                     ),
                   ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewModule(
+                      url: 'https://olymp.sip.de',
+                    ),
+                  ),
+                );
+              }
+            },
           ),
           ListTile(
             leading: Image.asset('assets/bookstack.png', width: 36, height: 36),
             title: const Text('ttpedia'),
-            onTap: () => Platform.isWindows
-                ? _openUrl('http://bookstack.sip.local')
-                : Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WebViewModule(
-                          url: 'http://bookstack.sip.local'),
+            onTap: () {
+              if (Platform.isWindows) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewWindowsModule(
+                      initialUrl: 'http://bookstack.sip.local',
                     ),
                   ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewModule(
+                      url: 'http://bookstack.sip.local',
+                    ),
+                  ),
+                );
+              }
+            },
           ),
           const ExpansionTile(
             leading: Icon(Icons.handyman),
@@ -505,7 +592,13 @@ class _NumberInputPageState extends State<NumberInputPage> {
                     title: Text(recentItems[index]),
                     onTap: () {
                       if (Platform.isWindows) {
-                        _openUrl(recentUrl);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                WebViewWindowsModule(initialUrl: recentUrl),
+                          ),
+                        );
                       } else {
                         Navigator.push(
                           context,
