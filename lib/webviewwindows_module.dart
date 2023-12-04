@@ -59,7 +59,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Error'),
+            title: const Text('Fehler'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,7 +73,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('Continue'),
+                child: const Text('Fortfahren'),
               )
             ],
           ),
@@ -85,7 +85,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
   Widget compositeView() {
     if (!_controller.value.isInitialized) {
       return const Text(
-        'Not Initialized',
+        'Starte WebView',
         style: TextStyle(
           fontSize: 24.0,
           fontWeight: FontWeight.w900,
@@ -101,7 +101,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
               child: Row(children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  tooltip: 'Open DevTools',
+                  tooltip: 'Zurück',
                   splashRadius: 20,
                   onPressed: () {
                     _controller.goBack();
@@ -109,6 +109,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
+                  tooltip: 'Neu Laden',
                   splashRadius: 20,
                   onPressed: () {
                     _controller.reload();
@@ -116,7 +117,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.arrow_forward),
-                  tooltip: 'Open DevTools',
+                  tooltip: 'Vorwärts',
                   splashRadius: 20,
                   onPressed: () {
                     _controller.goForward();
@@ -160,7 +161,7 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        tooltip: _isWebviewSuspended ? 'Resume webview' : 'Suspend webview',
+        tooltip: _isWebviewSuspended ? 'Fortfahren' : 'Pausieren',
         onPressed: () async {
           if (_isWebviewSuspended) {
             await _controller.resume();
@@ -193,18 +194,18 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
     final decision = await showDialog<WebviewPermissionDecision>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('WebView permission requested'),
-        content: Text('WebView has requested permission \'$kind\''),
+        title: const Text('WebView benötigt Berechtigung'),
+        content: Text('WebView hat eine Berechtigung angefragt \'$kind\''),
         actions: <Widget>[
           TextButton(
             onPressed: () =>
                 Navigator.pop(context, WebviewPermissionDecision.deny),
-            child: const Text('Deny'),
+            child: const Text('Verweigern'),
           ),
           TextButton(
             onPressed: () =>
                 Navigator.pop(context, WebviewPermissionDecision.allow),
-            child: const Text('Allow'),
+            child: const Text('Zulassen'),
           ),
         ],
       ),

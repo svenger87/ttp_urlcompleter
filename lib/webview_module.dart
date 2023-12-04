@@ -58,16 +58,12 @@ class _WebViewModuleState extends State<WebViewModule> {
         print('URL Changed: $url');
       }
 
-      // Implement your custom logic based on the URL
-      if (url.contains('some_keyword')) {
-        // Do something
-      }
+      if (url.contains('some_keyword')) {}
     });
   }
 
   @override
   void dispose() {
-    // Dispose of the webview when the widget is disposed
     _webviewPlugin.dispose();
     super.dispose();
   }
