@@ -16,6 +16,21 @@ void main() {
   runApp(const MyApp());
 }
 
+//URLs
+const String ikOfficeUrl = 'http://172.24.1.30:8080/ikoffice/root/';
+const String prodPlan1w =
+    'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH';
+const String prodPlan3w =
+    'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH';
+const String prodPlan1wNextcloud =
+    'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp';
+const String prodPlan3wNextcloud =
+    'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm';
+const String bookstack = 'http://bookstack.sip.local';
+const String intranet = 'http://lurchiweb.sip.local';
+const String ac = 'https://olymp.sip.de';
+const String wim = 'https://wim-solution.sip.local:8081';
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -156,7 +171,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   onTap: () {
-                    const url = 'http://172.24.1.30:8080/ikoffice/root/';
+                    const url = ikOfficeUrl;
                     if (Platform.isWindows) {
                       Navigator.push(
                         context,
@@ -202,7 +217,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   onTap: () {
-                    const url = 'http://172.24.1.30:8080/ikoffice/root/';
+                    const url = ikOfficeUrl;
                     if (Platform.isWindows) {
                       Navigator.push(
                         context,
@@ -285,7 +300,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
     final BuildContext currentContext = context;
 
     if (number.isNotEmpty) {
-      final url = 'https://wim-solution.sip.local:8081/$number';
+      final url = '$wim/$number';
 
       if (await canLaunch(url)) {
         if (Platform.isWindows) {
@@ -413,15 +428,13 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 title: const Text('Produktionsplan 1W'),
                 onTap: () {
                   if (Platform.isAndroid) {
-                    _openUrl(
-                        'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp');
+                    _openUrl(prodPlan1wNextcloud);
                   } else if (Platform.isWindows) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const WebViewWindowsModule(
-                          initialUrl:
-                              'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH',
+                          initialUrl: prodPlan1w,
                         ),
                       ),
                     );
@@ -430,8 +443,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const WebViewModule(
-                          url:
-                              'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH',
+                          url: prodPlan1w,
                         ),
                       ),
                     );
@@ -447,15 +459,13 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 title: const Text('Produktionsplan 3W'),
                 onTap: () {
                   if (Platform.isAndroid) {
-                    _openUrl(
-                        'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm');
+                    _openUrl(prodPlan3wNextcloud);
                   } else if (Platform.isWindows) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const WebViewWindowsModule(
-                          initialUrl:
-                              'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH',
+                          initialUrl: prodPlan3w,
                         ),
                       ),
                     );
@@ -464,8 +474,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const WebViewModule(
-                          url:
-                              'http://lurchiweb.sip.local/schedule/ZPPLAN_3W.pdf#view=FitH',
+                          url: prodPlan3w,
                         ),
                       ),
                     );
@@ -484,8 +493,8 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const WebViewWindowsModule(
-                        initialUrl: 'http://lurchiweb.sip.local'),
+                    builder: (context) =>
+                        const WebViewWindowsModule(initialUrl: intranet),
                   ),
                 );
               } else {
@@ -494,7 +503,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const WebViewModule(
-                      url: 'http://lurchiweb.sip.local',
+                      url: intranet,
                     ),
                   ),
                 );
@@ -510,7 +519,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const WebViewWindowsModule(
-                      initialUrl: 'https://olymp.sip.de',
+                      initialUrl: ac,
                     ),
                   ),
                 );
@@ -519,7 +528,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const WebViewModule(
-                      url: 'https://olymp.sip.de',
+                      url: ac,
                     ),
                   ),
                 );
@@ -535,7 +544,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const WebViewWindowsModule(
-                      initialUrl: 'http://bookstack.sip.local',
+                      initialUrl: bookstack,
                     ),
                   ),
                 );
@@ -544,7 +553,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const WebViewModule(
-                      url: 'http://bookstack.sip.local',
+                      url: bookstack,
                     ),
                   ),
                 );
@@ -586,8 +595,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
               itemCount: recentItems.length + 1,
               itemBuilder: (context, index) {
                 if (index < recentItems.length) {
-                  final recentUrl =
-                      'https://wim-solution.sip.local:8081/${recentItems[index]}';
+                  final recentUrl = '$wim/${recentItems[index]}';
                   return ListTile(
                     title: Text(recentItems[index]),
                     onTap: () {
@@ -644,7 +652,6 @@ class _NumberInputPageState extends State<NumberInputPage> {
     setState(() {
       recentItems.clear();
     });
-
     _saveRecentItems();
   }
 
