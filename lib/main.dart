@@ -26,7 +26,7 @@ const String prodPlan1wNextcloud =
     'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp';
 const String prodPlan3wNextcloud =
     'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm';
-const String bookstack = 'http://bookstack.sip.local';
+const String bookstack = 'http://tpc294/Default3.aspx';
 const String intranet = 'http://lurchiweb.sip.local';
 const String ac = 'https://olymp.sip.de';
 const String wim = 'https://wim-solution.sip.local:8081';
@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
       title: 'ttp App',
       theme: ThemeData(
         primaryColor: const Color(0xFF104382),
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.orange,
       ),
       home: const NumberInputPage(),
       debugShowCheckedModeBanner: false,
@@ -90,7 +90,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    var scaffold = Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
         title: Row(
@@ -260,6 +260,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
         ),
       ),
     );
+    return scaffold;
   }
 
   void _onQRViewCreated(QRViewController controller) {

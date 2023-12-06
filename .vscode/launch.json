@@ -5,18 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "ttp_urlcompleter",
+            "name": "ttp_app",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "ttp_urlcompleter (profile mode)",
+            "name": "ttp_app (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "ttp_urlcompleter (release mode)",
+            "name": "ttp_app (release mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

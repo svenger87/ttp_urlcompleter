@@ -1,4 +1,4 @@
-name: ttp_urlcompleter
+name: ttp_app
 description: App to make a businessprocess a bit more convienient.
 publish_to: 'none'
 version: 0.4.1+28
