@@ -26,7 +26,7 @@ const String prodPlan1wNextcloud =
     'https://wim-solution.sip.local:8443/s/iBbZrtda7BTT7Qp';
 const String prodPlan3wNextcloud =
     'https://wim-solution.sip.local:8443/s/EWxYDYmtKJQ2mfm';
-const String bookstack = 'http://tpc294/Default3.aspx';
+const String bookstack = 'http://bookstack.sip.local';
 const String intranet = 'http://lurchiweb.sip.local';
 const String ac = 'https://olymp.sip.de';
 const String wim = 'https://wim-solution.sip.local:8081';
@@ -40,8 +40,12 @@ class MyApp extends StatelessWidget {
       title: 'ttp App',
       theme: ThemeData(
         primaryColor: const Color(0xFF104382),
-        primarySwatch: Colors.orange,
+        primarySwatch: Colors.blue,
       ),
+      darkTheme: ThemeData.dark().copyWith(
+        primaryColor: const Color(0xFF104382),
+      ),
+      themeMode: ThemeMode.system,
       home: const NumberInputPage(),
       debugShowCheckedModeBanner: false,
     );
