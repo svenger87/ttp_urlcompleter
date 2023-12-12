@@ -12,7 +12,6 @@ class WebViewWindowsModule extends StatefulWidget {
       : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
   _WebViewWindowsModuleState createState() => _WebViewWindowsModuleState();
 }
 
@@ -29,24 +28,18 @@ class _WebViewWindowsModuleState extends State<WebViewWindowsModule> {
   }
 
   Future<void> initPlatformState() async {
-    // Optionally initialize the webview environment using
-    // a custom user data directory
-    // and/or a custom browser executable directory
-    // and/or custom chromium command line flags
-    //await WebviewController.initializeEnvironment(
-    //    additionalArguments: '--show-fps-counter');
-
     try {
       await _controller.initialize();
       _subscriptions.add(_controller.url.listen((url) {
         _textController.text = url;
       }));
 
-      _subscriptions
-          .add(_controller.containsFullScreenElementChanged.listen((flag) {
-        debugPrint('Contains fullscreen element: $flag');
-        windowManager.setFullScreen(flag);
-      }));
+      _subscriptions.add(
+        _controller.containsFullScreenElementChanged.listen((flag) {
+          debugPrint('Contains fullscreen element: $flag');
+          windowManager.setFullScreen(flag);
+        }),
+      );
 
       await _controller.setBackgroundColor(Colors.transparent);
       await _controller.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);

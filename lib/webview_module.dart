@@ -8,13 +8,13 @@ class WebViewModule extends StatefulWidget {
   const WebViewModule({Key? key, required this.url}) : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
   _WebViewModuleState createState() => _WebViewModuleState();
 }
 
 class _WebViewModuleState extends State<WebViewModule> {
   final FlutterWebviewPlugin _webviewPlugin = FlutterWebviewPlugin();
   bool _isLoading = true;
+  String _pageTitle = ''; // Variable to store the site name
 
   @override
   void initState() {
@@ -58,8 +58,22 @@ class _WebViewModuleState extends State<WebViewModule> {
         print('URL Changed: $url');
       }
 
-      if (url.contains('some_keyword')) {}
+      // Extract the page title from the URL or implement your logic
+      // For example, you can use a package like 'url_launcher' to parse the URL
+      String pageTitle = extractPageTitleFromUrl(url);
+
+      setState(() {
+        _pageTitle = pageTitle;
+      });
     });
+  }
+
+  // Function to extract page title from the URL (you can implement your logic)
+  String extractPageTitleFromUrl(String url) {
+    // Implement your logic to extract the page title
+    // For simplicity, let's say the title is the last segment of the URL
+    List<String> segments = Uri.parse(url).pathSegments;
+    return segments.isNotEmpty ? segments.last : 'Unknown';
   }
 
   @override
@@ -72,7 +86,7 @@ class _WebViewModuleState extends State<WebViewModule> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Externer Link'),
+        title: Text(_pageTitle), // Dynamically set the title
         backgroundColor: const Color(0xFF104382),
         actions: [
           IconButton(
