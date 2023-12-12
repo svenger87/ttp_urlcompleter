@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'package:http/http.dart' as http;
+import 'package:html/parser.dart';
 
 class WebViewModule extends StatefulWidget {
   final String url;
@@ -8,30 +10,25 @@ class WebViewModule extends StatefulWidget {
   const WebViewModule({Key? key, required this.url}) : super(key: key);
 
   @override
+  // ignore: library_private_types_in_public_api
   _WebViewModuleState createState() => _WebViewModuleState();
 }
 
 class _WebViewModuleState extends State<WebViewModule> {
   final FlutterWebviewPlugin _webviewPlugin = FlutterWebviewPlugin();
   bool _isLoading = true;
-  String _pageTitle = ''; // Variable to store the site name
+  String _pageTitle = '';
 
   @override
   void initState() {
     super.initState();
 
-    // Optional: Enable debugging for the webview
     _webviewPlugin.launch(widget.url, debuggingEnabled: true);
 
-    // Listen to page events
     _webviewPlugin.onStateChanged.listen((WebViewStateChanged state) {
       if (kDebugMode) {
         print('WebView State Changed:');
-      }
-      if (kDebugMode) {
         print('  Type: ${state.type}');
-      }
-      if (kDebugMode) {
         print('  URL: ${state.url}');
       }
 
@@ -52,28 +49,36 @@ class _WebViewModuleState extends State<WebViewModule> {
       }
     });
 
-    // Listen to URL changes
     _webviewPlugin.onUrlChanged.listen((String url) {
       if (kDebugMode) {
         print('URL Changed: $url');
       }
 
-      // Extract the page title from the URL or implement your logic
-      // For example, you can use a package like 'url_launcher' to parse the URL
-      String pageTitle = extractPageTitleFromUrl(url);
+      // Extract the page title from the URL using flutter_html
+      extractPageTitleFromUrl(url);
+    });
+  }
+
+  // Function to extract page title from the URL using flutter_html package
+  Future<void> extractPageTitleFromUrl(String url) async {
+    try {
+      // Fetch the HTML content of the page
+      final response = await http.get(Uri.parse(url));
+      final htmlContent = response.body;
+
+      // Parse the HTML content to get the title
+      final document = parse(htmlContent);
+      final titleElement = document.head?.querySelector('title');
+      final pageTitle = titleElement?.text ?? 'Externer Link';
 
       setState(() {
         _pageTitle = pageTitle;
       });
-    });
-  }
-
-  // Function to extract page title from the URL (you can implement your logic)
-  String extractPageTitleFromUrl(String url) {
-    // Implement your logic to extract the page title
-    // For simplicity, let's say the title is the last segment of the URL
-    List<String> segments = Uri.parse(url).pathSegments;
-    return segments.isNotEmpty ? segments.last : 'Externer Link';
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error extracting page title: $e');
+      }
+    }
   }
 
   @override
@@ -86,7 +91,7 @@ class _WebViewModuleState extends State<WebViewModule> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_pageTitle), // Dynamically set the title
+        title: Text(_pageTitle),
         backgroundColor: const Color(0xFF104382),
         actions: [
           IconButton(
