@@ -73,7 +73,7 @@ class _WebViewModuleState extends State<WebViewModule> {
     // Implement your logic to extract the page title
     // For simplicity, let's say the title is the last segment of the URL
     List<String> segments = Uri.parse(url).pathSegments;
-    return segments.isNotEmpty ? segments.last : 'Unknown';
+    return segments.isNotEmpty ? segments.last : 'Externer Link';
   }
 
   @override
