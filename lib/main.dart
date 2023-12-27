@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'converter_module.dart';
 import 'webview_module.dart';
 import 'webviewwindows_module.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -68,7 +70,15 @@ class _NumberInputPageState extends State<NumberInputPage> {
   bool hasScanned = false;
   Timer? scanTimer;
 
+  // Shlink API endpoint
+  static const apiUrl =
+      'https://wim-solution.sip.local:8081/rest/v2/short-urls?itemsPerPage=10000';
+
+  // API key for authorization
+  static const apiKey = 'b2380a66-c965-4177-8bbf-6ecf03fbaa32';
+
   List<String> recentItems = [];
+  List<String> profileSuggestions = [];
 
   @override
   void initState() {
@@ -153,19 +163,48 @@ class _NumberInputPageState extends State<NumberInputPage> {
             ),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: TextFormField(
-                controller: _numberController,
-                keyboardType: TextInputType.text,
-                decoration: const InputDecoration(
-                  labelText: 'Profilnummer eingeben',
-                  hintText: 'Geben Sie eine Profilnummer ein',
-                ),
-                onChanged: (_) {
-                  setState(() {
-                    hasScanned = false;
-                  });
+              child: Autocomplete<String>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  return profileSuggestions
+                      .where((String suggestion) =>
+                          suggestion
+                              .toLowerCase()
+                              .contains(textEditingValue.text.toLowerCase()) &&
+                          RegExp(r"^[a-zA-Z0-9]").hasMatch(suggestion))
+                      .toList();
                 },
-                onFieldSubmitted: (_) => _openUrlWithNumber(),
+                onSelected: (String selectedProfile) {
+                  if (_numberController.text.trim().toUpperCase() !=
+                      selectedProfile) {
+                    _numberController.text = selectedProfile;
+                    _openUrlWithNumber();
+                  }
+                },
+                fieldViewBuilder: (
+                  BuildContext context,
+                  TextEditingController textEditingController,
+                  FocusNode focusNode,
+                  VoidCallback onFieldSubmitted,
+                ) {
+                  return TextField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    onSubmitted: (_) {
+                      if (_numberController.text.trim().toUpperCase() !=
+                          textEditingController.text.trim().toUpperCase()) {
+                        _numberController.text = textEditingController.text;
+                        _openUrlWithNumber();
+                      }
+                    },
+                    onChanged: (String value) async {
+                      await _fetchProfileSuggestions(value);
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Profilnummer eingeben',
+                      hintText: 'Geben Sie eine Profilnummer ein',
+                    ),
+                  );
+                },
               ),
             ),
             // Link 1: PZE
@@ -265,6 +304,47 @@ class _NumberInputPageState extends State<NumberInputPage> {
       ),
     );
     return scaffold;
+  }
+
+  Future<void> _fetchProfileSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$apiUrl&q=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final List<dynamic> data = jsonResponse['shortUrls']['data'];
+
+        setState(() {
+          // Combine user's entered value with suggestions
+          final userEnteredValue = query.trim();
+          profileSuggestions = [
+            userEnteredValue,
+            ...data
+                .map<String>((item) => item['title']?.toString() ?? '')
+                .where((suggestion) => suggestion.isNotEmpty)
+                .toList(),
+          ];
+        });
+      } else {
+        // Handle non-200 status codes (e.g., API is offline)
+        if (kDebugMode) {
+          print('Error: ${response.statusCode}');
+        }
+        // Provide a fallback or default behavior here
+      }
+    } catch (e) {
+      // Handle network or other errors
+      if (kDebugMode) {
+        print('Error: $e');
+      }
+      // Provide a fallback or default behavior here
+    }
   }
 
   void _onQRViewCreated(QRViewController controller) {
