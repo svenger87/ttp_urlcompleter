@@ -11,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'converter_module.dart';
 import 'webview_module.dart';
 import 'webviewwindows_module.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
 
@@ -180,14 +179,12 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 },
                 fieldViewBuilder: (
                   BuildContext context,
-                  TextEditingController
-                      textEditingController, // Use the provided textEditingController here
+                  TextEditingController textEditingController,
                   FocusNode focusNode,
                   VoidCallback onFieldSubmitted,
                 ) {
                   return TextField(
-                    controller:
-                        textEditingController, // Use the provided textEditingController here
+                    controller: textEditingController,
                     focusNode: focusNode,
                     onSubmitted: (_) {
                       onFieldSubmitted();
@@ -204,7 +201,6 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 },
               ),
             ),
-
             // Link 1: PZE
             Padding(
               padding: const EdgeInsets.all(16.0),
