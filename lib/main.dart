@@ -174,27 +174,23 @@ class _NumberInputPageState extends State<NumberInputPage> {
                       .toList();
                 },
                 onSelected: (String selectedProfile) {
-                  if (_numberController.text.trim().toUpperCase() !=
-                      selectedProfile) {
-                    _numberController.text = selectedProfile;
-                    _openUrlWithNumber();
-                  }
+                  _numberController.text = selectedProfile;
+                  _openUrlWithNumber();
                 },
                 fieldViewBuilder: (
                   BuildContext context,
-                  TextEditingController textEditingController,
+                  TextEditingController
+                      textEditingController, // Use the provided textEditingController here
                   FocusNode focusNode,
                   VoidCallback onFieldSubmitted,
                 ) {
                   return TextField(
-                    controller: textEditingController,
+                    controller:
+                        textEditingController, // Use the provided textEditingController here
                     focusNode: focusNode,
                     onSubmitted: (_) {
-                      if (_numberController.text.trim().toUpperCase() !=
-                          textEditingController.text.trim().toUpperCase()) {
-                        _numberController.text = textEditingController.text;
-                        _openUrlWithNumber();
-                      }
+                      onFieldSubmitted();
+                      _addRecentItem(textEditingController.text.trim());
                     },
                     onChanged: (String value) async {
                       await _fetchProfileSuggestions(value);
@@ -207,6 +203,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 },
               ),
             ),
+
             // Link 1: PZE
             Padding(
               padding: const EdgeInsets.all(16.0),
