@@ -13,6 +13,7 @@ import 'webview_module.dart';
 import 'webviewwindows_module.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:http/io_client.dart' as http;
 
 void main() {
   runApp(const MyApp());
@@ -305,7 +306,10 @@ class _NumberInputPageState extends State<NumberInputPage> {
 
   Future<void> _fetchProfileSuggestions(String query) async {
     try {
-      final response = await http.get(
+      // Bypass SSL certificate validation (unsafe)
+      final httpClient = http.IOClient(
+          HttpClient()..badCertificateCallback = ((_, __, ___) => true));
+      final response = await httpClient.get(
         Uri.parse('$apiUrl&q=$query'),
         headers: {
           'accept': 'application/json',
@@ -335,6 +339,8 @@ class _NumberInputPageState extends State<NumberInputPage> {
         }
         // Provide a fallback or default behavior here
       }
+
+      httpClient.close(); // Close the client to release resources
     } catch (e) {
       // Handle network or other errors
       if (kDebugMode) {
