@@ -19,7 +19,9 @@ void main() {
 }
 
 //URLs
-const String ikOfficeUrl = 'http://172.24.1.30:8080/ikoffice/root/';
+const String ikOfficeLineConfig =
+    'http://ikoffice.sip.local:8080/ikoffice/root/projektverwaltung/linienkonfiguration';
+const String ikOfficePZE = 'http://172.24.1.30:8080/ikoffice/root/';
 const String prodPlan1w =
     'http://lurchiweb.sip.local/schedule/ZPPLAN.pdf#view=FitH';
 const String prodPlan3w =
@@ -136,7 +138,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             if (!Platform
                 .isWindows) // Conditionally show QR scanner if not on Windows
               SizedBox(
-                height: MediaQuery.of(context).size.height * 0.2,
+                height: MediaQuery.of(context).size.shortestSide * 0.2,
                 child: QRView(
                   key: qrKey,
                   onQRViewCreated: _onQRViewCreated,
@@ -208,7 +210,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   onTap: () {
-                    const url = ikOfficeUrl;
+                    const url = ikOfficePZE;
                     if (Platform.isWindows) {
                       Navigator.push(
                         context,
@@ -247,14 +249,14 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 ),
               ),
             ),
-
+            // Link 2 Linienkonfiguration
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
                   onTap: () {
-                    const url = ikOfficeUrl;
+                    const url = ikOfficeLineConfig;
                     if (Platform.isWindows) {
                       Navigator.push(
                         context,
