@@ -13,6 +13,7 @@ import 'webview_module.dart';
 import 'webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
+import 'picklist.dart';
 
 void main() {
   runApp(const MyApp());
@@ -651,6 +652,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             title: Text('Tools'),
             children: [
               ConverterModule(),
+              PickListModule(),
             ],
           ),
         ],
