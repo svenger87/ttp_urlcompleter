@@ -44,7 +44,11 @@ class PickListModule extends StatelessWidget {
   // Function to fetch picklist URLs from Nextcloud share
   Future<List<String>> _fetchPicklistUrls() async {
     try {
-      final response = await http.get(Uri.parse(nextcloudShareUrl));
+      final httpClient = http.Client(); // Create a custom HttpClient
+      // Ignore SSL certificate errors
+      httpClient.badCertificateCallback = (cert, host, port) => true;
+
+      final response = await httpClient.get(Uri.parse(nextcloudShareUrl));
       final html = response.body;
       final document = parse(html);
 
@@ -59,6 +63,8 @@ class PickListModule extends StatelessWidget {
           print('Fetched picklist URL: $url'); // Debug print statement
         }
       }
+
+      httpClient.close(); // Close the HttpClient to release resources
 
       return picklistUrls;
     } catch (e) {
