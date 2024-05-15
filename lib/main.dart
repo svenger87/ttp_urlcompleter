@@ -687,7 +687,10 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 // If PIN is not entered or entered over 24 hours ago, prompt the user to enter PIN
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const PinScreen()),
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        PinScreen(url: picklist), // Pass the URL as a parameter
+                  ),
                 );
               }
             },

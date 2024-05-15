@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'webview_module.dart'; // Import the WebViewModule
 
 class PinScreen extends StatefulWidget {
-  const PinScreen({super.key});
+  final String url; // Accept the URL as a parameter
+
+  const PinScreen({Key? key, required this.url}) : super(key: key);
 
   @override
   // ignore: library_private_types_in_public_api
@@ -13,7 +16,6 @@ class PinScreen extends StatefulWidget {
 class _PinScreenState extends State<PinScreen> {
   String _pin = '';
   bool _pinCorrect = false;
-  bool _showError = false; // State variable to control error message visibility
 
   // Function to verify PIN
   void _verifyPin(String pin) {
@@ -22,15 +24,12 @@ class _PinScreenState extends State<PinScreen> {
     if (pin == '1234') {
       setState(() {
         _pinCorrect = true;
-        _showError = false; // Reset error state if PIN is correct
       });
       _savePinTimestamp(); // Save timestamp when PIN is correct
+      _openUrl(); // Open the URL directly after correct PIN
     } else {
       // Handle incorrect PIN
-      // Set state to show error message
-      setState(() {
-        _showError = true;
-      });
+      // You can show an error message or clear PIN input
     }
   }
 
@@ -41,6 +40,7 @@ class _PinScreenState extends State<PinScreen> {
   }
 
   // Function to check if PIN was entered within the last 24 hours
+  // ignore: unused_element
   Future<bool> _checkPinTimestamp() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? pinTimestamp = prefs.getString('pinTimestamp');
@@ -54,11 +54,23 @@ class _PinScreenState extends State<PinScreen> {
     }
   }
 
+  // Function to open the URL
+  void _openUrl() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            WebViewModule(url: widget.url), // Use the URL parameter
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('PIN eingeben'),
+        backgroundColor: const Color(0xFF104382), // Set header bar color
       ),
       body: Center(
         child: Column(
@@ -81,22 +93,13 @@ class _PinScreenState extends State<PinScreen> {
                 _verifyPin(_pin);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    const Color(0xFF104382), // Set button background color
+                backgroundColor: const Color(0xFF104382), // Set button color
               ),
               child: const Text('Bestätigen'),
             ),
             _pinCorrect
                 ? const Text('PIN korrekt!')
-                : _showError // Show error message if PIN is incorrect
-                    ? const Text(
-                        'Falsche PIN. Bitte versuchen Sie es erneut.',
-                        style: TextStyle(
-                          color: Color(
-                              0xFF104382), // Use the same color as the button
-                        ),
-                      )
-                    : const SizedBox(), // Show message if PIN is correct or no error
+                : const SizedBox(), // Show message if PIN is correct
           ],
         ),
       ),
