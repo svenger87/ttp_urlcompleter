@@ -13,6 +13,7 @@ import 'webview_module.dart';
 import 'webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
+import 'pin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -103,6 +104,14 @@ class _NumberInputPageState extends State<NumberInputPage> {
     _numberController.dispose();
     scanTimer?.cancel();
     super.dispose();
+  }
+
+  Future<bool> _checkPinTimestamp() async {
+    // Implement the logic to check the PIN timestamp here
+    // For example, you can interact with SharedPreferences to check if the PIN has been entered recently
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final bool pinEnteredRecently = prefs.containsKey('pinTimestamp');
+    return pinEnteredRecently;
   }
 
   @override
@@ -650,24 +659,35 @@ class _NumberInputPageState extends State<NumberInputPage> {
           ListTile(
             leading: const Icon(Icons.checklist_rounded),
             title: const Text('Picklisten'),
-            onTap: () {
-              if (Platform.isWindows) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WebViewWindowsModule(
-                      initialUrl: picklist,
+            onTap: () async {
+              // Check if PIN has been entered correctly and within the last 24 hours
+              bool pinEnteredWithin24Hours = await _checkPinTimestamp();
+
+              if (pinEnteredWithin24Hours) {
+                // Allow navigation to WebViewModule if PIN is correct and within 24 hours
+                String picklist =
+                    'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
+                if (Platform.isWindows) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          WebViewWindowsModule(initialUrl: picklist),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => WebViewModule(url: picklist),
+                    ),
+                  );
+                }
               } else {
+                // If PIN is not entered or entered over 24 hours ago, prompt the user to enter PIN
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const WebViewModule(
-                      url: picklist,
-                    ),
-                  ),
+                  MaterialPageRoute(builder: (context) => const PinScreen()),
                 );
               }
             },
