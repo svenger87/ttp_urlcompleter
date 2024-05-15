@@ -13,7 +13,6 @@ import 'webview_module.dart';
 import 'webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
-import 'picklist.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,6 +34,7 @@ const String bookstack = 'http://bookstack.sip.local';
 const String intranet = 'http://lurchiweb.sip.local';
 const String ac = 'https://olymp.sip.de';
 const String wim = 'https://wim-solution.sip.local:8081';
+const String picklist = 'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -647,12 +647,36 @@ class _NumberInputPageState extends State<NumberInputPage> {
               }
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.checklist_rounded),
+            title: const Text('ttpedia'),
+            onTap: () {
+              if (Platform.isWindows) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewWindowsModule(
+                      initialUrl: picklist,
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WebViewModule(
+                      url: bookstack,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
           const ExpansionTile(
             leading: Icon(Icons.handyman),
             title: Text('Tools'),
             children: [
               ConverterModule(),
-              PickListModule(),
             ],
           ),
         ],
