@@ -13,6 +13,7 @@ class PinScreen extends StatefulWidget {
 class _PinScreenState extends State<PinScreen> {
   String _pin = '';
   bool _pinCorrect = false;
+  bool _showError = false; // State variable to control error message visibility
 
   // Function to verify PIN
   void _verifyPin(String pin) {
@@ -21,11 +22,15 @@ class _PinScreenState extends State<PinScreen> {
     if (pin == '1234') {
       setState(() {
         _pinCorrect = true;
+        _showError = false; // Reset error state if PIN is correct
       });
       _savePinTimestamp(); // Save timestamp when PIN is correct
     } else {
       // Handle incorrect PIN
-      // You can show an error message or clear PIN input
+      // Set state to show error message
+      setState(() {
+        _showError = true;
+      });
     }
   }
 
@@ -75,11 +80,23 @@ class _PinScreenState extends State<PinScreen> {
               onPressed: () {
                 _verifyPin(_pin);
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    const Color(0xFF104382), // Set button background color
+              ),
               child: const Text('Bestätigen'),
             ),
             _pinCorrect
-                ? const Text('PIN korrent!')
-                : const SizedBox(), // Show message if PIN is correct
+                ? const Text('PIN korrekt!')
+                : _showError // Show error message if PIN is incorrect
+                    ? const Text(
+                        'Falsche PIN. Bitte versuchen Sie es erneut.',
+                        style: TextStyle(
+                          color: Color(
+                              0xFF104382), // Use the same color as the button
+                        ),
+                      )
+                    : const SizedBox(), // Show message if PIN is correct or no error
           ],
         ),
       ),
