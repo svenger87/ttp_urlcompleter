@@ -649,7 +649,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
           ),
           ListTile(
             leading: const Icon(Icons.checklist_rounded),
-            title: const Text('ttpedia'),
+            title: const Text('Picklisten'),
             onTap: () {
               if (Platform.isWindows) {
                 Navigator.push(
@@ -665,7 +665,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const WebViewModule(
-                      url: bookstack,
+                      url: picklist,
                     ),
                   ),
                 );
