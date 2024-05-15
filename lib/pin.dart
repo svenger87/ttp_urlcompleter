@@ -16,6 +16,7 @@ class PinScreen extends StatefulWidget {
 class _PinScreenState extends State<PinScreen> {
   String _pin = '';
   bool _pinCorrect = false;
+  bool _showWrongPinHint = false; // Flag to show wrong PIN hint
 
   // Function to verify PIN
   void _verifyPin(String pin) {
@@ -28,8 +29,9 @@ class _PinScreenState extends State<PinScreen> {
       _savePinTimestamp(); // Save timestamp when PIN is correct
       _openUrl(); // Open the URL directly after correct PIN
     } else {
-      // Handle incorrect PIN
-      // You can show an error message or clear PIN input
+      setState(() {
+        _showWrongPinHint = true; // Show wrong PIN hint
+      });
     }
   }
 
@@ -97,6 +99,12 @@ class _PinScreenState extends State<PinScreen> {
               ),
               child: const Text('Bestätigen'),
             ),
+            _showWrongPinHint
+                ? const Text(
+                    'Falsche PIN! Bitte versuchen Sie es erneut.',
+                    style: TextStyle(color: Colors.red),
+                  )
+                : const SizedBox(), // Show wrong PIN hint
             _pinCorrect
                 ? const Text('PIN korrekt!')
                 : const SizedBox(), // Show message if PIN is correct
