@@ -1,5 +1,7 @@
+import 'dart:io'; // Import dart:io for HttpClient
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart'
+    as http; // Import IOClient for SSL certificate bypass
 import 'package:html/parser.dart' show parse;
 import 'package:html/dom.dart' as dom;
 import 'webview_module.dart';
@@ -9,7 +11,7 @@ class PickListModule extends StatelessWidget {
 
   // Nextcloud share URL
   static const String nextcloudShareUrl =
-      'https://wim-solution.sip.local:8443/s/tsCLmJSTadGT88c'; // Replace with your share URL
+      'https://10.152.50.75:8443/s/tsCLmJSTadGT88c'; // Replace with your share URL
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +46,9 @@ class PickListModule extends StatelessWidget {
   // Function to fetch picklist URLs from Nextcloud share
   Future<List<String>> _fetchPicklistUrls() async {
     try {
-      final httpClient = http.Client(); // Create a custom HttpClient
-      // Ignore SSL certificate errors
-      httpClient.badCertificateCallback = (cert, host, port) => true;
-
+      final httpClient = http.IOClient(HttpClient()
+        ..badCertificateCallback =
+            ((_, __, ___) => true)); // Use the bypass from main
       final response = await httpClient.get(Uri.parse(nextcloudShareUrl));
       final html = response.body;
       final document = parse(html);
