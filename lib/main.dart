@@ -148,7 +148,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             if (!Platform
                 .isWindows) // Conditionally show QR scanner if not on Windows
               SizedBox(
-                height: MediaQuery.of(context).size.shortestSide * 0.2,
+                height: MediaQuery.of(context).size.shortestSide * 0.4,
                 child: QRView(
                   key: qrKey,
                   onQRViewCreated: _onQRViewCreated,
