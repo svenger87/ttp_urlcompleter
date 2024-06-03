@@ -13,6 +13,7 @@ import 'webview_module.dart';
 import 'webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const MyApp());
@@ -656,34 +657,33 @@ class _NumberInputPageState extends State<NumberInputPage> {
               const pwd = '';
               const dirPath = '/';
 
-              final curlCommand = [
-                'curl',
-                '--user', '$user:$pwd',
-                '--insecure', // Disable certificate validation
-                '-X', 'PROPFIND',
-                '-H', 'Depth: 1',
-                '-H', 'Content-Type: text/xml',
-                '-H', 'Brief:t',
-                '-H', 'Prefer: return=minimal',
-                '-d', '<propfind xmlns="DAV:"><allprop/></propfind>',
-                url + dirPath,
-              ];
+              final basicAuth =
+                  'Basic ${base64Encode(utf8.encode('$user:$pwd'))}';
 
-              final result = await Process.run('curl', curlCommand);
+              final headers = <String, String>{
+                'Authorization': basicAuth,
+              };
 
-              if (result.exitCode == 0) {
+              final response = await http.get(
+                Uri.parse(url + dirPath),
+                headers: headers,
+              );
+
+              if (response.statusCode == 200) {
                 if (kDebugMode) {
-                  print('Output:');
+                  print('Response body:');
                 }
                 if (kDebugMode) {
-                  print(result.stdout);
+                  print(response.body);
                 }
+                // Process the response body as needed
               } else {
                 if (kDebugMode) {
                   print('Error:');
                 }
                 if (kDebugMode) {
-                  print(result.stderr);
+                  print(
+                      'HTTP ${response.statusCode}: ${response.reasonPhrase}');
                 }
               }
             },
