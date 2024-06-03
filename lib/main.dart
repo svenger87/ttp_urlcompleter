@@ -652,7 +652,8 @@ class _NumberInputPageState extends State<NumberInputPage> {
             leading: const Icon(Icons.checklist_rounded),
             title: const Text('Picklisten'),
             onTap: () async {
-              final url = 'https://wim-solution.sip.local:8443/public.php';
+              final url =
+                  'https://wim-solution.sip.local:8443/public.php/webdav';
               final user = 'mYYc2cJyWG795BM';
               final pwd = '';
               final dirPath = '/';
