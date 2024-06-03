@@ -122,7 +122,7 @@ packages:
     source: hosted
     version: "7.0.0"
   dio:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: dio
       sha256: "11e40df547d418cc0c4900a9318b26304e665da6fa4755399a9ff9efd09034b5"
@@ -729,10 +729,10 @@ packages:
     dependency: "direct main"
     description:
       name: webdav_client
-      sha256: bfd8e4a9dc8fe5014d3f6e681e00a3e54fad710e33938d6746d97f67614b5bda
+      sha256: "682fffc50b61dc0e8f46717171db03bf9caaa17347be41c0c91e297553bf86b2"
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.0"
+    version: "1.2.2"
   webview_windows:
     dependency: "direct main"
     description:
