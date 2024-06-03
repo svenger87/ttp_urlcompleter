@@ -13,7 +13,6 @@ import 'webview_module.dart';
 import 'webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
-import 'package:webdav_client/webdav_client.dart' as webdav;
 
 void main() {
   runApp(const MyApp());
@@ -657,24 +656,35 @@ class _NumberInputPageState extends State<NumberInputPage> {
               const pwd = '';
               const dirPath = '/';
 
-              final client = webdav.newClient(
-                url,
-                user: user,
-                password: pwd,
-                debug: true,
-              );
+              final curlCommand = [
+                'curl',
+                '--user', '$user:$pwd',
+                '--insecure', // Disable certificate validation
+                '-X', 'PROPFIND',
+                '-H', 'Depth: 1',
+                '-H', 'Content-Type: text/xml',
+                '-H', 'Brief:t',
+                '-H', 'Prefer: return=minimal',
+                '-d', '<propfind xmlns="DAV:"><allprop/></propfind>',
+                url + dirPath,
+              ];
 
-              try {
-                final list = await client.readDir(dirPath);
+              final result = await Process.run('curl', curlCommand);
+
+              if (result.exitCode == 0) {
                 if (kDebugMode) {
-                  print(list);
+                  print('Output:');
                 }
-                // Process the list as needed
-              } catch (e) {
                 if (kDebugMode) {
-                  print('Error: $e');
+                  print(result.stdout);
                 }
-                // Handle error
+              } else {
+                if (kDebugMode) {
+                  print('Error:');
+                }
+                if (kDebugMode) {
+                  print(result.stderr);
+                }
               }
             },
           ),
