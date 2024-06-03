@@ -652,40 +652,39 @@ class _NumberInputPageState extends State<NumberInputPage> {
             leading: const Icon(Icons.checklist_rounded),
             title: const Text('Picklisten'),
             onTap: () async {
-              const url = 'https://wim-solution.sip.local:8443/public.php';
-              const user = 'mYYc2cJyWG795BM';
-              const pwd = '';
-              const dirPath = '/';
+              final url = 'https://wim-solution.sip.local:8443/public.php';
+              final user = 'mYYc2cJyWG795BM';
+              final pwd = '';
+              final dirPath = '/';
 
               final basicAuth =
-                  'Basic ${base64Encode(utf8.encode('$user:$pwd'))}';
+                  'Basic ' + base64Encode(utf8.encode('$user:$pwd'));
 
               final headers = <String, String>{
                 'Authorization': basicAuth,
               };
 
-              final response = await http.get(
-                Uri.parse(url + dirPath),
-                headers: headers,
-              );
+              final httpClient = HttpClient();
+              httpClient.badCertificateCallback =
+                  (X509Certificate cert, String host, int port) => true;
+
+              final request = await httpClient.getUrl(Uri.parse(url + dirPath));
+              headers.forEach((name, value) {
+                request.headers.set(name, value);
+              });
+
+              final response = await request.close();
 
               if (response.statusCode == 200) {
-                if (kDebugMode) {
-                  print('Response body:');
-                }
-                if (kDebugMode) {
-                  print(response.body);
-                }
+                print('Response body:');
+                print(await response.transform(utf8.decoder).join());
                 // Process the response body as needed
               } else {
-                if (kDebugMode) {
-                  print('Error:');
-                }
-                if (kDebugMode) {
-                  print(
-                      'HTTP ${response.statusCode}: ${response.reasonPhrase}');
-                }
+                print('Error:');
+                print('HTTP ${response.statusCode}: ${response.reasonPhrase}');
               }
+
+              httpClient.close(); // Close the client to release resources
             },
           ),
           const ExpansionTile(
