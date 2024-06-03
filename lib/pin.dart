@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'webview_module.dart'; // Import the WebViewModule
+import 'package:webdav_client/webdav_client.dart' as webdav;
+import 'webview_module.dart';
 
 class PinScreen extends StatefulWidget {
-  final String url; // Accept the URL as a parameter
+  final String url;
 
   const PinScreen({Key? key, required this.url}) : super(key: key);
 
@@ -16,99 +17,216 @@ class PinScreen extends StatefulWidget {
 class _PinScreenState extends State<PinScreen> {
   String _pin = '';
   bool _pinCorrect = false;
-  bool _showWrongPinHint = false; // Flag to show wrong PIN hint
+  bool _showWrongPinHint = false;
+  List<String> _usernames = [];
+  late webdav.Client client;
 
-  // Function to verify PIN
+  final url = 'https://wim-solution.sip.local:8443/public.php';
+  final user = 'mYYc2cJyWG795BM';
+  final pwd = '';
+  final dirPath = '/';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsernames();
+    _initializeWebDavClient();
+  }
+
+  void _initializeWebDavClient() {
+    client = webdav.newClient(
+      url,
+      user: user,
+      password: pwd,
+      debug: true,
+    );
+  }
+
+  Future<void> _loadUsernames() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _usernames = prefs.getStringList('usernames') ?? [];
+    });
+  }
+
+  Future<void> _saveUsername(String username) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (!_usernames.contains(username)) {
+      _usernames.add(username);
+      await prefs.setStringList('usernames', _usernames);
+    }
+  }
+
   void _verifyPin(String pin) {
-    // Your PIN verification logic here
-    // For simplicity, I'm hardcoding a PIN
     if (pin == '1234') {
       setState(() {
         _pinCorrect = true;
       });
-      _savePinTimestamp(); // Save timestamp when PIN is correct
-      _openUrl(); // Open the URL directly after correct PIN
+      _savePinTimestamp();
+      _openUrl();
     } else {
       setState(() {
-        _showWrongPinHint = true; // Show wrong PIN hint
+        _showWrongPinHint = true;
       });
     }
   }
 
-  // Function to save timestamp when PIN is entered correctly
   Future<void> _savePinTimestamp() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('pinTimestamp', DateTime.now().toString());
   }
 
-  // Function to check if PIN was entered within the last 24 hours
-  // ignore: unused_element
-  Future<bool> _checkPinTimestamp() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? pinTimestamp = prefs.getString('pinTimestamp');
-    if (pinTimestamp != null) {
-      DateTime timestamp = DateTime.parse(pinTimestamp);
-      DateTime now = DateTime.now();
-      Duration difference = now.difference(timestamp);
-      return difference.inHours < 24;
-    } else {
-      return false; // PIN not entered yet
-    }
-  }
-
-  // Function to open the URL
   void _openUrl() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            WebViewModule(url: widget.url), // Use the URL parameter
+        builder: (context) => WebViewModule(url: widget.url),
       ),
     );
   }
 
+  Future<void> _promptForCompletion() async {
+    String? selectedUser = await _showUserSelectionDialog();
+    if (selectedUser != null) {
+      await _saveUsername(selectedUser);
+      bool isDone = await _showCompletionDialog();
+      if (isDone) {
+        await _renameAndMoveFile(selectedUser);
+      }
+    }
+  }
+
+  Future<String?> _showUserSelectionDialog() async {
+    String? selectedUser;
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select User'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return DropdownButton<String>(
+                isExpanded: true,
+                value: selectedUser,
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedUser = newValue!;
+                  });
+                },
+                items: _usernames.map<DropdownMenuItem<String>>((String user) {
+                  return DropdownMenuItem<String>(
+                    value: user,
+                    child: Text(user),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop(selectedUser);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool> _showCompletionDialog() async {
+    bool? isDone = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Is the file done?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Yes'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+            TextButton(
+              child: const Text('No'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+          ],
+        );
+      },
+    );
+    return isDone ?? false;
+  }
+
+  Future<void> _renameAndMoveFile(String username) async {
+    try {
+      const String oldFilePath = '/path/to/file'; // Specify the file path
+      final String newFilePath =
+          '/Done/${username}_${DateTime.now().toIso8601String()}.file_extension'; // Update the file extension
+
+      // Assuming the client has the method to move files, otherwise use copy + delete
+      await client.copy(oldFilePath, newFilePath, false);
+      await client.remove(oldFilePath);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File moved to Done folder')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to move file: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('PIN eingeben'),
-        backgroundColor: const Color(0xFF104382), // Set header bar color
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            TextField(
-              onChanged: (value) {
-                setState(() {
-                  _pin = value;
-                });
-              },
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              decoration: const InputDecoration(
-                hintText: 'PIN eingeben',
+    return WillPopScope(
+      onWillPop: () async {
+        await _promptForCompletion();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('PIN eingeben'),
+          backgroundColor: const Color(0xFF104382),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              TextField(
+                onChanged: (value) {
+                  setState(() {
+                    _pin = value;
+                  });
+                },
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  hintText: 'PIN eingeben',
+                ),
               ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                _verifyPin(_pin);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF104382), // Set button color
+              ElevatedButton(
+                onPressed: () {
+                  _verifyPin(_pin);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF104382),
+                ),
+                child: const Text('Bestätigen'),
               ),
-              child: const Text('Bestätigen'),
-            ),
-            _showWrongPinHint
-                ? const Text(
-                    'Falsche PIN! Bitte versuchen Sie es erneut.',
-                    style: TextStyle(color: Colors.red),
-                  )
-                : const SizedBox(), // Show wrong PIN hint
-            _pinCorrect
-                ? const Text('PIN korrekt!')
-                : const SizedBox(), // Show message if PIN is correct
-          ],
+              _showWrongPinHint
+                  ? const Text(
+                      'Falsche PIN! Bitte versuchen Sie es erneut.',
+                      style: TextStyle(color: Colors.red),
+                    )
+                  : const SizedBox(),
+              _pinCorrect ? const Text('PIN korrekt!') : const SizedBox(),
+            ],
+          ),
         ),
       ),
     );
