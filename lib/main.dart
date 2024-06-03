@@ -13,7 +13,7 @@ import 'webview_module.dart';
 import 'webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
-import 'pin.dart';
+import 'package:webdav_client/webdav_client.dart' as webdav;
 
 void main() {
   runApp(const MyApp());
@@ -35,7 +35,7 @@ const String bookstack = 'http://bookstack.sip.local';
 const String intranet = 'http://lurchiweb.sip.local';
 const String ac = 'https://olymp.sip.de';
 const String wim = 'https://wim-solution.sip.local:8081';
-const String picklist = 'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
+//const String picklist = 'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -104,14 +104,6 @@ class _NumberInputPageState extends State<NumberInputPage> {
     _numberController.dispose();
     scanTimer?.cancel();
     super.dispose();
-  }
-
-  Future<bool> _checkPinTimestamp() async {
-    // Implement the logic to check the PIN timestamp here
-    // For example, you can interact with SharedPreferences to check if the PIN has been entered recently
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool pinEnteredRecently = prefs.containsKey('pinTimestamp');
-    return pinEnteredRecently;
   }
 
   @override
@@ -660,38 +652,29 @@ class _NumberInputPageState extends State<NumberInputPage> {
             leading: const Icon(Icons.checklist_rounded),
             title: const Text('Picklisten'),
             onTap: () async {
-              // Check if PIN has been entered correctly and within the last 24 hours
-              bool pinEnteredWithin24Hours = await _checkPinTimestamp();
+              const url = 'https://wim-solution.sip.local:8443/public.php';
+              const user = 'mYYc2cJyWG795BM';
+              const pwd = '';
+              const dirPath = '/';
 
-              if (pinEnteredWithin24Hours) {
-                // Allow navigation to WebViewModule if PIN is correct and within 24 hours
-                String picklist =
-                    'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
-                if (Platform.isWindows) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          WebViewWindowsModule(initialUrl: picklist),
-                    ),
-                  );
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => WebViewModule(url: picklist),
-                    ),
-                  );
+              final client = webdav.newClient(
+                url,
+                user: user,
+                password: pwd,
+                debug: true,
+              );
+
+              try {
+                final list = await client.readDir(dirPath);
+                if (kDebugMode) {
+                  print(list);
                 }
-              } else {
-                // If PIN is not entered or entered over 24 hours ago, prompt the user to enter PIN
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        PinScreen(url: picklist), // Pass the URL as a parameter
-                  ),
-                );
+                // Process the list as needed
+              } catch (e) {
+                if (kDebugMode) {
+                  print('Error: $e');
+                }
+                // Handle error
               }
             },
           ),
