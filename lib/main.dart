@@ -652,14 +652,14 @@ class _NumberInputPageState extends State<NumberInputPage> {
             leading: const Icon(Icons.checklist_rounded),
             title: const Text('Picklisten'),
             onTap: () async {
-              final url =
+              const url =
                   'https://wim-solution.sip.local:8443/public.php/webdav';
-              final user = 'mYYc2cJyWG795BM';
-              final pwd = '';
-              final dirPath = '/';
+              const user = 'mYYc2cJyWG795BM';
+              const pwd = '';
+              const dirPath = '/';
 
               final basicAuth =
-                  'Basic ' + base64Encode(utf8.encode('$user:$pwd'));
+                  'Basic ${base64Encode(utf8.encode('$user:$pwd'))}';
 
               final headers = <String, String>{
                 'Authorization': basicAuth,
@@ -677,12 +677,21 @@ class _NumberInputPageState extends State<NumberInputPage> {
               final response = await request.close();
 
               if (response.statusCode == 200) {
-                print('Response body:');
-                print(await response.transform(utf8.decoder).join());
+                if (kDebugMode) {
+                  print('Response body:');
+                }
+                if (kDebugMode) {
+                  print(await response.transform(utf8.decoder).join());
+                }
                 // Process the response body as needed
               } else {
-                print('Error:');
-                print('HTTP ${response.statusCode}: ${response.reasonPhrase}');
+                if (kDebugMode) {
+                  print('Error:');
+                }
+                if (kDebugMode) {
+                  print(
+                      'HTTP ${response.statusCode}: ${response.reasonPhrase}');
+                }
               }
 
               httpClient.close(); // Close the client to release resources
