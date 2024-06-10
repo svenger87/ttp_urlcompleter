@@ -651,7 +651,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             },
           ),
           ListTile(
-            leading: Image.asset('assets/sap.svg', width: 36, height: 36),
+            leading: Image.asset('assets/sap.png', width: 36, height: 36),
             title: const Text('Mobile BANF'),
             onTap: () {
               if (Platform.isWindows) {
