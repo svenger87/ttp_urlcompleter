@@ -35,8 +35,7 @@ const String bookstack = 'http://bookstack.sip.local';
 const String intranet = 'http://lurchiweb.sip.local';
 const String ac = 'https://olymp.sip.de';
 const String wim = 'https://wim-solution.sip.local:8081';
-const String sapfiori =
-    'https://europa.sip.local:8001/sap/bc/ui5_ui5/ui2/ushell/shells/abap/FioriLaunchpad.html?sap-client=100&sap-language=DE';
+const String sapfiori = 'https://wim-solution.sip.local:8081/2WKGz';
 //const String picklist = 'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
 
 class MyApp extends StatelessWidget {
