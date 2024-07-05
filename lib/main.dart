@@ -1,4 +1,4 @@
-// ignore_for_file: library_private_types_in_public_api, deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: library_private_types_in_public_api, deprecated_member_use, use_build_context_synchronously, unused_import
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,6 +14,7 @@ import 'webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
 import 'package:http/http.dart' as http;
+import 'torsteuerung_module.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,7 +36,7 @@ const String bookstack = 'http://bookstack.sip.local';
 const String intranet = 'http://lurchiweb.sip.local';
 const String ac = 'https://olymp.sip.de';
 const String wim = 'https://wim-solution.sip.local:8081';
-//const String picklist = 'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
+const String picklist = 'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -697,11 +698,24 @@ class _NumberInputPageState extends State<NumberInputPage> {
               httpClient.close(); // Close the client to release resources
             },
           ),
-          const ExpansionTile(
-            leading: Icon(Icons.handyman),
-            title: Text('Tools'),
+          ExpansionTile(
+            leading: const Icon(Icons.handyman),
+            title: const Text('Tools'),
             children: [
-              ConverterModule(),
+              const ConverterModule(),
+              ListTile(
+                leading: const Icon(Icons.door_sliding),
+                title: const Text('Torsteuerung'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const TorsteuerungModule(initialUrl: 'google.de'),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ],

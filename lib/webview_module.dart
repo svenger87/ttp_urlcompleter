@@ -59,14 +59,10 @@ class _WebViewModuleState extends State<WebViewModule> {
     });
   }
 
-  // Function to extract page title from the URL using flutter_html package
   Future<void> extractPageTitleFromUrl(String url) async {
     try {
-      // Fetch the HTML content of the page
       final response = await http.get(Uri.parse(url));
       final htmlContent = response.body;
-
-      // Parse the HTML content to get the title
       final document = parse(htmlContent);
       final titleElement = document.head?.querySelector('title');
       final pageTitle = titleElement?.text ?? 'Externer Link';
@@ -78,6 +74,7 @@ class _WebViewModuleState extends State<WebViewModule> {
       if (kDebugMode) {
         print('Error extracting page title: $e');
       }
+      // Handle error gracefully, e.g., show error message to user
     }
   }
 
