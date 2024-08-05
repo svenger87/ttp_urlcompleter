@@ -18,7 +18,7 @@ class TorsteuerungModule extends StatefulWidget {
 }
 
 class _TorsteuerungModuleState extends State<TorsteuerungModule> {
-  final String correctPin = '1234'; // Define the correct PIN
+  final String correctPin = '1958'; // Define the correct PIN
   final String doorControlUrl = 'http://10.152.10.52:3000/relay?relay=1';
   final String videoStreamUrl =
       'http://synonvr-ttp:8080/memfs/51866bc4-758c-44e2-8349-82a84ffa6a47.m3u8';
@@ -143,7 +143,7 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
                         ),
                       )
                     : const Text(
-                        'Open/Close Door',
+                        'Tor öffnen/schließen',
                         style: TextStyle(color: Colors.white), // Text color
                       ),
               ),
@@ -200,7 +200,7 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error toggling door: $e');
+        print('Fehler beim öffnen/schließen des Tores: $e');
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Fehler!')),
