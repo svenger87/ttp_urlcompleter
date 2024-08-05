@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
-
-import 'pin_entry_screen.dart'; // Import the PIN entry screen
+import 'pin_entry_screen.dart';
+import 'package:video_player_win/video_player_win.dart';
 
 class TorsteuerungModule extends StatefulWidget {
   final String initialUrl;
@@ -18,28 +18,67 @@ class TorsteuerungModule extends StatefulWidget {
 }
 
 class _TorsteuerungModuleState extends State<TorsteuerungModule> {
-  final String correctPin = '1958'; // Define the correct PIN
+  final String correctPin = '1234'; // Define the correct PIN
   final String doorControlUrl = 'http://10.152.10.52:3000/relay?relay=1';
   final String videoStreamUrl =
       'http://synonvr-ttp:8080/memfs/51866bc4-758c-44e2-8349-82a84ffa6a47.m3u8';
 
-  late VideoPlayerController _videoController;
+  VideoPlayerController? _videoController;
+  WinVideoPlayerController? _winVideoController;
   bool _isDoorOpening = false;
   bool _isPinVerified = false;
+  bool _isVideoInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _videoController = VideoPlayerController.network(videoStreamUrl)
-      ..initialize().then((_) {
-        setState(() {});
-        _videoController.play();
+    _initializeVideoController();
+  }
+
+  void _initializeVideoController() {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      _winVideoController = WinVideoPlayerController.network(videoStreamUrl);
+      _winVideoController!.initialize().then((_) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+        if (mounted) {
+          _winVideoController!.play();
+        }
+      }).catchError((error) {
+        if (kDebugMode) {
+          print('Error initializing WinVideoPlayerController: $error');
+        }
+        // Handle error as needed, e.g., show an error message
+        setState(() {
+          _isVideoInitialized = true; // Set this to true to proceed
+        });
       });
+    } else {
+      _videoController = VideoPlayerController.network(videoStreamUrl);
+      _videoController!.initialize().then((_) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+        if (mounted) {
+          _videoController!.play();
+        }
+      }).catchError((error) {
+        if (kDebugMode) {
+          print('Error initializing VideoPlayerController: $error');
+        }
+        // Handle error as needed, e.g., show an error message
+        setState(() {
+          _isVideoInitialized = true; // Set this to true to proceed
+        });
+      });
+    }
   }
 
   @override
   void dispose() {
-    _videoController.dispose();
+    _videoController?.dispose();
+    _winVideoController?.dispose();
     super.dispose();
   }
 
@@ -50,13 +89,24 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Falsche PIN')),
+        const SnackBar(content: Text('Incorrect PIN')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_isVideoInitialized) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Loading...'),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     if (!_isPinVerified) {
       return PinEntryScreen(onSubmit: _verifyPin);
     }
@@ -64,7 +114,7 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF104382),
-        title: const Text('Torsteuerung'),
+        title: const Text('Torsteuerung Module'),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -93,7 +143,7 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
                         ),
                       )
                     : const Text(
-                        'Tor öffnen/schließen',
+                        'Open/Close Door',
                         style: TextStyle(color: Colors.white), // Text color
                       ),
               ),
@@ -106,8 +156,12 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
                   bottom: 16.0), // Adjust top and bottom padding as needed
               child: Center(
                 child: AspectRatio(
-                  aspectRatio: _videoController.value.aspectRatio,
-                  child: VideoPlayer(_videoController),
+                  aspectRatio: defaultTargetPlatform == TargetPlatform.windows
+                      ? _winVideoController!.value.aspectRatio
+                      : _videoController!.value.aspectRatio,
+                  child: defaultTargetPlatform == TargetPlatform.windows
+                      ? WinVideoPlayer(_winVideoController!)
+                      : VideoPlayer(_videoController!),
                 ),
               ),
             ),
