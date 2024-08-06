@@ -19,13 +19,16 @@ class TorsteuerungModule extends StatefulWidget {
 
 class _TorsteuerungModuleState extends State<TorsteuerungModule> {
   final String correctPin = '1958'; // Define the correct PIN
-  final String doorControlUrl = 'http://10.152.10.52:3000/relay?relay=1';
+  final String openDoorUrl =
+      'http://10.152.10.52:3000/relay?relay=1'; // URL for opening
+  final String closeDoorUrl =
+      'http://10.152.10.52:3000/relay?relay=2'; // URL for closing
   final String videoStreamUrl =
       'http://synonvr-ttp:8080/memfs/51866bc4-758c-44e2-8349-82a84ffa6a47.m3u8';
 
   VideoPlayerController? _videoController;
   WinVideoPlayerController? _winVideoController;
-  bool _isDoorOpening = false;
+  bool _isDoorActionInProgress = false;
   bool _isPinVerified = false;
   bool _isVideoInitialized = false;
 
@@ -120,40 +123,60 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(
-                top: 50.0,
-                bottom: 0.0), // Adjust top and bottom padding as needed
-            child: Container(
-              width: double.infinity, // Full width by default
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0), // Horizontal padding for the button
-              child: ElevatedButton(
-                onPressed: _isDoorOpening ? null : () => _toggleDoor(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF104382), // Background color
-                ),
-                child: _isDoorOpening
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+            padding: const EdgeInsets.only(top: 50.0, bottom: 0.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _isDoorActionInProgress
+                      ? null
+                      : () => _toggleDoor(openDoorUrl, 'Tor öffnet'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF104382),
+                  ),
+                  child: _isDoorActionInProgress
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Tor öffnen',
+                          style: TextStyle(color: Colors.white),
                         ),
-                      )
-                    : const Text(
-                        'Tor öffnen/schließen',
-                        style: TextStyle(color: Colors.white), // Text color
-                      ),
-              ),
+                ),
+                ElevatedButton(
+                  onPressed: _isDoorActionInProgress
+                      ? null
+                      : () => _toggleDoor(closeDoorUrl, 'Tor schließt'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF104382),
+                  ),
+                  child: _isDoorActionInProgress
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Tor schließen',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                ),
+              ],
             ),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(
-                  top: 16.0,
-                  bottom: 16.0), // Adjust top and bottom padding as needed
+              padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
               child: Center(
                 child: AspectRatio(
                   aspectRatio: defaultTargetPlatform == TargetPlatform.windows
@@ -171,15 +194,15 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
     );
   }
 
-  void _toggleDoor(BuildContext context) async {
+  void _toggleDoor(String url, String actionMessage) async {
     setState(() {
-      _isDoorOpening = true;
+      _isDoorActionInProgress = true;
     });
 
     try {
-      final response = await http.get(Uri.parse(doorControlUrl));
+      final response = await http.get(Uri.parse(url));
       if (kDebugMode) {
-        print('Requested URL: ${Uri.parse(doorControlUrl)}');
+        print('Requested URL: $url');
       }
       if (kDebugMode) {
         print('Response status code: ${response.statusCode}');
@@ -188,10 +211,9 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
         print('Response body: ${response.body}');
       }
 
-      // Handle response based on status code
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tor öffnet/schließt')),
+          SnackBar(content: Text(actionMessage)),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -207,7 +229,7 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
       );
     } finally {
       setState(() {
-        _isDoorOpening = false;
+        _isDoorActionInProgress = false;
       });
     }
   }
