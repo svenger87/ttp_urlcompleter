@@ -200,7 +200,7 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
     });
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.put(Uri.parse(url));
       if (kDebugMode) {
         print('Requested URL: $url');
       }
