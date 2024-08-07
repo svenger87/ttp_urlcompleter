@@ -1,5 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -200,14 +202,13 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
     });
 
     try {
-      final response = await http.put(Uri.parse(url));
+      final response = await http
+          .put(Uri.parse(url))
+          .timeout(const Duration(seconds: 15)); // Timeout for the request
+
       if (kDebugMode) {
         print('Requested URL: $url');
-      }
-      if (kDebugMode) {
         print('Response status code: ${response.statusCode}');
-      }
-      if (kDebugMode) {
         print('Response body: ${response.body}');
       }
 
@@ -220,6 +221,15 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
           const SnackBar(content: Text('Fehlgeschlagen!')),
         );
       }
+    } on TimeoutException catch (_) {
+      if (kDebugMode) {
+        print('Request to $url timed out.');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content:
+                Text('Zeitüberschreitung beim Öffnen/Schließen des Tores')),
+      );
     } catch (e) {
       if (kDebugMode) {
         print('Fehler beim öffnen/schließen des Tores: $e');
