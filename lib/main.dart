@@ -365,66 +365,31 @@ class _NumberInputPageState extends State<NumberInputPage> {
         final scannedCode = scanData.code!;
         if (kDebugMode) {
           print('Scanned QR Code: $scannedCode');
-        } // Debugging line
+        }
 
-        // Use the first 5 characters of the scanned code
-        final firstFiveChars =
-            scannedCode.length >= 5 ? scannedCode.substring(0, 5) : scannedCode;
-        if (kDebugMode) {
-          print('First 5 Characters: $firstFiveChars');
-        } // Debugging line
-
-        // Check if we need to open the URL based on the length of the code
-        if (firstFiveChars.length == 5) {
-          // Form URL with the first 5 characters
-          final url = '$wim/$firstFiveChars';
-          if (kDebugMode) {
-            print('Formed URL with first 5 characters: $url');
-          } // Debugging line
-          if (await canLaunch(url)) {
-            if (Platform.isWindows) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WebViewWindowsModule(initialUrl: url),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WebViewModule(url: url),
-                ),
-              );
-            }
-          } else {
-            if (kDebugMode) {
-              print('Could not launch URL with first 5 characters: $url');
-            } // Debugging line
-          }
+        // Determine the URL based on the length of the scanned code
+        String url;
+        if (scannedCode.length >= 6) {
+          // If the code has at least 6 characters, use it as is
+          url = scannedCode;
         } else {
-          // Debugging line
-          if (await canLaunch(scannedCode)) {
-            if (Platform.isWindows) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      WebViewWindowsModule(initialUrl: scannedCode),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WebViewModule(url: scannedCode),
-                ),
-              );
-            }
-          } else {
-            if (kDebugMode) {
-              print('Could not launch URL directly: $scannedCode');
-            } // Debugging line
+          // If the code has fewer than 6 characters, form a URL using the first 5 characters
+          final firstFiveChars = scannedCode.length >= 5
+              ? scannedCode.substring(0, 5)
+              : scannedCode;
+          url = '$wim/$firstFiveChars';
+        }
+
+        if (kDebugMode) {
+          print('Final URL to be launched: $url');
+        }
+
+        // Navigate to the formed URL if possible
+        if (await canLaunch(url)) {
+          _navigateToUrl(url);
+        } else {
+          if (kDebugMode) {
+            print('Could not launch URL: $url');
           }
         }
 
@@ -436,6 +401,24 @@ class _NumberInputPageState extends State<NumberInputPage> {
         });
       }
     });
+  }
+
+  void _navigateToUrl(String url) {
+    if (Platform.isWindows) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WebViewWindowsModule(initialUrl: url),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WebViewModule(url: url),
+        ),
+      );
+    }
   }
 
   void _openUrlWithNumber() async {
