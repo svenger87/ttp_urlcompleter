@@ -20,9 +20,9 @@ class TorsteuerungModule extends StatefulWidget {
 class _TorsteuerungModuleState extends State<TorsteuerungModule> {
   final String correctPin = '1958'; // Define the correct PIN
   final String openDoorUrl =
-      'http://10.152.10.52:3000/relay?relay=1'; // URL for opening
+      'http://10.152.200.9/relay?relay=1'; // URL for opening
   final String closeDoorUrl =
-      'http://10.152.10.52:3000/relay?relay=2'; // URL for closing
+      'http://10.152.200.9/relay?relay=2'; // URL for closing
   final String videoStreamUrl =
       'http://synonvr-ttp:8080/memfs/51866bc4-758c-44e2-8349-82a84ffa6a47.m3u8';
 
