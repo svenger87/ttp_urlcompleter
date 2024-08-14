@@ -55,7 +55,10 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Werkzeuglagerverwaltung')),
+      appBar: AppBar(
+        title: const Text('Werkzeuglagerverwaltung'),
+        backgroundColor: const Color(0xFF104382), // Set the desired color
+      ),
       body: Column(
         children: [
           Padding(

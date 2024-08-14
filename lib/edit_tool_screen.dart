@@ -1,6 +1,5 @@
-// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously, prefer_const_constructors
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
 import 'tool.dart';
@@ -18,26 +17,18 @@ class _EditToolScreenState extends State<EditToolScreen> {
   late String _storageLocation;
   bool _isLoading = false;
   bool _hasError = false;
-  bool _isEdited = false; // Track if data has been edited
+  bool _forceUpdate = false; // Force update flag
 
   @override
   void initState() {
     super.initState();
     _storageLocation = widget.tool.storageLocation;
-    _isEdited = false; // Initialize as false
   }
 
   Future<void> _updateTool() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Always set do_not_update to 1 when editing
     const doNotUpdate = true;
-
-    if (kDebugMode) {
-      print('Tool edited: $_isEdited, doNotUpdate flag: $doNotUpdate');
-      print(
-          'Updating tool ${widget.tool.id}: storageLocation=$_storageLocation, doNotUpdate=$doNotUpdate');
-    }
 
     setState(() {
       _isLoading = true;
@@ -46,26 +37,35 @@ class _EditToolScreenState extends State<EditToolScreen> {
 
     try {
       final result = await ToolService().updateTool(
-          widget.tool.id, _storageLocation,
-          doNotUpdate: doNotUpdate);
+        widget.tool.id,
+        _storageLocation,
+        doNotUpdate: doNotUpdate,
+        forceUpdate: _forceUpdate,
+      );
+
       if (result == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')));
+          const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')),
+        );
         Navigator.pop(context);
       } else if (result == 'ignored') {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Update des Lagerplatzes ist nicht erlaubt!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Änderung nicht zugelassen! Falls erfolderlich erzwingen!')),
+        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content:
-                Text('Unbekannter Fehler beim Aktualisieren des Werkzeugs')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unbekannter Fehler')),
+        );
       }
     } catch (e) {
       setState(() {
         _hasError = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Update des Werkzeugs fehlgeschlagen')));
+        const SnackBar(content: Text('Update des Werkzeugs fehlgeschlagen')),
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -76,7 +76,10 @@ class _EditToolScreenState extends State<EditToolScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Werkzeug bearbeiten')),
+      appBar: AppBar(
+        title: const Text('Werkzeuglagerverwaltung'),
+        backgroundColor: const Color(0xFF104382), // Set the desired color
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: _isLoading
@@ -95,7 +98,6 @@ class _EditToolScreenState extends State<EditToolScreen> {
                           onChanged: (value) {
                             setState(() {
                               _storageLocation = value;
-                              _isEdited = true; // Set to true when editing
                             });
                           },
                           validator: (value) {
@@ -106,9 +108,56 @@ class _EditToolScreenState extends State<EditToolScreen> {
                           },
                         ),
                         const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _updateTool,
-                          child: const Text('Lagerplatz speichern'),
+
+                        // Hint box for "Force Update"
+                        Container(
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4.0),
+                          ),
+                          child: const Text(
+                            'Verwenden Sie diese Option, um den Lagerplatz zu '
+                            'aktualisieren, selbst wenn das Werkzeug als nicht '
+                            'aktualisierbar markiert ist. Diese Aktion sollte nur '
+                            'durchgeführt werden, wenn Sie sicher sind, dass die '
+                            'Änderung notwendig ist.',
+                            style:
+                                TextStyle(fontSize: 14, color: Colors.black87),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Switch to force update
+                        SwitchTheme(
+                          data: SwitchThemeData(
+                            thumbColor: MaterialStateProperty.all(const Color(
+                                0xFF104382)), // Color when switch is on
+                            trackColor: MaterialStateProperty.all(
+                                Color.fromARGB(255, 179, 8, 8).withOpacity(
+                                    0.5)), // Color when switch is off
+                          ),
+                          child: SwitchListTile(
+                            title:
+                                const Text('Änderung vom Lagerplatz erzwingen'),
+                            value: _forceUpdate,
+                            onChanged: (value) {
+                              setState(() {
+                                _forceUpdate = value; // Ensure state is updated
+                              });
+                            },
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 0.0), // Remove default padding
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: _updateTool,
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF104382)),
+                            child: const Text('Lagerplatz speichern'),
+                          ),
                         ),
                       ],
                     ),

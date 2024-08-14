@@ -33,13 +33,14 @@ class ToolService {
 
   // Update an existing tool
   Future<String> updateTool(int id, String storageLocation,
-      {required bool doNotUpdate}) async {
+      {required bool doNotUpdate, bool forceUpdate = false}) async {
     final response = await http.put(
       Uri.parse('$localApiUrl/$id'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'storage_location': storageLocation,
         'do_not_update': doNotUpdate ? 1 : 0,
+        'force_update': forceUpdate, // Add the force_update parameter here
       }),
     );
 
