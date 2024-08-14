@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'package:http/io_client.dart' as http;
 import 'package:http/http.dart' as http;
 import 'torsteuerung_module.dart';
+import 'tool_ui.dart';
 
 void main() {
   runApp(const MyApp());
@@ -749,6 +750,18 @@ class _NumberInputPageState extends State<NumberInputPage> {
                     MaterialPageRoute(
                       builder: (context) =>
                           const TorsteuerungModule(initialUrl: 'google.de'),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.door_sliding),
+                title: const Text('Werkzeuglagerverwaltung'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ToolInventoryScreen(),
                     ),
                   );
                 },

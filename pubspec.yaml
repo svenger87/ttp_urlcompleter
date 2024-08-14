@@ -1,7 +1,7 @@
 name: ttp_app
 description: App to make a businessprocess a bit more convienient.
 publish_to: 'none'
-version: 0.5.3+40
+version: 0.5.3+46
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -49,7 +49,7 @@ flutter:
     - assets/IKOffice.ico
   
 msix_config:
-  display_name: WIM Profilauswahl
+  display_name: ttp App
   publisher_display_name: ttp Papenburg GmbH
   identity_name: com.app.ttpurlcompleter
   msix_version: 1.0.1.1
