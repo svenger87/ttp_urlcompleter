@@ -395,7 +395,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
         }
 
         // Reset scanning state after 10 seconds
-        scanTimer = Timer(const Duration(seconds: 10), () {
+        scanTimer = Timer(const Duration(seconds: 3), () {
           setState(() {
             hasScanned = false;
           });
