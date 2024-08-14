@@ -1,5 +1,6 @@
-// ignore_for_file: library_private_types_in_public_api
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
 import 'tool.dart';
@@ -17,15 +18,26 @@ class _EditToolScreenState extends State<EditToolScreen> {
   late String _storageLocation;
   bool _isLoading = false;
   bool _hasError = false;
+  bool _isEdited = false; // Track if data has been edited
 
   @override
   void initState() {
     super.initState();
     _storageLocation = widget.tool.storageLocation;
+    _isEdited = false; // Initialize as false
   }
 
   Future<void> _updateTool() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Always set do_not_update to 1 when editing
+    const doNotUpdate = true;
+
+    if (kDebugMode) {
+      print('Tool edited: $_isEdited, doNotUpdate flag: $doNotUpdate');
+      print(
+          'Updating tool ${widget.tool.id}: storageLocation=$_storageLocation, doNotUpdate=$doNotUpdate');
+    }
 
     setState(() {
       _isLoading = true;
@@ -33,19 +45,17 @@ class _EditToolScreenState extends State<EditToolScreen> {
     });
 
     try {
-      await ToolService().updateTool(widget.tool.id, _storageLocation);
-      // ignore: use_build_context_synchronously
+      await ToolService().updateTool(widget.tool.id, _storageLocation,
+          doNotUpdate: doNotUpdate);
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')));
-      // ignore: use_build_context_synchronously
       Navigator.pop(context);
     } catch (e) {
       setState(() {
         _hasError = true;
       });
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Update des Werkeugs fehlgeschlagen')));
+          const SnackBar(content: Text('Update des Werkzeugs fehlgeschlagen')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -72,9 +82,12 @@ class _EditToolScreenState extends State<EditToolScreen> {
                           initialValue: _storageLocation,
                           decoration:
                               const InputDecoration(labelText: 'Lagerplatz'),
-                          onChanged: (value) => setState(() {
-                            _storageLocation = value;
-                          }),
+                          onChanged: (value) {
+                            setState(() {
+                              _storageLocation = value;
+                              _isEdited = true; // Set to true when editing
+                            });
+                          },
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Bitte Lagerplatz eingeben';
