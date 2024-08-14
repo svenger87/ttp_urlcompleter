@@ -32,19 +32,29 @@ class ToolService {
   }
 
   // Update an existing tool
-  Future<void> updateTool(int id, String storageLocation,
+  Future<String> updateTool(int id, String storageLocation,
       {required bool doNotUpdate}) async {
     final response = await http.put(
       Uri.parse('$localApiUrl/$id'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'storage_location': storageLocation,
-        'do_not_update': doNotUpdate ? 1 : 0, // Convert boolean to 0 or 1
+        'do_not_update': doNotUpdate ? 1 : 0,
       }),
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update tool');
+    if (response.statusCode == 200) {
+      final responseBody = response.body;
+      if (responseBody.contains('Tool updated successfully')) {
+        return 'success';
+      } else if (responseBody.contains(
+          'Storage location update ignored due to do_not_update flag')) {
+        return 'ignored'; // Storage location update ignored
+      } else {
+        return 'unknown'; // Handle other responses
+      }
+    } else {
+      throw Exception('Failed to update tool: ${response.body}');
     }
   }
 

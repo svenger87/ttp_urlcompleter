@@ -45,11 +45,21 @@ class _EditToolScreenState extends State<EditToolScreen> {
     });
 
     try {
-      await ToolService().updateTool(widget.tool.id, _storageLocation,
+      final result = await ToolService().updateTool(
+          widget.tool.id, _storageLocation,
           doNotUpdate: doNotUpdate);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')));
-      Navigator.pop(context);
+      if (result == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')));
+        Navigator.pop(context);
+      } else if (result == 'ignored') {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Update des Lagerplatzes ist nicht erlaubt!')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content:
+                Text('Unbekannter Fehler beim Aktualisieren des Werkzeugs')));
+      }
     } catch (e) {
       setState(() {
         _hasError = true;
