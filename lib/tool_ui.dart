@@ -90,6 +90,11 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Adjust the padding and font size based on screen width
+    double fontSize = 14;  // Keep the font size consistent
+    double paddingSize = 4.0;  // Reduced padding to make better use of space
+    double buttonHeight = 30;  // Set a fixed height for buttons
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Werkzeuglagerverwaltung'),
@@ -116,15 +121,16 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: EdgeInsets.all(paddingSize),
             child: Row(
               children: [
                 Expanded(
                   flex: 2,
                   child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Werkzeugnummer',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
+                    decoration: InputDecoration(
+                      labelText: 'Werkzeugnr.',
+                      labelStyle: TextStyle(fontSize: fontSize),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -134,13 +140,14 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 8.0),
+                SizedBox(width: paddingSize),
                 Expanded(
                   flex: 2,
                   child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Lagerplatz',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
+                    decoration: InputDecoration(
+                      labelText: 'Lagerpl.',
+                      labelStyle: TextStyle(fontSize: fontSize),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -150,13 +157,14 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 8.0),
+                SizedBox(width: paddingSize),
                 Expanded(
                   flex: 1,
                   child: DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Status',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
+                      labelStyle: TextStyle(fontSize: fontSize),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     value: _storageStatusFilter.isEmpty
                         ? null
@@ -180,10 +188,13 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     }).toList(),
                   ),
                 ),
-                const SizedBox(width: 8.0),
-                ElevatedButton(
-                  onPressed: _clearFilters,
-                  child: const Text('Filter löschen'),
+                SizedBox(width: paddingSize),
+                SizedBox(
+                  height: buttonHeight,
+                  child: ElevatedButton(
+                    onPressed: _clearFilters,
+                    child: const Text('Löschen'),
+                  ),
                 ),
               ],
             ),
@@ -200,15 +211,21 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     : Colors.red;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0, vertical: 4.0),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: paddingSize, vertical: 6.0),
                   child: Row(
                     children: [
                       Expanded(
                         flex: 2,
                         child: ListTile(
-                          title: Text(tool.toolNumber),
-                          subtitle: Text('Werkzeugnummer: ${tool.toolNumber}'),
+                          title: Text(
+                            tool.toolNumber,
+                            style: TextStyle(fontSize: fontSize),
+                          ),
+                          subtitle: Text(
+                            'Nr.: ${tool.toolNumber}',
+                            style: TextStyle(fontSize: fontSize - 2),
+                          ),
                           onTap: () async {
                             await Navigator.push(
                               context,
@@ -223,9 +240,12 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text(tool.storageLocation.isNotEmpty
-                            ? tool.storageLocation
-                            : 'Unbekannt'),
+                        child: Text(
+                          tool.storageLocation.isNotEmpty
+                              ? tool.storageLocation
+                              : 'Unbekannt',
+                          style: TextStyle(fontSize: fontSize),
+                        ),
                       ),
                       Expanded(
                         flex: 1,
@@ -233,7 +253,7 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12.0, vertical: 4.0),
                           decoration: BoxDecoration(
-                            color: statusColor,
+                            color: statusColor, // Use the statusColor variable here
                             borderRadius: BorderRadius.circular(4.0),
                           ),
                           child: Text(

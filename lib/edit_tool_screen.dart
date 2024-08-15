@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
 import 'tool.dart';
@@ -148,15 +150,15 @@ class _EditToolScreenState extends State<EditToolScreen> {
                         // Add a dropdown for storage status with colored indicators
                         DropdownButtonFormField<String>(
                           value: _storageStatus,
-                          items: [
+                          items: const [
                             DropdownMenuItem(
                               value: 'In stock',
                               child: Row(
                                 children: [
-                                  const Icon(Icons.circle,
+                                  Icon(Icons.circle,
                                       color: Colors.green, size: 12),
-                                  const SizedBox(width: 8),
-                                  const Text('Auf Lager'),
+                                  SizedBox(width: 8),
+                                  Text('Auf Lager'),
                                 ],
                               ),
                             ),
@@ -164,10 +166,10 @@ class _EditToolScreenState extends State<EditToolScreen> {
                               value: 'Out of stock',
                               child: Row(
                                 children: [
-                                  const Icon(Icons.circle,
+                                  Icon(Icons.circle,
                                       color: Colors.red, size: 12),
-                                  const SizedBox(width: 8),
-                                  const Text('Nicht auf Lager'),
+                                  SizedBox(width: 8),
+                                  Text('Nicht auf Lager'),
                                 ],
                               ),
                             ),
