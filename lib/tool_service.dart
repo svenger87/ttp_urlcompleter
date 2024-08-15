@@ -3,10 +3,7 @@ import 'package:http/http.dart' as http;
 import 'tool.dart';
 
 class ToolService {
-  // Local API URL
   final String localApiUrl = 'http://wim-solution:3000/tools';
-
-  // API URL for updating tools
   final String updateToolsApiUrl = 'http://wim-solution:3000/update-tools';
 
   // Fetch tools from local API
@@ -36,17 +33,17 @@ class ToolService {
 
   // Update an existing tool
   Future<String> updateTool(int id, String storageLocation,
-      {required bool doNotUpdate,
-      bool forceUpdate = false,
-      String? storageStatus}) async {
+      {required String storageStatus,
+      required bool doNotUpdate,
+      bool forceUpdate = false}) async {
     final response = await http.put(
       Uri.parse('$localApiUrl/$id'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'storage_location': storageLocation,
+        'storage_status': storageStatus,
         'do_not_update': doNotUpdate ? 1 : 0,
         'force_update': forceUpdate,
-        if (storageStatus != null) 'storage_status': storageStatus,
       }),
     );
 
@@ -65,7 +62,7 @@ class ToolService {
     }
   }
 
-  // Delete a tool (soft delete by setting a 'deleted' flag)
+  // Delete a tool (soft delete)
   Future<void> deleteTool(int id) async {
     final response = await http.delete(Uri.parse('$localApiUrl/$id'));
 
@@ -74,12 +71,12 @@ class ToolService {
     }
   }
 
-  // Update tools from the external source via the API endpoint
+  // Update tools from API
   Future<void> updateTools() async {
     final response = await http.get(Uri.parse(updateToolsApiUrl));
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to update tools from external source');
+      throw Exception('Failed to update tools: ${response.body}');
     }
   }
 }

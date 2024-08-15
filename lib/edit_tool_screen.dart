@@ -52,11 +52,22 @@ class _EditToolScreenState extends State<EditToolScreen> {
         );
         Navigator.pop(context);
       } else if (result == 'ignored') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+        // If only storage location was ignored but storage status was updated, check if it was due to the do_not_update flag
+        if (_storageLocation != widget.tool.storageLocation) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
               content: Text(
-                  'Änderung nicht zugelassen! Falls erforderlich erzwingen!')),
-        );
+                  'Lagerplatz wurde nicht aktualisiert! Erzwingen Sie die Änderung, wenn erforderlich.'),
+            ),
+          );
+        } else {
+          // If no location change was attempted, consider it a success
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Werkzeugstatus erfolgreich aktualisiert')),
+          );
+          Navigator.pop(context);
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unbekannter Fehler')),
