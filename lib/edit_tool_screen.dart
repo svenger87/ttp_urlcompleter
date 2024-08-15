@@ -1,5 +1,3 @@
-// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
 import 'tool.dart';
@@ -52,7 +50,6 @@ class _EditToolScreenState extends State<EditToolScreen> {
         );
         Navigator.pop(context);
       } else if (result == 'ignored') {
-        // If only storage location was ignored but storage status was updated, check if it was due to the do_not_update flag
         if (_storageLocation != widget.tool.storageLocation) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -61,7 +58,6 @@ class _EditToolScreenState extends State<EditToolScreen> {
             ),
           );
         } else {
-          // If no location change was attempted, consider it a success
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
                 content: Text('Werkzeugstatus erfolgreich aktualisiert')),
@@ -149,17 +145,31 @@ class _EditToolScreenState extends State<EditToolScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Add a dropdown for storage status
+                        // Add a dropdown for storage status with colored indicators
                         DropdownButtonFormField<String>(
                           value: _storageStatus,
-                          items: const [
+                          items: [
                             DropdownMenuItem(
                               value: 'In stock',
-                              child: Text('Auf Lager'),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.circle,
+                                      color: Colors.green, size: 12),
+                                  const SizedBox(width: 8),
+                                  const Text('Auf Lager'),
+                                ],
+                              ),
                             ),
                             DropdownMenuItem(
                               value: 'Out of stock',
-                              child: Text('Nicht auf Lager'),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.circle,
+                                      color: Colors.red, size: 12),
+                                  const SizedBox(width: 8),
+                                  const Text('Nicht auf Lager'),
+                                ],
+                              ),
                             ),
                           ],
                           onChanged: (value) {

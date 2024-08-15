@@ -755,7 +755,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.door_sliding),
+                leading: const Icon(Icons.storage),
                 title: const Text('Werkzeuglagerverwaltung'),
                 onTap: () {
                   Navigator.push(
