@@ -93,6 +93,40 @@ class _EditToolScreenState extends State<EditToolScreen> {
     }
   }
 
+  Future<void> _confirmDeleteTool() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Werkzeug löschen'),
+          content: const Text(
+              'Möchten Sie dieses Werkzeug wirklich löschen?\nDiese Aktion kann nicht rückgängig gemacht werden.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false); // User cancels the deletion
+              },
+              child: const Text('Abbrechen'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // User confirms the deletion
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('Löschen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      await _deleteTool(); // Proceed with the deletion if confirmed
+    }
+  }
+
   Future<void> _deleteTool() async {
     setState(() {
       _isLoading = true;
@@ -240,7 +274,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
                         // Add a delete button
                         Center(
                           child: ElevatedButton(
-                            onPressed: _deleteTool,
+                            onPressed: _confirmDeleteTool,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                             ),
