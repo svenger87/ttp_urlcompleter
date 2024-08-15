@@ -1,4 +1,4 @@
-// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously, prefer_const_constructors
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
@@ -15,14 +15,16 @@ class EditToolScreen extends StatefulWidget {
 class _EditToolScreenState extends State<EditToolScreen> {
   final _formKey = GlobalKey<FormState>();
   late String _storageLocation;
+  late String _storageStatus;
   bool _isLoading = false;
   bool _hasError = false;
-  bool _forceUpdate = false; // Force update flag
+  bool _forceUpdate = false;
 
   @override
   void initState() {
     super.initState();
     _storageLocation = widget.tool.storageLocation;
+    _storageStatus = widget.tool.storageStatus;
   }
 
   Future<void> _updateTool() async {
@@ -39,6 +41,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
       final result = await ToolService().updateTool(
         widget.tool.id,
         _storageLocation,
+        storageStatus: _storageStatus,
         doNotUpdate: doNotUpdate,
         forceUpdate: _forceUpdate,
       );
@@ -52,7 +55,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text(
-                  'Änderung nicht zugelassen! Falls erfolderlich erzwingen!')),
+                  'Änderung nicht zugelassen! Falls erforderlich erzwingen!')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -73,12 +76,38 @@ class _EditToolScreenState extends State<EditToolScreen> {
     }
   }
 
+  Future<void> _deleteTool() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    try {
+      await ToolService().deleteTool(widget.tool.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Werkzeug erfolgreich gelöscht')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Löschen des Werkzeugs fehlgeschlagen')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Werkzeuglagerverwaltung'),
-        backgroundColor: const Color(0xFF104382), // Set the desired color
+        backgroundColor: const Color(0xFF104382),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -109,7 +138,30 @@ class _EditToolScreenState extends State<EditToolScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Hint box for "Force Update"
+                        // Add a dropdown for storage status
+                        DropdownButtonFormField<String>(
+                          value: _storageStatus,
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'In stock',
+                              child: Text('Auf Lager'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Out of stock',
+                              child: Text('Nicht auf Lager'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _storageStatus = value!;
+                            });
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Lagerstatus',
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
                         Container(
                           padding: const EdgeInsets.all(16.0),
                           decoration: BoxDecoration(
@@ -128,35 +180,37 @@ class _EditToolScreenState extends State<EditToolScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Switch to force update
-                        SwitchTheme(
-                          data: SwitchThemeData(
-                            thumbColor: MaterialStateProperty.all(const Color(
-                                0xFF104382)), // Color when switch is on
-                            trackColor: MaterialStateProperty.all(
-                                Color.fromARGB(255, 179, 8, 8).withOpacity(
-                                    0.5)), // Color when switch is off
-                          ),
-                          child: SwitchListTile(
-                            title:
-                                const Text('Änderung vom Lagerplatz erzwingen'),
-                            value: _forceUpdate,
-                            onChanged: (value) {
-                              setState(() {
-                                _forceUpdate = value; // Ensure state is updated
-                              });
-                            },
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 0.0), // Remove default padding
-                          ),
+                        SwitchListTile(
+                          title:
+                              const Text('Änderung vom Lagerplatz erzwingen'),
+                          value: _forceUpdate,
+                          onChanged: (value) {
+                            setState(() {
+                              _forceUpdate = value;
+                            });
+                          },
                         ),
                         const SizedBox(height: 20),
+
                         Center(
                           child: ElevatedButton(
                             onPressed: _updateTool,
                             style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF104382)),
+                              backgroundColor: const Color(0xFF104382),
+                            ),
                             child: const Text('Lagerplatz speichern'),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Add a delete button
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: _deleteTool,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
+                            child: const Text('Werkzeug löschen'),
                           ),
                         ),
                       ],

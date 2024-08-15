@@ -1,4 +1,4 @@
-// ignore_for_file: library_private_types_in_public_api
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
@@ -18,6 +18,8 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
   List<Tool> _filteredTools = [];
   String _toolFilter = '';
   String _storageLocationFilter = '';
+  String _storageStatusFilter = '';
+  bool _isUpdatingTools = false;
 
   @override
   void initState() {
@@ -26,11 +28,17 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
   }
 
   Future<void> _loadTools() async {
-    final tools = await toolService.fetchTools();
-    setState(() {
-      _allTools = tools;
-      _applyFilters();
-    });
+    try {
+      final tools = await toolService.fetchTools();
+      setState(() {
+        _allTools = tools;
+        _applyFilters();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading tools: $e')),
+      );
+    }
   }
 
   void _applyFilters() {
@@ -39,7 +47,11 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
         final matchesToolNumber = tool.toolNumber.contains(_toolFilter);
         final matchesStorageLocation =
             tool.storageLocation.contains(_storageLocationFilter);
-        return matchesToolNumber && matchesStorageLocation;
+        final matchesStorageStatus = _storageStatusFilter.isEmpty ||
+            tool.storageStatus == _storageStatusFilter;
+        return matchesToolNumber &&
+            matchesStorageLocation &&
+            matchesStorageStatus;
       }).toList();
     });
   }
@@ -48,8 +60,28 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
     setState(() {
       _toolFilter = '';
       _storageLocationFilter = '';
+      _storageStatusFilter = '';
       _filteredTools = List.from(_allTools);
     });
+  }
+
+  Future<void> _updateTools() async {
+    setState(() {
+      _isUpdatingTools = true;
+    });
+
+    try {
+      await toolService.updateTools();
+      await _loadTools();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating tools: $e')),
+      );
+    } finally {
+      setState(() {
+        _isUpdatingTools = false;
+      });
+    }
   }
 
   @override
@@ -57,18 +89,38 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Werkzeuglagerverwaltung'),
-        backgroundColor: const Color(0xFF104382), // Set the desired color
+        backgroundColor: const Color(0xFF104382),
+        actions: [
+          _isUpdatingTools
+              ? const Padding(
+                  padding: EdgeInsets.all(10.0),
+                  child: SizedBox(
+                    width: 30,
+                    height: 30,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 4.0,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _updateTools,
+                ),
+        ],
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
                 Expanded(
+                  flex: 2,
                   child: TextField(
                     decoration: const InputDecoration(
-                      labelText: 'Filtern nach Werkzeug',
+                      labelText: 'Werkzeugnummer',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -78,11 +130,13 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8.0),
                 Expanded(
+                  flex: 2,
                   child: TextField(
                     decoration: const InputDecoration(
-                      labelText: 'Filtern nach Lagerplatz',
+                      labelText: 'Lagerplatz',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -92,11 +146,40 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     },
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _clearFilters();
-                  },
+                const SizedBox(width: 8.0),
+                Expanded(
+                  flex: 1,
+                  child: DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
+                    ),
+                    value: _storageStatusFilter.isEmpty
+                        ? null
+                        : _storageStatusFilter,
+                    onChanged: (value) {
+                      setState(() {
+                        _storageStatusFilter = value ?? '';
+                        _applyFilters();
+                      });
+                    },
+                    items: <String>['', 'In stock', 'Out of stock']
+                        .map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value.isEmpty
+                            ? 'Alle'
+                            : value == 'In stock'
+                                ? 'Auf Lager'
+                                : 'Nicht auf Lager'),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+                ElevatedButton(
+                  onPressed: _clearFilters,
+                  child: const Text('Filter löschen'),
                 ),
               ],
             ),
@@ -106,33 +189,65 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
               itemCount: _filteredTools.length,
               itemBuilder: (context, index) {
                 final tool = _filteredTools[index];
-                return ListTile(
-                  title: Text(tool.name),
-                  subtitle: Text('Werkzeugnummer: ${tool.toolNumber}'),
-                  trailing: Text('Lagerplatz: ${tool.storageLocation}'),
-                  onTap: () async {
-                    // Navigate to the EditToolScreen
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditToolScreen(tool: tool),
-                      ),
-                    );
 
-                    // Refresh the tool list after returning from edit screen
-                    _loadTools();
-                  },
+                // Ensure storage status is correctly interpreted and displayed
+                Color statusColor = tool.storageStatus == 'In stock'
+                    ? Colors.green
+                    : Colors.red;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 4.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: ListTile(
+                          title: Text(tool.toolNumber),
+                          subtitle: Text('Werkzeugnummer: ${tool.toolNumber}'),
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EditToolScreen(tool: tool),
+                              ),
+                            );
+                            _loadTools(); // Refresh the tool list
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(tool.storageLocation.isNotEmpty
+                            ? tool.storageLocation
+                            : 'Unbekannt'),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12.0, vertical: 4.0),
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            borderRadius: BorderRadius.circular(4.0),
+                          ),
+                          child: Text(
+                            tool.storageStatus == 'In stock'
+                                ? 'Auf Lager'
+                                : 'Nicht auf Lager',
+                            style: const TextStyle(color: Colors.white),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Handle add functionality or navigate to add tool screen if needed
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }

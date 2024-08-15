@@ -6,6 +6,9 @@ class ToolService {
   // Local API URL
   final String localApiUrl = 'http://wim-solution:3000/tools';
 
+  // API URL for updating tools
+  final String updateToolsApiUrl = 'http://wim-solution:3000/update-tools';
+
   // Fetch tools from local API
   Future<List<Tool>> fetchTools() async {
     final response = await http.get(Uri.parse(localApiUrl));
@@ -33,14 +36,17 @@ class ToolService {
 
   // Update an existing tool
   Future<String> updateTool(int id, String storageLocation,
-      {required bool doNotUpdate, bool forceUpdate = false}) async {
+      {required bool doNotUpdate,
+      bool forceUpdate = false,
+      String? storageStatus}) async {
     final response = await http.put(
       Uri.parse('$localApiUrl/$id'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'storage_location': storageLocation,
         'do_not_update': doNotUpdate ? 1 : 0,
-        'force_update': forceUpdate, // Add the force_update parameter here
+        'force_update': forceUpdate,
+        if (storageStatus != null) 'storage_status': storageStatus,
       }),
     );
 
@@ -59,12 +65,21 @@ class ToolService {
     }
   }
 
-  // Delete a tool
+  // Delete a tool (soft delete by setting a 'deleted' flag)
   Future<void> deleteTool(int id) async {
     final response = await http.delete(Uri.parse('$localApiUrl/$id'));
 
     if (response.statusCode != 200) {
       throw Exception('Failed to delete tool: ${response.body}');
+    }
+  }
+
+  // Update tools from the external source via the API endpoint
+  Future<void> updateTools() async {
+    final response = await http.get(Uri.parse(updateToolsApiUrl));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update tools from external source');
     }
   }
 }
