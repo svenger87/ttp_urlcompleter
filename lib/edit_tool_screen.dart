@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, library_private_types_in_public_api
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
@@ -24,7 +24,14 @@ class _EditToolScreenState extends State<EditToolScreen> {
   void initState() {
     super.initState();
     _storageLocation = widget.tool.storageLocation;
-    _storageStatus = widget.tool.storageStatus;
+
+    // Normalize _storageStatus to lowercase for case-insensitive handling
+    _storageStatus = widget.tool.storageStatus.toLowerCase();
+
+    // Ensure _storageStatus matches one of the dropdown values
+    if (_storageStatus != 'in stock' && _storageStatus != 'out of stock') {
+      _storageStatus = 'in stock'; // Default to 'in stock' if no match
+    }
   }
 
   Future<void> _updateTool() async {
@@ -52,7 +59,8 @@ class _EditToolScreenState extends State<EditToolScreen> {
         );
         Navigator.pop(context);
       } else if (result == 'ignored') {
-        if (_storageLocation != widget.tool.storageLocation) {
+        if (_storageLocation.toLowerCase() !=
+            widget.tool.storageLocation.toLowerCase()) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -147,12 +155,13 @@ class _EditToolScreenState extends State<EditToolScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Add a dropdown for storage status with colored indicators
+                        // Dropdown for storage status with colored indicators
                         DropdownButtonFormField<String>(
-                          value: _storageStatus,
+                          value: _storageStatus
+                              .toLowerCase(), // Ensure value is lowercase
                           items: const [
                             DropdownMenuItem(
-                              value: 'In stock',
+                              value: 'in stock',
                               child: Row(
                                 children: [
                                   Icon(Icons.circle,
@@ -163,7 +172,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
                               ),
                             ),
                             DropdownMenuItem(
-                              value: 'Out of stock',
+                              value: 'out of stock',
                               child: Row(
                                 children: [
                                   Icon(Icons.circle,
@@ -176,13 +185,15 @@ class _EditToolScreenState extends State<EditToolScreen> {
                           ],
                           onChanged: (value) {
                             setState(() {
-                              _storageStatus = value!;
+                              _storageStatus =
+                                  value!.toLowerCase(); // Normalize on change
                             });
                           },
                           decoration: const InputDecoration(
                             labelText: 'Lagerstatus',
                           ),
                         ),
+
                         const SizedBox(height: 20),
 
                         Container(

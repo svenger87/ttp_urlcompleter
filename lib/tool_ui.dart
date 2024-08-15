@@ -18,7 +18,7 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
   List<Tool> _filteredTools = [];
   String _toolFilter = '';
   String _storageLocationFilter = '';
-  String _storageStatusFilter = '';
+  String _storageStatusFilter = ''; // Represents the selected filter value
   bool _isUpdatingTools = false;
 
   @override
@@ -47,8 +47,12 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
         final matchesToolNumber = tool.toolNumber.contains(_toolFilter);
         final matchesStorageLocation =
             tool.storageLocation.contains(_storageLocationFilter);
+
+        // Ensure storage status is correctly compared
         final matchesStorageStatus = _storageStatusFilter.isEmpty ||
-            tool.storageStatus == _storageStatusFilter;
+            (tool.storageStatus.toLowerCase() ==
+                _storageStatusFilter.toLowerCase());
+
         return matchesToolNumber &&
             matchesStorageLocation &&
             matchesStorageStatus;
@@ -90,10 +94,9 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Adjust the padding and font size based on screen width
-    double fontSize = 14;  // Keep the font size consistent
-    double paddingSize = 4.0;  // Reduced padding to make better use of space
-    double buttonHeight = 30;  // Set a fixed height for buttons
+    double fontSize = 14; // Keep the font size consistent
+    double paddingSize = 4.0; // Reduced padding to make better use of space
+    double buttonHeight = 30; // Set a fixed height for buttons
 
     return Scaffold(
       appBar: AppBar(
@@ -130,7 +133,8 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     decoration: InputDecoration(
                       labelText: 'Werkzeugnr.',
                       labelStyle: TextStyle(fontSize: fontSize),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -147,7 +151,8 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     decoration: InputDecoration(
                       labelText: 'Lagerpl.',
                       labelStyle: TextStyle(fontSize: fontSize),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -164,7 +169,8 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     decoration: InputDecoration(
                       labelText: 'Status',
                       labelStyle: TextStyle(fontSize: fontSize),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8.0),
                     ),
                     value: _storageStatusFilter.isEmpty
                         ? null
@@ -175,8 +181,11 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                         _applyFilters();
                       });
                     },
-                    items: <String>['', 'In stock', 'Out of stock']
-                        .map((String value) {
+                    items: const <String>[
+                      '', // Empty for "All"
+                      'In stock',
+                      'Out of stock'
+                    ].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value.isEmpty
@@ -253,7 +262,8 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12.0, vertical: 4.0),
                           decoration: BoxDecoration(
-                            color: statusColor, // Use the statusColor variable here
+                            color:
+                                statusColor, // Use the statusColor variable here
                             borderRadius: BorderRadius.circular(4.0),
                           ),
                           child: Text(
