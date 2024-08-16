@@ -87,7 +87,7 @@ class ToolService {
 
     if (response.statusCode == 200) {
       List<dynamic> body = json.decode(response.body);
-      return body.map((dynamic item) => item['storagename'] as String).toList();
+      return body.map((dynamic item) => item as String).toList();
     } else {
       throw Exception('Failed to load free storages from API');
     }
