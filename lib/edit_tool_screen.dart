@@ -1,8 +1,9 @@
-// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronouslyyy
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously, prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
 import 'tool.dart';
+import 'free_storages_screen.dart';
 
 class EditToolScreen extends StatefulWidget {
   final Tool tool;
@@ -14,7 +15,7 @@ class EditToolScreen extends StatefulWidget {
 
 class _EditToolScreenState extends State<EditToolScreen> {
   final _formKey = GlobalKey<FormState>();
-  late String _storageLocation;
+  late TextEditingController _storageLocationController;
   late String _storageStatus;
   bool _isLoading = false;
   bool _hasError = false;
@@ -23,7 +24,10 @@ class _EditToolScreenState extends State<EditToolScreen> {
   @override
   void initState() {
     super.initState();
-    _storageLocation = widget.tool.storageLocation;
+
+    // Initialize the controller with the existing storage location
+    _storageLocationController =
+        TextEditingController(text: widget.tool.storageLocation);
 
     // Normalize _storageStatus to lowercase for case-insensitive handling
     _storageStatus = widget.tool.storageStatus.toLowerCase();
@@ -31,6 +35,27 @@ class _EditToolScreenState extends State<EditToolScreen> {
     // Ensure _storageStatus matches one of the dropdown values
     if (_storageStatus != 'in stock' && _storageStatus != 'out of stock') {
       _storageStatus = 'in stock'; // Default to 'in stock' if no match
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose the controller when the widget is disposed
+    _storageLocationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectFreeStorage() async {
+    final selectedStorage = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => FreeStoragesScreen()),
+    );
+
+    if (selectedStorage != null) {
+      setState(() {
+        // Update the text field's value via the controller
+        _storageLocationController.text = selectedStorage;
+      });
     }
   }
 
@@ -47,7 +72,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
     try {
       final result = await ToolService().updateTool(
         widget.tool.id,
-        _storageLocation,
+        _storageLocationController.text, // Use the controller's value
         storageStatus: _storageStatus,
         doNotUpdate: doNotUpdate,
         forceUpdate: _forceUpdate,
@@ -59,7 +84,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
         );
         Navigator.pop(context);
       } else if (result == 'ignored') {
-        if (_storageLocation.toLowerCase() !=
+        if (_storageLocationController.text.toLowerCase() !=
             widget.tool.storageLocation.toLowerCase()) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -171,21 +196,28 @@ class _EditToolScreenState extends State<EditToolScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextFormField(
-                          initialValue: _storageLocation,
-                          decoration:
-                              const InputDecoration(labelText: 'Lagerplatz'),
-                          onChanged: (value) {
-                            setState(() {
-                              _storageLocation = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Bitte Lagerplatz eingeben';
-                            }
-                            return null;
-                          },
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _storageLocationController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Lagerplatz',
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Bitte Lagerplatz eingeben';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.search),
+                              onPressed: _selectFreeStorage,
+                              tooltip: 'Freie Lagerplätze anzeigen',
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
 

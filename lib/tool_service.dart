@@ -1,5 +1,3 @@
-//
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'tool.dart';
@@ -7,6 +5,7 @@ import 'tool.dart';
 class ToolService {
   final String localApiUrl = 'http://wim-solution:3000/tools';
   final String updateToolsApiUrl = 'http://wim-solution:3000/update-tools';
+  final String freeStoragesApiUrl = 'http://wim-solution:3000/free-storages';
 
   // Fetch tools from local API
   Future<List<Tool>> fetchTools() async {
@@ -79,6 +78,18 @@ class ToolService {
 
     if (response.statusCode != 200) {
       throw Exception('Failed to update tools: ${response.body}');
+    }
+  }
+
+  // Fetch free storages from API
+  Future<List<String>> fetchFreeStorages() async {
+    final response = await http.get(Uri.parse(freeStoragesApiUrl));
+
+    if (response.statusCode == 200) {
+      List<dynamic> body = json.decode(response.body);
+      return body.map((dynamic item) => item['storagename'] as String).toList();
+    } else {
+      throw Exception('Failed to load free storages from API');
     }
   }
 }
