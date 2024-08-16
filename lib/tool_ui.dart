@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'tool_service.dart';
 import 'tool.dart';
 import 'edit_tool_screen.dart';
+import 'storage_utilization_screen.dart';
 
 class ToolInventoryScreen extends StatefulWidget {
   const ToolInventoryScreen({super.key});
@@ -173,9 +174,26 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     ),
                   ),
                 )
-              : IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _updateTools,
+              : Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _updateTools,
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                          Icons.storage), // Icon for storage utilization
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const StorageUtilizationScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
         ],
       ),
