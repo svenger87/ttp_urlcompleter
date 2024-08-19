@@ -220,7 +220,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   Offset _tappedOffset = Offset.zero;
   Offset? _offset;
   double? _zoomLevel;
-  double _circleSize = 50;
+  double _circleSize = 30;
 
   @override
   void initState() {
