@@ -1,16 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:pdfx/pdfx.dart';
-import 'pdf_service.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'pdf_service.dart';
 import 'package:http/http.dart' as http;
 
 class PdfReaderPage extends StatefulWidget {
   const PdfReaderPage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _PdfReaderPageState createState() => _PdfReaderPageState();
 }
 
@@ -51,12 +51,12 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
-        final dir = await getApplicationDocumentsDirectory();
+        final dir = await getTemporaryDirectory();
         final file = File('${dir.path}/$fullFileName');
 
         await file.writeAsBytes(response.bodyBytes);
 
-        // ignore: use_build_context_synchronously
+        // Use build context synchronously
         final result = await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => PdfViewerPage(
@@ -193,7 +193,7 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
   }
 }
 
-class PdfViewerPage extends StatelessWidget {
+class PdfViewerPage extends StatefulWidget {
   final String filePath;
   final String fileName;
   final VoidCallback onDelete;
@@ -208,50 +208,121 @@ class PdfViewerPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (kDebugMode) {
-      print('Opening PDF Viewer for: $fileName at path: $filePath');
+  _PdfViewerPageState createState() => _PdfViewerPageState();
+}
+
+class _PdfViewerPageState extends State<PdfViewerPage> {
+  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
+  final PdfViewerController _pdfViewerController = PdfViewerController();
+  PdfDocument? _loadedDocument;
+  Uint8List? _documentBytes;
+  int _tappedPageNumber = 0;
+  Offset _tappedOffset = Offset.zero;
+  Offset? _offset;
+  double? _zoomLevel;
+  double _circleSize = 50;
+
+  @override
+  void initState() {
+    _getPdfBytes();
+    super.initState();
+  }
+
+  Future<void> _getPdfBytes() async {
+    _documentBytes = await File(widget.filePath).readAsBytes();
+    setState(() {});
+  }
+
+  void _addCircle() async {
+    if (_loadedDocument != null) {
+      final PdfPage page = _loadedDocument!.pages[_tappedPageNumber - 1];
+
+      page.graphics.drawEllipse(
+        Rect.fromLTWH(_tappedOffset.dx - _circleSize / 2,
+            _tappedOffset.dy - _circleSize / 2, _circleSize, _circleSize),
+        brush: PdfBrushes.green,
+      );
+
+      final List<int> bytes = await _loadedDocument!.save();
+      setState(() {
+        _documentBytes = Uint8List.fromList(bytes);
+      });
     }
-    final pdfController =
-        PdfController(document: PdfDocument.openFile(filePath));
+  }
 
-    final isDone = fileName.startsWith('ERLEDIGT_');
+  Future<void> _savePdf() async {
+    if (_loadedDocument != null) {
+      final List<int> bytes = await _loadedDocument!.save();
+      final dir = await getTemporaryDirectory();
+      final outputFile = File('${dir.path}/modified_${widget.fileName}');
+      await outputFile.writeAsBytes(bytes, flush: true);
+      print('PDF saved to: ${outputFile.path}');
+      await PdfService.uploadPdf('picklists', widget.fileName, outputFile);
+      print('PDF uploaded to server: ${widget.fileName}');
+    }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(fileName),
+        title: Text(widget.fileName),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context)
-                .pop(false); // Simply go back without refreshing
+          onPressed: () async {
+            await _savePdf(); // Save and upload the PDF when navigating back
+            Navigator.of(context).pop();
           },
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
             color: Colors.green,
-            onPressed: isDone
-                ? null
-                : () {
-                    onMarkAsDone();
-                    Navigator.of(context)
-                        .pop(true); // Mark as done and refresh the list
-                  },
-            tooltip: isDone ? 'Already marked as done' : 'Mark as Done',
+            onPressed: () async {
+              await _savePdf(); // Save and upload the PDF when marking as done
+              widget.onMarkAsDone();
+            },
+            tooltip: 'Mark as Done',
           ),
           IconButton(
             icon: const Icon(Icons.delete),
             color: Colors.red,
-            onPressed: () {
-              onDelete();
-              Navigator.of(context).pop(true); // Delete and refresh the list
-            },
+            onPressed: widget.onDelete,
             tooltip: 'Delete PDF',
           ),
         ],
       ),
-      body: PdfView(controller: pdfController),
+      body: _documentBytes != null
+          ? SfPdfViewer.memory(
+              _documentBytes!,
+              key: _pdfViewerKey,
+              controller: _pdfViewerController,
+              initialZoomLevel: _zoomLevel ?? 1.0,
+              onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                _loadedDocument = details.document;
+
+                if (_offset != null) {
+                  _pdfViewerController.jumpTo(
+                      xOffset: _offset!.dx, yOffset: _offset!.dy);
+                }
+              },
+              onTap: (PdfGestureDetails details) {
+                _offset = _pdfViewerController.scrollOffset;
+                _tappedPageNumber = details.pageNumber;
+                _tappedOffset = details.pagePosition;
+                _zoomLevel = _pdfViewerController.zoomLevel;
+
+                _addCircle();
+              },
+            )
+          : const Center(child: CircularProgressIndicator()),
     );
+  }
+
+  @override
+  void dispose() {
+    _pdfViewerController.dispose();
+    _loadedDocument?.dispose();
+    super.dispose();
   }
 }

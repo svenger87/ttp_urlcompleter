@@ -792,7 +792,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                         Navigator.pop(context);
                       },
                       style: TextButton.styleFrom(
-                        primary: Theme.of(context).primaryColor,
+                        foregroundColor: Theme.of(context).primaryColor,
                       ),
                       child: const Row(
                         children: [

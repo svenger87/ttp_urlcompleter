@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   pdfx
   screen_retriever
+  syncfusion_pdfviewer_windows
   url_launcher_windows
   video_player_win
   webview_windows
