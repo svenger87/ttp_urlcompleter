@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import 'tool_service.dart';
 import 'tool.dart';
@@ -54,6 +56,7 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
         _isLoading = false;
       });
 
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_errorMessage!)),
       );
@@ -137,10 +140,12 @@ class _ToolInventoryScreenState extends State<ToolInventoryScreen> {
       await toolService.updateTools();
       await _loadTools();
       // Show a success message when tools are successfully updated
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Werkzeuge erfolgreich aktualisiert!')),
       );
     } catch (e) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating tools: $e')),
       );

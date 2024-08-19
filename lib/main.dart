@@ -16,6 +16,7 @@ import 'package:http/io_client.dart' as http;
 import 'package:http/http.dart' as http;
 import 'torsteuerung_module.dart';
 import 'tool_ui.dart';
+import 'pickists_ui.dart';
 
 void main() {
   runApp(const MyApp());
@@ -690,50 +691,13 @@ class _NumberInputPageState extends State<NumberInputPage> {
           ListTile(
             leading: const Icon(Icons.checklist_rounded),
             title: const Text('Picklisten'),
-            onTap: () async {
-              const url =
-                  'https://wim-solution.sip.local:8443/public.php/webdav';
-              const user = 'mYYc2cJyWG795BM';
-              const pwd = '';
-              const dirPath = '/';
-
-              final basicAuth =
-                  'Basic ${base64Encode(utf8.encode('$user:$pwd'))}';
-
-              final headers = <String, String>{
-                'Authorization': basicAuth,
-              };
-
-              final httpClient = HttpClient();
-              httpClient.badCertificateCallback =
-                  (X509Certificate cert, String host, int port) => true;
-
-              final request = await httpClient.getUrl(Uri.parse(url + dirPath));
-              headers.forEach((name, value) {
-                request.headers.set(name, value);
-              });
-
-              final response = await request.close();
-
-              if (response.statusCode == 200) {
-                if (kDebugMode) {
-                  print('Response body:');
-                }
-                if (kDebugMode) {
-                  print(await response.transform(utf8.decoder).join());
-                }
-                // Process the response body as needed
-              } else {
-                if (kDebugMode) {
-                  print('Error:');
-                }
-                if (kDebugMode) {
-                  print(
-                      'HTTP ${response.statusCode}: ${response.reasonPhrase}');
-                }
-              }
-
-              httpClient.close(); // Close the client to release resources
+            onTap: () {
+              // Navigate to the new PDF Reader module
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const PdfReaderPage(),
+                ),
+              );
             },
           ),
           ExpansionTile(

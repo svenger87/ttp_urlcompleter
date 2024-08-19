@@ -1,3 +1,6 @@
+// ignore_for_file: library_private_types_in_public_api
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -40,8 +43,12 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
         );
 
         // Debug print for allStorages
-        print('allStorages: $allStorages');
-        print('Total items in allStorages: ${allStorages.length}');
+        if (kDebugMode) {
+          print('allStorages: $allStorages');
+        }
+        if (kDebugMode) {
+          print('Total items in allStorages: ${allStorages.length}');
+        }
 
         // Parse the 'free-storages' response as List<String>
         final List<String> freeStorages = List<String>.from(
@@ -49,8 +56,12 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
         );
 
         // Debug print for freeStorages
-        print('freeStorages: $freeStorages');
-        print('Total items in freeStorages: ${freeStorages.length}');
+        if (kDebugMode) {
+          print('freeStorages: $freeStorages');
+        }
+        if (kDebugMode) {
+          print('Total items in freeStorages: ${freeStorages.length}');
+        }
 
         // Calculate capacities
         final int freeCapacity =
@@ -68,14 +79,24 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
         });
 
         // Print the results
-        print('Max Capacity: $_maxCapacity');
-        print('Free Capacity: $_freeCapacity');
-        print('Used Capacity: $_usedCapacity');
-        print('Usage Percentage: $_usagePercentage%');
+        if (kDebugMode) {
+          print('Max Capacity: $_maxCapacity');
+        }
+        if (kDebugMode) {
+          print('Free Capacity: $_freeCapacity');
+        }
+        if (kDebugMode) {
+          print('Used Capacity: $_usedCapacity');
+        }
+        if (kDebugMode) {
+          print('Usage Percentage: $_usagePercentage%');
+        }
       } else {
         // Handle non-200 responses
-        print(
-            'Error: ${allStoragesResponse.statusCode}, ${freeStoragesResponse.statusCode}');
+        if (kDebugMode) {
+          print(
+              'Error: ${allStoragesResponse.statusCode}, ${freeStoragesResponse.statusCode}');
+        }
         setState(() {
           _isLoading = false;
           _hasError = true;
@@ -83,7 +104,9 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
       }
     } catch (e) {
       // Catch and print any exceptions
-      print('Exception: $e');
+      if (kDebugMode) {
+        print('Exception: $e');
+      }
       setState(() {
         _isLoading = false;
         _hasError = true;
@@ -120,7 +143,8 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
                         value: _usagePercentage / 100,
                         minHeight: 20,
                         backgroundColor: Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(Colors.green),
                       ),
                     ],
                   ),
