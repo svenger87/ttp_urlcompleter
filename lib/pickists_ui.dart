@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -64,6 +66,7 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
               fileName: fileName,
               onDelete: () => _deletePdf(fileName),
               onMarkAsDone: () => _markPdfAsDone(fileName),
+              isDone: fileName.startsWith('ERLEDIGT_'),
             ),
           ),
         );
@@ -138,7 +141,7 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PDF Reader')),
+      appBar: AppBar(title: const Text('Picklistenmanagement')),
       body: ListView.builder(
         itemCount: _pdfs.length,
         itemBuilder: (context, index) {
@@ -169,13 +172,15 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
                 IconButton(
                   icon: const Icon(Icons.check),
                   color: isDone ? Colors.grey : Colors.green,
-                  tooltip: isDone ? 'Already marked as done' : 'Mark as Done',
+                  tooltip: isDone
+                      ? 'Bereits als erledigt markiert'
+                      : 'Als erledigt markieren',
                   onPressed: isDone ? null : () => _markPdfAsDone(file),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
                   color: Colors.red,
-                  tooltip: 'Delete PDF',
+                  tooltip: 'PDF löschen',
                   onPressed: () => _deletePdf(file),
                 ),
               ],
@@ -198,6 +203,7 @@ class PdfViewerPage extends StatefulWidget {
   final String fileName;
   final VoidCallback onDelete;
   final VoidCallback onMarkAsDone;
+  final bool isDone;
 
   const PdfViewerPage({
     super.key,
@@ -205,6 +211,7 @@ class PdfViewerPage extends StatefulWidget {
     required this.fileName,
     required this.onDelete,
     required this.onMarkAsDone,
+    required this.isDone,
   });
 
   @override
@@ -220,21 +227,32 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   Offset _tappedOffset = Offset.zero;
   Offset? _offset;
   double? _zoomLevel;
-  double _circleSize = 30;
+  final double _circleSize = 30;
+  bool _isDone = false; // Track if the PDF is marked as done
+  bool _isDeleted = false; // Track if the PDF is deleted
 
   @override
   void initState() {
+    _isDone = widget.isDone;
     _getPdfBytes();
     super.initState();
   }
 
   Future<void> _getPdfBytes() async {
-    _documentBytes = await File(widget.filePath).readAsBytes();
-    setState(() {});
+    try {
+      _documentBytes = await File(widget.filePath).readAsBytes();
+      setState(() {});
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error reading PDF file: $e');
+      }
+    }
   }
 
   void _addCircle() async {
-    if (_loadedDocument != null) {
+    if (_loadedDocument != null &&
+        _tappedPageNumber > 0 &&
+        _tappedPageNumber <= _loadedDocument!.pages.count) {
       final PdfPage page = _loadedDocument!.pages[_tappedPageNumber - 1];
 
       page.graphics.drawEllipse(
@@ -247,18 +265,36 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
       setState(() {
         _documentBytes = Uint8List.fromList(bytes);
       });
+    } else {
+      if (kDebugMode) {
+        print('Error: _loadedDocument is null or _tappedPageNumber is invalid');
+      }
     }
   }
 
   Future<void> _savePdf() async {
     if (_loadedDocument != null) {
-      final List<int> bytes = await _loadedDocument!.save();
-      final dir = await getTemporaryDirectory();
-      final outputFile = File('${dir.path}/modified_${widget.fileName}');
-      await outputFile.writeAsBytes(bytes, flush: true);
-      print('PDF saved to: ${outputFile.path}');
-      await PdfService.uploadPdf('picklists', widget.fileName, outputFile);
-      print('PDF uploaded to server: ${widget.fileName}');
+      try {
+        final List<int> bytes = await _loadedDocument!.save();
+        final dir = await getTemporaryDirectory();
+        final outputFile = File('${dir.path}/modified_${widget.fileName}');
+        await outputFile.writeAsBytes(bytes, flush: true);
+        if (kDebugMode) {
+          print('PDF saved to: ${outputFile.path}');
+        }
+        await PdfService.uploadPdf('picklists', widget.fileName, outputFile);
+        if (kDebugMode) {
+          print('PDF uploaded to server: ${widget.fileName}');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error saving or uploading PDF: $e');
+        }
+      }
+    } else {
+      if (kDebugMode) {
+        print('Error: _loadedDocument is null');
+      }
     }
   }
 
@@ -270,25 +306,39 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () async {
-            await _savePdf(); // Save and upload the PDF when navigating back
+            if (!_isDeleted) {
+              await _savePdf(); // Save and upload the PDF when navigating back
+            }
             Navigator.of(context).pop();
           },
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
-            color: Colors.green,
-            onPressed: () async {
-              await _savePdf(); // Save and upload the PDF when marking as done
-              widget.onMarkAsDone();
-            },
-            tooltip: 'Mark as Done',
+            color: _isDone ? Colors.grey : Colors.green,
+            onPressed: _isDone
+                ? null
+                : () async {
+                    await _savePdf(); // Save and upload the PDF when marking as done
+                    widget.onMarkAsDone();
+                    setState(() {
+                      _isDone = true;
+                    });
+                  },
+            tooltip: 'Als erledigt markieren',
           ),
           IconButton(
             icon: const Icon(Icons.delete),
-            color: Colors.red,
-            onPressed: widget.onDelete,
-            tooltip: 'Delete PDF',
+            color: _isDeleted ? Colors.grey : Colors.red,
+            onPressed: _isDeleted
+                ? null
+                : () {
+                    widget.onDelete();
+                    setState(() {
+                      _isDeleted = true;
+                    });
+                  },
+            tooltip: 'PDF löschen',
           ),
         ],
       ),
