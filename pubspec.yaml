@@ -17,7 +17,6 @@ dependencies:
   platform: ^3.1.1
   shared_preferences: ^2.2.0
   flutter_dropdown: ^1.0.1+hotfix.1
-  pdfx: ^2.4.0
   flutter_typeahead: ^4.8.0
   flutter_webview_plugin: ^0.4.0
   webview_windows: ^0.3.0
@@ -32,6 +31,8 @@ dependencies:
   provider: ^6.1.2
   syncfusion_flutter_pdfviewer: 23.2.7
   syncfusion_flutter_pdf: 23.2.7
+  pdfx: ^2.6.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
