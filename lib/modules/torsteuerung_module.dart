@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
-import 'pin_entry_screen.dart';
+import '../screens/pin_entry_screen.dart';
 import 'package:video_player_win/video_player_win.dart';
 
 class TorsteuerungModule extends StatefulWidget {

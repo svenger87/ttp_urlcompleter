@@ -6,7 +6,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'pdf_service.dart';
+import '../services/pdf_service.dart';
 import 'package:http/http.dart' as http;
 
 class PdfReaderPage extends StatefulWidget {
@@ -17,7 +17,7 @@ class PdfReaderPage extends StatefulWidget {
 }
 
 class _PdfReaderPageState extends State<PdfReaderPage> {
-  List<String> _pdfs = [];
+  Map<String, dynamic> _pdfs = {};
 
   @override
   void initState() {
@@ -41,31 +41,97 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
     }
   }
 
-  Future<void> _openPdf(String fileName) async {
-    try {
-      final fullFileName =
-          fileName.startsWith('ERLEDIGT_') ? fileName : fileName;
-      final url =
-          'http://wim-solution.sip.local:3001/api/pdf/picklists/$fullFileName';
-      if (kDebugMode) {
-        print('Attempting to open PDF: $fullFileName at URL: $url');
+  List<Widget> _buildFileList(Map<String, dynamic> files,
+      [String parentPath = '']) {
+    List<Widget> fileWidgets = [];
+
+    files.forEach((key, value) {
+      String fullPath = parentPath.isEmpty ? key : '$parentPath/$key';
+
+      if (value is String) {
+        // It's a file
+        final isDone = key.startsWith('ERLEDIGT_');
+        fileWidgets.add(
+          ListTile(
+            title: Text(
+              key.replaceFirst('ERLEDIGT_', ''),
+              style: TextStyle(
+                decoration:
+                    isDone ? TextDecoration.lineThrough : TextDecoration.none,
+                color: isDone ? Colors.grey : Colors.white,
+              ),
+            ),
+            leading: Icon(
+              Icons.check_circle,
+              color: isDone ? Colors.green : Colors.transparent,
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.check),
+                  color: isDone ? Colors.grey : Colors.green,
+                  tooltip: isDone
+                      ? 'Bereits als erledigt markiert'
+                      : 'Als erledigt markieren',
+                  onPressed: isDone ? null : () => _markPdfAsDone(fullPath),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  color: Colors.red,
+                  tooltip: 'PDF löschen',
+                  onPressed: () => _deletePdf(fullPath),
+                ),
+              ],
+            ),
+            onTap: () {
+              if (kDebugMode) {
+                print('Tapped on PDF: $fullPath');
+              }
+              _openPdf(fullPath);
+            },
+          ),
+        );
+      } else if (value is Map<String, dynamic>) {
+        // It's a folder, recursively build the list
+        fileWidgets.add(
+          ExpansionTile(
+            title: Text(key),
+            children: _buildFileList(value, fullPath),
+          ),
+        );
       }
-      final response = await http.get(Uri.parse(url));
+    });
+
+    return fileWidgets;
+  }
+
+  Future<void> _openPdf(String fullPath) async {
+    try {
+      final fileName = fullPath.split('/').last;
+      final url =
+          'http://wim-solution.sip.local:3001/api/pdf/picklists/$fullPath';
+      if (kDebugMode) {
+        print('Attempting to open PDF: $fullPath at URL: $url');
+      }
+      final encodedUrl = Uri.encodeFull(url); // Ensure URL is properly encoded
+      final response = await http.get(Uri.parse(encodedUrl));
 
       if (response.statusCode == 200) {
         final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/$fullFileName');
+        final file = File('${dir.path}/$fileName');
 
         await file.writeAsBytes(response.bodyBytes);
 
-        // Use build context synchronously
+        // Pass the correct full path when opening the PDF viewer
         final result = await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => PdfViewerPage(
               filePath: file.path,
               fileName: fileName,
-              onDelete: () => _deletePdf(fileName),
-              onMarkAsDone: () => _markPdfAsDone(fileName),
+              originalPath: fullPath, // Store the original path
+              onDelete: () => _deletePdf(fullPath),
+              onMarkAsDone: () => _markPdfAsDone(fullPath),
               isDone: fileName.startsWith('ERLEDIGT_'),
             ),
           ),
@@ -86,17 +152,22 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
     }
   }
 
-  Future<void> _deletePdf(String fileName) async {
+  Future<void> _deletePdf(String fullPath) async {
     try {
       if (kDebugMode) {
-        print('Attempting to delete PDF: $fileName');
+        print('Attempting to delete PDF: $fullPath');
       }
-      await PdfService.deletePdf('picklists', fileName);
+      await PdfService.deletePdf('picklists', fullPath);
       setState(() {
-        _pdfs.remove(fileName);
+        final keys = fullPath.split('/');
+        Map<String, dynamic> currentLevel = _pdfs;
+        for (int i = 0; i < keys.length - 1; i++) {
+          currentLevel = currentLevel[keys[i]];
+        }
+        currentLevel.remove(keys.last);
       });
       if (kDebugMode) {
-        print('Deleted PDF: $fileName');
+        print('Deleted PDF: $fullPath');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -105,32 +176,32 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
     }
   }
 
-  Future<void> _markPdfAsDone(String fileName) async {
+  Future<void> _markPdfAsDone(String fullPath) async {
     try {
+      final fileName = fullPath.split('/').last;
       if (fileName.startsWith('ERLEDIGT_')) {
         if (kDebugMode) {
           print('File is already marked as done: $fileName');
         }
-        return; // Exit early if the file is already marked as done
+        return;
       }
 
       if (kDebugMode) {
         print('Attempting to mark PDF as done: $fileName');
       }
-      await PdfService.markPdfAsDone('picklists', fileName);
+      await PdfService.markPdfAsDone('picklists', fullPath);
       final doneFileName = 'ERLEDIGT_$fileName';
 
       setState(() {
-        int index = _pdfs.indexOf(fileName);
-        if (index != -1) {
-          _pdfs[index] = doneFileName;
-          if (kDebugMode) {
-            print('Updated local list: $_pdfs');
-          }
+        final keys = fullPath.split('/');
+        Map<String, dynamic> currentLevel = _pdfs;
+        for (int i = 0; i < keys.length - 1; i++) {
+          currentLevel = currentLevel[keys[i]];
         }
+        currentLevel[doneFileName] = currentLevel.remove(fileName);
       });
 
-      _loadPdfs(); // Reload the PDFs to reflect the change
+      _loadPdfs();
     } catch (e) {
       if (kDebugMode) {
         print('Error marking PDF as done: $e');
@@ -141,59 +212,15 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Picklistenmanagement')),
-      body: ListView.builder(
-        itemCount: _pdfs.length,
-        itemBuilder: (context, index) {
-          final file = _pdfs[index];
-          final isDone = file.startsWith('ERLEDIGT_');
-          if (kDebugMode) {
-            print('Displaying PDF: $file (Is Done: $isDone)');
-          }
-
-          return ListTile(
-            title: Text(
-              file.replaceFirst('ERLEDIGT_', ''),
-              style: TextStyle(
-                decoration:
-                    isDone ? TextDecoration.lineThrough : TextDecoration.none,
-                color: isDone ? Colors.grey : Colors.white,
-              ),
-            ),
-            leading: Icon(
-              Icons.check_circle,
-              color: isDone
-                  ? Colors.green
-                  : Colors.transparent, // Show green check if done
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.check),
-                  color: isDone ? Colors.grey : Colors.green,
-                  tooltip: isDone
-                      ? 'Bereits als erledigt markiert'
-                      : 'Als erledigt markieren',
-                  onPressed: isDone ? null : () => _markPdfAsDone(file),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  color: Colors.red,
-                  tooltip: 'PDF löschen',
-                  onPressed: () => _deletePdf(file),
-                ),
-              ],
-            ),
-            onTap: () {
-              if (kDebugMode) {
-                print('Tapped on PDF: $file');
-              }
-              _openPdf(file); // Open the PDF when the ListTile is tapped
-            },
-          );
-        },
+      appBar: AppBar(
+        title: const Text('Picklistenmanagement'),
+        backgroundColor: const Color(0xFF104382), // AppBar color
       ),
+      body: _pdfs.isNotEmpty
+          ? ListView(
+              children: _buildFileList(_pdfs),
+            )
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -201,6 +228,7 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
 class PdfViewerPage extends StatefulWidget {
   final String filePath;
   final String fileName;
+  final String originalPath; // New variable to hold the original path
   final VoidCallback onDelete;
   final VoidCallback onMarkAsDone;
   final bool isDone;
@@ -209,6 +237,7 @@ class PdfViewerPage extends StatefulWidget {
     super.key,
     required this.filePath,
     required this.fileName,
+    required this.originalPath, // Pass the original path to this widget
     required this.onDelete,
     required this.onMarkAsDone,
     required this.isDone,
@@ -228,8 +257,8 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   Offset? _offset;
   double? _zoomLevel;
   final double _circleSize = 30;
-  bool _isDone = false; // Track if the PDF is marked as done
-  bool _isDeleted = false; // Track if the PDF is deleted
+  bool _isDone = false;
+  bool _isDeleted = false;
 
   @override
   void initState() {
@@ -275,6 +304,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   Future<void> _savePdf() async {
     if (_loadedDocument != null) {
       try {
+        // Save the modified PDF to a temporary location
         final List<int> bytes = await _loadedDocument!.save();
         final dir = await getTemporaryDirectory();
         final outputFile = File('${dir.path}/modified_${widget.fileName}');
@@ -282,9 +312,18 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
         if (kDebugMode) {
           print('PDF saved to: ${outputFile.path}');
         }
-        await PdfService.uploadPdf('picklists', widget.fileName, outputFile);
+
+        // Use widget.originalPath for the correct relative path on the server
+        String relativePath = widget.originalPath;
+
         if (kDebugMode) {
-          print('PDF uploaded to server: ${widget.fileName}');
+          print('Relative Path for upload: $relativePath');
+        }
+
+        // Upload the file using the original server path but the file from the temp directory
+        await PdfService.uploadPdf('picklists', relativePath, outputFile);
+        if (kDebugMode) {
+          print('PDF uploaded to server: $relativePath');
         }
       } catch (e) {
         if (kDebugMode) {

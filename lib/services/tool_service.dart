@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'tool.dart';
+import '../models/tool.dart';
 
 class ToolService {
   final String localApiUrl = 'http://wim-solution:3000/tools';

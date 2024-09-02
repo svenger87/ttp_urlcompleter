@@ -1,8 +1,8 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
-import 'tool_service.dart';
-import 'tool.dart';
+import '../services/tool_service.dart';
+import '../models/tool.dart';
 import 'edit_tool_screen.dart';
 import 'storage_utilization_screen.dart';
 
