@@ -12,6 +12,8 @@ import '../screens/tool_ui.dart';
 import '../screens/pickists_screen.dart';
 import '../modules/torsteuerung_module.dart';
 import '../modules/converter_module.dart';
+import '../screens/stations_screen.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({Key? key}) : super(key: key);
@@ -215,6 +217,15 @@ class MainDrawer extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => const PdfReaderPage(),
+              ));
+            },
+          ),
+          ListTile(
+            leading: Icon(MdiIcons.gantryCrane),
+            title: const Text('Aufhängestationen'),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const Dashboard(),
               ));
             },
           ),

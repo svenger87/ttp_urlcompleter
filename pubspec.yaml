@@ -32,6 +32,8 @@ dependencies:
   syncfusion_flutter_pdfviewer: 23.2.7
   syncfusion_flutter_pdf: 23.2.7
   pdfx: ^2.6.0
+  material_design_icons_flutter: ^7.0.7296
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +52,7 @@ flutter:
     - assets/anbauteile.json
     - assets/wzabt_pdfs/
     - assets/IKOffice.ico
+    - assets/extruder.svg
   
 msix_config:
   display_name: ttp App
