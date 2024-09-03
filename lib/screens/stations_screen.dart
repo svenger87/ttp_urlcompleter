@@ -308,9 +308,6 @@ class MaterialFlowCard extends StatelessWidget {
     String workplace = station['Arbeitsplatz'] ?? 'FREI';
     String mainArticle = station['Hauptartikel'] ?? 'FREI';
     String equipment = station['Equipment'] ?? 'FREI';
-    Color statusColor = materialNumber == 'FREI' ? Colors.red : Colors.green;
-    Color dryingColor =
-        dryingRequired == 'Erforderlich' ? Colors.green : Colors.red;
 
     return Card(
       margin: const EdgeInsets.all(10),
@@ -327,14 +324,16 @@ class MaterialFlowCard extends StatelessWidget {
                   isSmallScreen: isSmallScreen,
                 ),
               ),
-              const Pipeline(),
+              if (materialNumber != 'FREI')
+                const Pipeline(), // Conditional Pipeline rendering
               Expanded(
                 child: DryerComponent(
                   dryingRequired: dryingRequired,
                   isSmallScreen: isSmallScreen,
                 ),
               ),
-              const Pipeline(),
+              if (materialNumber != 'FREI')
+                const Pipeline(), // Conditional Pipeline rendering
               Expanded(
                 child: ExtruderComponent(
                   equipment: equipment,
