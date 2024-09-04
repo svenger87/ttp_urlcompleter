@@ -205,35 +205,51 @@ class StationOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
 
-    int crossAxisCount;
-    if (screenWidth < 600) {
-      crossAxisCount = 2;
-    } else if (screenWidth >= 600 && screenWidth < 1200) {
-      crossAxisCount = 3;
-    } else if (screenWidth >= 1200 && screenWidth < 1600) {
-      crossAxisCount = 4;
-    } else {
-      crossAxisCount = 8;
-    }
+        int crossAxisCount;
+        double childAspectRatio;
 
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 10.0,
-          mainAxisSpacing: 10.0,
-          childAspectRatio: screenWidth < 600 ? 2 : 1.5,
-        ),
-        itemCount: stations.length,
-        itemBuilder: (context, index) {
-          var station = stations[index];
-          return StationCard(
-              station: station, isSmallScreen: screenWidth < 600);
-        },
-      ),
+        if (screenWidth < 600) {
+          // Mobile Portrait
+          crossAxisCount = 2;
+          childAspectRatio = 1.2;
+        } else if (screenWidth >= 600 && screenWidth < 900) {
+          // Mobile Landscape / Small Tablets
+          crossAxisCount = 3;
+          childAspectRatio = 1.5;
+        } else if (screenWidth >= 900 && screenWidth < 1200) {
+          // Tablets
+          crossAxisCount = 4;
+          childAspectRatio = 1.5;
+        } else if (screenWidth >= 1200 && screenWidth < 1600) {
+          // Laptops / Small Desktops
+          crossAxisCount = 6;
+          childAspectRatio = 1.6;
+        } else {
+          // Large Desktops
+          crossAxisCount = 8;
+          childAspectRatio = 1.6;
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(10.0),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 10.0,
+            mainAxisSpacing: 10.0,
+            childAspectRatio: childAspectRatio,
+          ),
+          itemCount: stations.length,
+          itemBuilder: (context, index) {
+            var station = stations[index];
+            return StationCard(
+                station: station, isSmallScreen: screenWidth < 600);
+          },
+        );
+      },
     );
   }
 }
@@ -245,13 +261,19 @@ class MaterialFlowDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 600;
 
-    return ListView.builder(
-      itemCount: stations.length,
-      itemBuilder: (context, index) {
-        var station = stations[index];
-        return MaterialFlowCard(station: station, isSmallScreen: isSmallScreen);
+        return ListView.builder(
+          padding: const EdgeInsets.all(10.0),
+          itemCount: stations.length,
+          itemBuilder: (context, index) {
+            var station = stations[index];
+            return MaterialFlowCard(
+                station: station, isSmallScreen: isSmallScreen);
+          },
+        );
       },
     );
   }
@@ -275,6 +297,7 @@ class StationCard extends StatelessWidget {
     String remark = station['Bemerkung'] ?? 'N/A';
     String type = station['Name'] ?? 'N/A';
     String wbz = station['WBZ'] ?? 'N/A';
+
     Color statusColor = materialNumber == 'FREI' ? Colors.white : Colors.blue;
 
     return Card(
@@ -294,7 +317,7 @@ class StationCard extends StatelessWidget {
                   child: Text(
                     'Station: $stationName',
                     style: TextStyle(
-                      fontSize: isSmallScreen ? 14 : 16,
+                      fontSize: isSmallScreen ? 12 : 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -307,35 +330,27 @@ class StationCard extends StatelessWidget {
             Text(
               'Typ: $type',
               style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
+                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
             ),
-            Flexible(
-              child: Text(
-                'Material: $materialNumber',
-                style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-              ),
+            Text(
+              'Material: $materialNumber',
+              style: TextStyle(
+                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
             ),
-            Flexible(
-              child: Text(
-                'WBZ: $wbz',
-                style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-              ),
+            Text(
+              'WBZ: $wbz',
+              style: TextStyle(
+                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
             ),
-            Flexible(
-              child: Text(
-                'Linie: $workplace',
-                style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-              ),
+            Text(
+              'Linie: $workplace',
+              style: TextStyle(
+                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
             ),
-            Flexible(
-              child: Text(
-                'Bemerkung: $remark',
-                style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-              ),
+            Text(
+              'Bemerkung: $remark',
+              style: TextStyle(
+                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
             ),
           ],
         ),
