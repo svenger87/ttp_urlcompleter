@@ -336,10 +336,9 @@ class StationCard extends StatelessWidget {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       color: Colors.grey[900],
-      child: IntrinsicHeight(
-        // Wrap the card in IntrinsicHeight to adjust height dynamically
-        child: Padding(
-          padding: const EdgeInsets.all(8),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment:
                 CrossAxisAlignment.start, // Align content to start
@@ -419,7 +418,8 @@ class MaterialFlowCard extends StatelessWidget {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       color: Colors.grey[900],
-      child: IntrinsicHeight(
+      child: SingleChildScrollView(
+        // Allow the card content to scroll if it's too large
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Column(
@@ -427,7 +427,7 @@ class MaterialFlowCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    flex: 2, // Take available space
+                    flex: 2,
                     child: StationComponent(
                       stationName: stationName,
                       materialName: materialNumber,
@@ -435,15 +435,15 @@ class MaterialFlowCard extends StatelessWidget {
                     ),
                   ),
                   if (materialNumber != 'FREI') ...[
-                    const SizedBox(width: 10), // Add some spacing
+                    const SizedBox(width: 10),
                     const SizedBox(
-                      width: 100, // Fixed width for pipeline
+                      width: 100,
                       child: Pipeline(),
                     ),
                   ] else
                     const SizedBox(width: 10),
                   Expanded(
-                    flex: 2, // Take available space
+                    flex: 2,
                     child: DryerComponent(
                       dryingRequired: dryingRequired,
                       isSmallScreen: isSmallScreen,
@@ -452,13 +452,13 @@ class MaterialFlowCard extends StatelessWidget {
                   if (materialNumber != 'FREI') ...[
                     const SizedBox(width: 10),
                     const SizedBox(
-                      width: 100, // Fixed width for pipeline
+                      width: 100,
                       child: Pipeline(),
                     ),
                   ] else
                     const SizedBox(width: 10),
                   Expanded(
-                    flex: 2, // Take available space
+                    flex: 2,
                     child: ExtruderComponent(
                       equipment: equipment,
                       workstation: workplace,
