@@ -210,13 +210,13 @@ class StationOverview extends StatelessWidget {
 
     int crossAxisCount;
     if (screenWidth < 600) {
-      crossAxisCount = 1;
-    } else if (screenWidth >= 600 && screenWidth < 1200) {
       crossAxisCount = 2;
-    } else if (screenWidth >= 1200 && screenWidth < 1600) {
+    } else if (screenWidth >= 600 && screenWidth < 1200) {
       crossAxisCount = 3;
-    } else {
+    } else if (screenWidth >= 1200 && screenWidth < 1600) {
       crossAxisCount = 4;
+    } else {
+      crossAxisCount = 8;
     }
 
     return Padding(
@@ -244,16 +244,71 @@ class MaterialFlowDashboard extends StatelessWidget {
 
   const MaterialFlowDashboard({super.key, required this.stations});
 
+  List<dynamic> reorderStationsInSnakePattern(
+      List<dynamic> stations, int crossAxisCount) {
+    int totalItems = stations.length;
+    int numRows =
+        (totalItems / crossAxisCount).ceil(); // Calculate number of rows
+
+    // Create an empty list for reordered stations
+    List<dynamic> reorderedStations = List.filled(totalItems, null);
+
+    // Reorder the list in a "snake" pattern
+    for (int i = 0; i < totalItems; i++) {
+      int row = i % numRows;
+      int col = i ~/ numRows;
+      int newIndex = col + row * crossAxisCount;
+
+      // Make sure to avoid any null value overflow if the totalItems is not a perfect multiple of crossAxisCount
+      if (newIndex < totalItems) {
+        reorderedStations[newIndex] = stations[i];
+      }
+    }
+
+    return reorderedStations;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return ListView.builder(
-      itemCount: stations.length,
-      itemBuilder: (context, index) {
-        var station = stations[index];
-        return MaterialFlowCard(station: station, isSmallScreen: isSmallScreen);
-      },
+    int crossAxisCount;
+    if (screenWidth < 600) {
+      crossAxisCount = 1; // For small screens, show 1 column
+    } else {
+      crossAxisCount = 2; // For larger screens, show 2 columns
+    }
+
+    // Reduce card size by adjusting childAspectRatio based on both width and height
+    final double cardHeight =
+        screenHeight / 9.5; // Adjust this value to fit more cards vertically
+    final double cardWidth = screenWidth / crossAxisCount;
+    final double aspectRatio =
+        cardWidth / cardHeight; // Adjust based on the new height
+
+    // Reorder the stations in a snake pattern
+    List<dynamic> reorderedStations =
+        reorderStationsInSnakePattern(stations, crossAxisCount);
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: GridView.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 10.0,
+          mainAxisSpacing: 10.0,
+          childAspectRatio: aspectRatio, // Dynamically calculated aspect ratio
+        ),
+        itemCount: reorderedStations.length,
+        itemBuilder: (context, index) {
+          var station = reorderedStations[index];
+          return MaterialFlowCard(
+            station: station,
+            isSmallScreen: screenWidth < 600,
+          );
+        },
+      ),
     );
   }
 }
