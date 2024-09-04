@@ -336,8 +336,9 @@ class StationCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start, // Align content properly
+          mainAxisSize: MainAxisSize.min, // Let the height adapt to content
           children: [
             Row(
               children: [
@@ -368,7 +369,7 @@ class StationCard extends StatelessWidget {
             Text(
               'WBZ: $wbz',
               style: TextStyle(
-                  fontSize: isSmallScreen ? 20 : 24, color: Colors.white70),
+                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
             ),
             Text(
               'Linie: $workplace',
@@ -414,52 +415,44 @@ class MaterialFlowCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Column(
+          mainAxisSize:
+              MainAxisSize.min, // Allow the card to adapt to content height
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment
                   .spaceBetween, // Ensure elements are spaced evenly
               children: [
                 Flexible(
-                  child: Center(
-                    child: StationComponent(
-                      stationName: stationName,
-                      materialName: materialNumber,
-                      isSmallScreen: isSmallScreen,
-                    ),
+                  child: StationComponent(
+                    stationName: stationName,
+                    materialName: materialNumber,
+                    isSmallScreen: isSmallScreen,
                   ),
                 ),
                 if (materialNumber != 'FREI')
                   const Flexible(
-                    child: Center(
-                      child: Pipeline(),
-                    ),
+                    child: Pipeline(),
                   )
                 else
                   const Spacer(), // Add Spacer for missing pipeline
                 Flexible(
-                  child: Center(
-                    child: DryerComponent(
-                      dryingRequired: dryingRequired,
-                      isSmallScreen: isSmallScreen,
-                    ),
+                  child: DryerComponent(
+                    dryingRequired: dryingRequired,
+                    isSmallScreen: isSmallScreen,
                   ),
                 ),
                 if (materialNumber != 'FREI')
                   const Flexible(
-                    child: Center(
-                      child: Pipeline(),
-                    ),
+                    child: Pipeline(),
                   )
                 else
                   const Spacer(), // Add Spacer for missing pipeline
                 Flexible(
-                  child: Center(
-                    child: ExtruderComponent(
-                      equipment: equipment,
-                      workstation: workplace,
-                      article: mainArticle,
-                      isSmallScreen: isSmallScreen,
-                    ),
+                  child: ExtruderComponent(
+                    equipment: equipment,
+                    workstation: workplace,
+                    article: mainArticle,
+                    isSmallScreen: isSmallScreen,
                   ),
                 ),
               ],
