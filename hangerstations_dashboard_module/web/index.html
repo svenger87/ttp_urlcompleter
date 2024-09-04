@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="description" content="Dashboard Module">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aufhängestationen Dashboard</title>
+  
+  <!-- Manifest for Progressive Web App -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Flutter SDK -->
+  <script src="flutter.js" defer></script>
+  
+  <!-- Additional meta data -->
+  <meta name="theme-color" content="#000000">
+
+  <!-- Load any custom fonts if necessary -->
+  <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"> -->
+</head>
+<body>
+  <!-- This script ensures that the service worker is registered if the browser supports it -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('flutter_service_worker.js');
+      });
+    }
+  </script>
+  
+  <!-- The app will be rendered inside this <div> -->
+  <div id="app-container">
+    <script src="main.dart.js" type="application/javascript"></script>
+  </div>
+</body>
+</html>
