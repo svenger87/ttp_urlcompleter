@@ -179,7 +179,6 @@ class _DashboardState extends State<Dashboard>
             } else if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
             } else if (!snapshot.hasData || snapshot.data == null) {
-              // Ensure snapshot.data is not null
               return const Center(child: Text('No data available.'));
             } else {
               var stations = List.from(snapshot.data!['stations']);
@@ -244,71 +243,16 @@ class MaterialFlowDashboard extends StatelessWidget {
 
   const MaterialFlowDashboard({super.key, required this.stations});
 
-  List<dynamic> reorderStationsInSnakePattern(
-      List<dynamic> stations, int crossAxisCount) {
-    int totalItems = stations.length;
-    int numRows =
-        (totalItems / crossAxisCount).ceil(); // Calculate number of rows
-
-    // Create an empty list for reordered stations
-    List<dynamic> reorderedStations = List.filled(totalItems, null);
-
-    // Reorder the list in a "snake" pattern
-    for (int i = 0; i < totalItems; i++) {
-      int row = i % numRows;
-      int col = i ~/ numRows;
-      int newIndex = col + row * crossAxisCount;
-
-      // Make sure to avoid any null value overflow if the totalItems is not a perfect multiple of crossAxisCount
-      if (newIndex < totalItems) {
-        reorderedStations[newIndex] = stations[i];
-      }
-    }
-
-    return reorderedStations;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
-    int crossAxisCount;
-    if (screenWidth < 600) {
-      crossAxisCount = 1; // For small screens, show 1 column
-    } else {
-      crossAxisCount = 2; // For larger screens, show 2 columns
-    }
-
-    // Reduce card size by adjusting childAspectRatio based on both width and height
-    final double cardHeight =
-        screenHeight / 9.5; // Adjust this value to fit more cards vertically
-    final double cardWidth = screenWidth / crossAxisCount;
-    final double aspectRatio =
-        cardWidth / cardHeight; // Adjust based on the new height
-
-    // Reorder the stations in a snake pattern
-    List<dynamic> reorderedStations =
-        reorderStationsInSnakePattern(stations, crossAxisCount);
-
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 10.0,
-          mainAxisSpacing: 10.0,
-          childAspectRatio: aspectRatio, // Dynamically calculated aspect ratio
-        ),
-        itemCount: reorderedStations.length,
-        itemBuilder: (context, index) {
-          var station = reorderedStations[index];
-          return MaterialFlowCard(
-            station: station,
-            isSmallScreen: screenWidth < 600,
-          );
-        },
-      ),
+    return ListView.builder(
+      itemCount: stations.length,
+      itemBuilder: (context, index) {
+        var station = stations[index];
+        return MaterialFlowCard(station: station, isSmallScreen: isSmallScreen);
+      },
     );
   }
 }
@@ -338,57 +282,62 @@ class StationCard extends StatelessWidget {
       color: Colors.grey[900],
       child: Padding(
         padding: const EdgeInsets.all(8),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // Align content to start
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.settings,
-                      color: statusColor, size: isSmallScreen ? 20 : 24),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Station: $stationName',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 14 : 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      overflow: TextOverflow.ellipsis, // Prevent text overflow
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.settings,
+                    color: statusColor, size: isSmallScreen ? 20 : 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Station: $stationName',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Typ: $type',
-                style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-              ),
-              Text(
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Typ: $type',
+              style: TextStyle(
+                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
+            ),
+            Flexible(
+              child: Text(
                 'Material: $materialNumber',
                 style: TextStyle(
                     fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
               ),
-              Text(
+            ),
+            Flexible(
+              child: Text(
                 'WBZ: $wbz',
                 style: TextStyle(
                     fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
               ),
-              Text(
+            ),
+            Flexible(
+              child: Text(
                 'Linie: $workplace',
                 style: TextStyle(
                     fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
               ),
-              Text(
+            ),
+            Flexible(
+              child: Text(
                 'Bemerkung: $remark',
                 style: TextStyle(
                     fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -416,49 +365,52 @@ class MaterialFlowCard extends StatelessWidget {
     String equipment = station['Equipment'] ?? 'FREI';
 
     return Card(
+      margin: const EdgeInsets.all(10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       color: Colors.grey[900],
-      child: SingleChildScrollView(
-        // Allow the card content to scroll if it's too large
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment
+                  .spaceBetween, // Ensure elements are spaced evenly
+              children: [
+                Flexible(
+                  child: Center(
                     child: StationComponent(
                       stationName: stationName,
                       materialName: materialNumber,
                       isSmallScreen: isSmallScreen,
                     ),
                   ),
-                  if (materialNumber != 'FREI') ...[
-                    const SizedBox(width: 10),
-                    const SizedBox(
-                      width: 100,
+                ),
+                if (materialNumber != 'FREI')
+                  const Flexible(
+                    child: Center(
                       child: Pipeline(),
                     ),
-                  ] else
-                    const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
+                  )
+                else
+                  const Spacer(), // Add Spacer for missing pipeline
+                Flexible(
+                  child: Center(
                     child: DryerComponent(
                       dryingRequired: dryingRequired,
                       isSmallScreen: isSmallScreen,
                     ),
                   ),
-                  if (materialNumber != 'FREI') ...[
-                    const SizedBox(width: 10),
-                    const SizedBox(
-                      width: 100,
+                ),
+                if (materialNumber != 'FREI')
+                  const Flexible(
+                    child: Center(
                       child: Pipeline(),
                     ),
-                  ] else
-                    const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
+                  )
+                else
+                  const Spacer(), // Add Spacer for missing pipeline
+                Flexible(
+                  child: Center(
                     child: ExtruderComponent(
                       equipment: equipment,
                       workstation: workplace,
@@ -466,10 +418,10 @@ class MaterialFlowCard extends StatelessWidget {
                       isSmallScreen: isSmallScreen,
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -491,16 +443,13 @@ class StationComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      // Wrap everything in a Center widget
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center, // Center the content
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             MdiIcons.gantryCrane,
             size: isSmallScreen ? 24 : 30,
-            color: materialName == 'FREI'
-                ? Colors.white
-                : Colors.blue, // Set icon to white if materialNumber is 'LEER'
+            color: materialName == 'FREI' ? Colors.white : Colors.blue,
           ),
           const SizedBox(height: 10),
           Text(
@@ -539,13 +488,12 @@ class DryerComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment:
-          MainAxisAlignment.center, // Ensure the content is centered
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           dryingRequired == 'Erforderlich'
               ? MdiIcons.tumbleDryer
-              : MdiIcons.tumbleDryerOff, // Show tumbleDryerOff if not required
+              : MdiIcons.tumbleDryerOff,
           size: isSmallScreen ? 24 : 30,
           color: dryingRequired == 'Erforderlich' ? Colors.green : Colors.red,
         ),
@@ -580,8 +528,7 @@ class ExtruderComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment:
-          MainAxisAlignment.center, // Ensure the content is centered
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SvgPicture.asset(
           'assets/extruder.svg',
