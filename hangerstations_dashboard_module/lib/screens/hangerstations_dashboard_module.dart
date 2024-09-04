@@ -235,11 +235,11 @@ class StationOverview extends StatelessWidget {
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(10.0),
+          padding: const EdgeInsets.all(2.0),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 10.0,
-            mainAxisSpacing: 10.0,
+            crossAxisSpacing: 2.0,
+            mainAxisSpacing: 2.0,
             childAspectRatio: childAspectRatio,
           ),
           itemCount: stations.length,
@@ -267,23 +267,24 @@ class MaterialFlowDashboard extends StatelessWidget {
         final isSmallScreen = screenWidth < 600;
 
         if (screenWidth >= 1200) {
-          // For large screens, use a grid layout with two rows
+          // For large screens, use a grid layout with two rows and reduced spacing
           return Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 5.0), // Reduced overall padding
             child: GridView.builder(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4, // Display in 4 columns (two rows)
-                crossAxisSpacing: 10.0,
-                mainAxisSpacing: 10.0,
-                childAspectRatio:
-                    2.5, // Adjust this to get the desired row height
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4, // Display in 4 columns
+                crossAxisSpacing: 2.0, // Reduce horizontal spacing
+                mainAxisSpacing: 2.0, // Reduce vertical spacing
+                childAspectRatio: 2.5, // Adjust aspect ratio
               ),
               itemCount: stations.length,
               itemBuilder: (context, index) {
                 var station = stations[index];
                 return MaterialFlowCard(
-                    station: station,
-                    isSmallScreen: false); // No small screen adjustments
+                  station: station,
+                  isSmallScreen: false,
+                );
               },
             ),
           );
@@ -295,7 +296,9 @@ class MaterialFlowDashboard extends StatelessWidget {
             itemBuilder: (context, index) {
               var station = stations[index];
               return MaterialFlowCard(
-                  station: station, isSmallScreen: isSmallScreen);
+                station: station,
+                isSmallScreen: isSmallScreen,
+              );
             },
           );
         }
@@ -405,11 +408,11 @@ class MaterialFlowCard extends StatelessWidget {
     String equipment = station['Equipment'] ?? 'FREI';
 
     return Card(
-      margin: const EdgeInsets.all(10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      margin: const EdgeInsets.all(2), // Minimize the card margin
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       color: Colors.grey[900],
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(2), // Minimize internal padding
         child: Column(
           children: [
             Row(
@@ -431,7 +434,7 @@ class MaterialFlowCard extends StatelessWidget {
                     ),
                   )
                 else
-                  const Spacer(),
+                  const Spacer(), // Add Spacer for missing pipeline
                 Flexible(
                   child: Center(
                     child: DryerComponent(
@@ -447,7 +450,7 @@ class MaterialFlowCard extends StatelessWidget {
                     ),
                   )
                 else
-                  const Spacer(),
+                  const Spacer(), // Add Spacer for missing pipeline
                 Flexible(
                   child: Center(
                     child: ExtruderComponent(
