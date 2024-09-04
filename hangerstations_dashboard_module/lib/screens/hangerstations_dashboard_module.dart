@@ -1,35 +1,59 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:async';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _DashboardState createState() => _DashboardState();
 }
 
 class _DashboardState extends State<Dashboard>
     with SingleTickerProviderStateMixin {
   bool isUpdating = false;
-  late AnimationController _controller; // Declare the controller
+  late AnimationController _controller;
+  Timer? _timer; // Timer for background updates
+  Map<String, dynamic>? _fetchedData;
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize the controller here
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(); // Start the animation loop
+
+    _fetchDataSilently(); // Initial data fetch
+    _startBackgroundUpdate(); // Start the background update timer
   }
 
+  // Function to silently fetch data without showing any loading indicators
+  Future<void> _fetchDataSilently() async {
+    try {
+      final data = await fetchData();
+      setState(() {
+        _fetchedData = data;
+      });
+    } catch (e) {
+      // Handle error if necessary, or leave it silent for background tasks
+    }
+  }
+
+  // Timer to trigger background data fetch every 60 seconds
+  void _startBackgroundUpdate() {
+    _timer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      _fetchDataSilently(); // Silently update data every 60 seconds
+    });
+  }
+
+  // Fetch the actual data from the API
   Future<Map<String, dynamic>> fetchData() async {
     final response = await http.get(
         Uri.parse('http://wim-solution.sip.local:5000/api/dashboard_data'));
@@ -40,9 +64,10 @@ class _DashboardState extends State<Dashboard>
     }
   }
 
+  // Manual update cache function (preserving existing functionality)
   Future<void> _updateCache() async {
     setState(() {
-      isUpdating = true; // Start the spinning animation
+      isUpdating = true;
     });
 
     try {
@@ -52,7 +77,7 @@ class _DashboardState extends State<Dashboard>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cache update triggered.')),
         );
-        await _pollCacheUpdateStatus(); // Start polling for completion status
+        await _pollCacheUpdateStatus();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -66,11 +91,12 @@ class _DashboardState extends State<Dashboard>
       );
     } finally {
       setState(() {
-        isUpdating = false; // Stop the spinning animation
+        isUpdating = false;
       });
     }
   }
 
+  // Poll cache update status (unchanged)
   Future<void> _pollCacheUpdateStatus() async {
     bool updateComplete = false;
     while (!updateComplete) {
@@ -84,10 +110,9 @@ class _DashboardState extends State<Dashboard>
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Cache update fertig.')),
             );
-            setState(() {}); // Refresh UI after update
+            setState(() {});
           } else {
-            await Future.delayed(
-                const Duration(seconds: 2)); // Wait before checking again
+            await Future.delayed(const Duration(seconds: 2));
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -110,6 +135,7 @@ class _DashboardState extends State<Dashboard>
   @override
   void dispose() {
     _controller.dispose();
+    _timer?.cancel(); // Cancel the timer when the widget is disposed
     super.dispose();
   }
 
@@ -130,12 +156,10 @@ class _DashboardState extends State<Dashboard>
           actions: [
             IconButton(
               icon: isUpdating
-                  ? (_controller.isAnimating
-                      ? RotationTransition(
-                          turns: _controller,
-                          child: const Icon(Icons.refresh),
-                        )
-                      : const Icon(Icons.refresh))
+                  ? RotationTransition(
+                      turns: _controller,
+                      child: const Icon(Icons.refresh),
+                    )
                   : const Icon(Icons.refresh),
               onPressed: isUpdating
                   ? null
@@ -146,12 +170,17 @@ class _DashboardState extends State<Dashboard>
           ],
         ),
         body: FutureBuilder<Map<String, dynamic>>(
-          future: fetchData(),
+          future:
+              _fetchedData == null ? fetchData() : Future.value(_fetchedData),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                _fetchedData == null) {
               return const Center(child: CircularProgressIndicator());
             } else if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data == null) {
+              // Ensure snapshot.data is not null
+              return const Center(child: Text('No data available.'));
             } else {
               var stations = List.from(snapshot.data!['stations']);
               stations.sort(
@@ -307,8 +336,11 @@ class MaterialFlowCard extends StatelessWidget {
   final Map<String, dynamic> station;
   final bool isSmallScreen;
 
-  const MaterialFlowCard(
-      {super.key, required this.station, required this.isSmallScreen});
+  const MaterialFlowCard({
+    super.key,
+    required this.station,
+    required this.isSmallScreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -324,42 +356,61 @@ class MaterialFlowCard extends StatelessWidget {
       margin: const EdgeInsets.all(10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       color: Colors.grey[900],
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: StationComponent(
-                  stationName: stationName,
-                  materialName: materialNumber,
-                  isSmallScreen: isSmallScreen,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment
+                  .spaceBetween, // Ensure elements are spaced evenly
+              children: [
+                Flexible(
+                  child: Center(
+                    child: StationComponent(
+                      stationName: stationName,
+                      materialName: materialNumber,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                  ),
                 ),
-              ),
-              if (materialNumber != 'FREI')
-                const Expanded(
-                  child: Center(child: Pipeline()),
+                if (materialNumber != 'FREI')
+                  const Flexible(
+                    child: Center(
+                      child: Pipeline(),
+                    ),
+                  )
+                else
+                  const Spacer(), // Add Spacer for missing pipeline
+                Flexible(
+                  child: Center(
+                    child: DryerComponent(
+                      dryingRequired: dryingRequired,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                  ),
                 ),
-              Expanded(
-                child: DryerComponent(
-                  dryingRequired: dryingRequired,
-                  isSmallScreen: isSmallScreen,
+                if (materialNumber != 'FREI')
+                  const Flexible(
+                    child: Center(
+                      child: Pipeline(),
+                    ),
+                  )
+                else
+                  const Spacer(), // Add Spacer for missing pipeline
+                Flexible(
+                  child: Center(
+                    child: ExtruderComponent(
+                      equipment: equipment,
+                      workstation: workplace,
+                      article: mainArticle,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                  ),
                 ),
-              ),
-              if (materialNumber != 'FREI')
-                const Expanded(
-                  child: Center(child: Pipeline()),
-                ),
-              Expanded(
-                child: ExtruderComponent(
-                  equipment: equipment,
-                  workstation: workplace,
-                  article: mainArticle,
-                  isSmallScreen: isSmallScreen,
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -379,26 +430,38 @@ class StationComponent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(MdiIcons.gantryCrane,
-            size: isSmallScreen ? 24 : 30, color: Colors.blue),
-        const SizedBox(height: 10),
-        Text(
-          'Aufhängestation: $stationName',
-          style:
-              TextStyle(color: Colors.white, fontSize: isSmallScreen ? 10 : 12),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 5),
-        Text(
-          'Materialnummer: $materialName',
-          style: TextStyle(
-              color: Colors.white70, fontSize: isSmallScreen ? 10 : 12),
-          textAlign: TextAlign.center,
-        ),
-      ],
+    return Center(
+      // Wrap everything in a Center widget
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center, // Center the content
+        children: [
+          Icon(
+            MdiIcons.gantryCrane,
+            size: isSmallScreen ? 24 : 30,
+            color: materialName == 'FREI'
+                ? Colors.white
+                : Colors.blue, // Set icon to white if materialNumber is 'LEER'
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Aufhängestation: $stationName',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isSmallScreen ? 10 : 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Materialnummer: $materialName',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: isSmallScreen ? 10 : 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -416,16 +479,23 @@ class DryerComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisAlignment:
+          MainAxisAlignment.center, // Ensure the content is centered
       children: [
-        Icon(MdiIcons.tumbleDryer,
-            size: isSmallScreen ? 24 : 30,
-            color:
-                dryingRequired == 'Erforderlich' ? Colors.green : Colors.red),
+        Icon(
+          dryingRequired == 'Erforderlich'
+              ? MdiIcons.tumbleDryer
+              : MdiIcons.tumbleDryerOff, // Show tumbleDryerOff if not required
+          size: isSmallScreen ? 24 : 30,
+          color: dryingRequired == 'Erforderlich' ? Colors.green : Colors.red,
+        ),
         const SizedBox(height: 10),
         Text(
           dryingRequired,
-          style:
-              TextStyle(color: Colors.white, fontSize: isSmallScreen ? 10 : 12),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: isSmallScreen ? 10 : 12,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -450,7 +520,8 @@ class ExtruderComponent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment:
+          MainAxisAlignment.center, // Ensure the content is centered
       children: [
         SvgPicture.asset(
           'assets/extruder.svg',
@@ -462,22 +533,28 @@ class ExtruderComponent extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           'Linie: $workstation',
-          style:
-              TextStyle(color: Colors.white, fontSize: isSmallScreen ? 12 : 14),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: isSmallScreen ? 12 : 14,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 5),
         Text(
           'Artikel: $article',
           style: TextStyle(
-              color: Colors.white70, fontSize: isSmallScreen ? 10 : 12),
+            color: Colors.white70,
+            fontSize: isSmallScreen ? 10 : 12,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 5),
         Text(
           'Werkzeug: $equipment',
           style: TextStyle(
-              color: Colors.white70, fontSize: isSmallScreen ? 10 : 12),
+            color: Colors.white70,
+            fontSize: isSmallScreen ? 10 : 12,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -489,7 +566,6 @@ class Pipeline extends StatefulWidget {
   const Pipeline({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _PipelineState createState() => _PipelineState();
 }
 
@@ -519,7 +595,9 @@ class _PipelineState extends State<Pipeline>
     return CustomPaint(
       painter: MovingGradientPipelinePainter(animation: _animation),
       child: const SizedBox(
-          width: double.infinity, height: 10), // Allow pipeline to stretch
+        width: double.infinity,
+        height: 10, // Ensure a consistent height for the pipeline
+      ),
     );
   }
 }
@@ -540,15 +618,10 @@ class MovingGradientPipelinePainter extends CustomPainter {
         Colors.lightBlueAccent,
         Colors.blue,
       ],
-      stops: [
-        movingStop,
-        movingStop +
-            0.2, // Adjust this value to control the gradient "highlight"
-        movingStop + 0.4
-      ],
+      stops: [movingStop, movingStop + 0.2, movingStop + 0.4],
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
-      tileMode: TileMode.repeated, // Infinite repeated gradient
+      tileMode: TileMode.repeated,
     );
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
