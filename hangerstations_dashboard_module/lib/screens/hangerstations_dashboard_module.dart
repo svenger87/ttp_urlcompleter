@@ -317,8 +317,11 @@ class StationCard extends StatelessWidget {
   final Map<String, dynamic> station;
   final bool isSmallScreen;
 
-  const StationCard(
-      {super.key, required this.station, required this.isSmallScreen});
+  const StationCard({
+    super.key,
+    required this.station,
+    required this.isSmallScreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -326,62 +329,67 @@ class StationCard extends StatelessWidget {
     String materialNumber = station['Materialnummer'] ?? 'FREI';
     String workplace = station['Arbeitsplatz'] ?? 'FREI';
     String remark = station['Bemerkung'] ?? 'N/A';
-    String type = station['Name'] ?? 'N/A;';
-    String wbz = station['WBZ'] ?? 'N/A;';
+    String type = station['Name'] ?? 'N/A';
+    String wbz = station['WBZ'] ?? 'N/A';
     Color statusColor = materialNumber == 'FREI' ? Colors.white : Colors.blue;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       color: Colors.grey[900],
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start, // Align content properly
-          mainAxisSize: MainAxisSize.min, // Let the height adapt to content
-          children: [
-            Row(
-              children: [
-                Icon(Icons.settings,
-                    color: statusColor, size: isSmallScreen ? 20 : 24),
-                const SizedBox(width: 8),
-                Text(
-                  'Station: $stationName',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+      child: IntrinsicHeight(
+        // Wrap the card in IntrinsicHeight to adjust height dynamically
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start, // Align content to start
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.settings,
+                      color: statusColor, size: isSmallScreen ? 20 : 24),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Station: $stationName',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis, // Prevent text overflow
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Typ: $type',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-            ),
-            Text(
-              'Material: $materialNumber',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-            ),
-            Text(
-              'WBZ: $wbz',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-            ),
-            Text(
-              'Linie: $workplace',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-            ),
-            Text(
-              'Bemerkung: $remark',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Typ: $type',
+                style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
+              ),
+              Text(
+                'Material: $materialNumber',
+                style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
+              ),
+              Text(
+                'WBZ: $wbz',
+                style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
+              ),
+              Text(
+                'Linie: $workplace',
+                style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
+              ),
+              Text(
+                'Bemerkung: $remark',
+                style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 14, color: Colors.white70),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -409,55 +417,59 @@ class MaterialFlowCard extends StatelessWidget {
     String equipment = station['Equipment'] ?? 'FREI';
 
     return Card(
-      margin: const EdgeInsets.all(10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       color: Colors.grey[900],
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          mainAxisSize:
-              MainAxisSize.min, // Allow the card to adapt to content height
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment
-                  .spaceBetween, // Ensure elements are spaced evenly
-              children: [
-                Flexible(
-                  child: StationComponent(
-                    stationName: stationName,
-                    materialName: materialNumber,
-                    isSmallScreen: isSmallScreen,
+      child: IntrinsicHeight(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2, // Take available space
+                    child: StationComponent(
+                      stationName: stationName,
+                      materialName: materialNumber,
+                      isSmallScreen: isSmallScreen,
+                    ),
                   ),
-                ),
-                if (materialNumber != 'FREI')
-                  const Flexible(
-                    child: Pipeline(),
-                  )
-                else
-                  const Spacer(), // Add Spacer for missing pipeline
-                Flexible(
-                  child: DryerComponent(
-                    dryingRequired: dryingRequired,
-                    isSmallScreen: isSmallScreen,
+                  if (materialNumber != 'FREI') ...[
+                    const SizedBox(width: 10), // Add some spacing
+                    const SizedBox(
+                      width: 100, // Fixed width for pipeline
+                      child: Pipeline(),
+                    ),
+                  ] else
+                    const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2, // Take available space
+                    child: DryerComponent(
+                      dryingRequired: dryingRequired,
+                      isSmallScreen: isSmallScreen,
+                    ),
                   ),
-                ),
-                if (materialNumber != 'FREI')
-                  const Flexible(
-                    child: Pipeline(),
-                  )
-                else
-                  const Spacer(), // Add Spacer for missing pipeline
-                Flexible(
-                  child: ExtruderComponent(
-                    equipment: equipment,
-                    workstation: workplace,
-                    article: mainArticle,
-                    isSmallScreen: isSmallScreen,
+                  if (materialNumber != 'FREI') ...[
+                    const SizedBox(width: 10),
+                    const SizedBox(
+                      width: 100, // Fixed width for pipeline
+                      child: Pipeline(),
+                    ),
+                  ] else
+                    const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2, // Take available space
+                    child: ExtruderComponent(
+                      equipment: equipment,
+                      workstation: workplace,
+                      article: mainArticle,
+                      isSmallScreen: isSmallScreen,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
