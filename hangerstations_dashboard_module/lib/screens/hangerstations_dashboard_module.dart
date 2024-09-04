@@ -263,17 +263,42 @@ class MaterialFlowDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 600;
+        final screenWidth = constraints.maxWidth;
+        final isSmallScreen = screenWidth < 600;
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(10.0),
-          itemCount: stations.length,
-          itemBuilder: (context, index) {
-            var station = stations[index];
-            return MaterialFlowCard(
-                station: station, isSmallScreen: isSmallScreen);
-          },
-        );
+        if (screenWidth >= 1200) {
+          // For large screens, use a grid layout with two rows
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4, // Display in 4 columns (two rows)
+                crossAxisSpacing: 10.0,
+                mainAxisSpacing: 10.0,
+                childAspectRatio:
+                    2.5, // Adjust this to get the desired row height
+              ),
+              itemCount: stations.length,
+              itemBuilder: (context, index) {
+                var station = stations[index];
+                return MaterialFlowCard(
+                    station: station,
+                    isSmallScreen: false); // No small screen adjustments
+              },
+            ),
+          );
+        } else {
+          // For smaller screens, use the regular single-row list layout
+          return ListView.builder(
+            padding: const EdgeInsets.all(10.0),
+            itemCount: stations.length,
+            itemBuilder: (context, index) {
+              var station = stations[index];
+              return MaterialFlowCard(
+                  station: station, isSmallScreen: isSmallScreen);
+            },
+          );
+        }
       },
     );
   }
@@ -388,8 +413,7 @@ class MaterialFlowCard extends StatelessWidget {
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment
-                  .spaceBetween, // Ensure elements are spaced evenly
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Flexible(
                   child: Center(
@@ -407,7 +431,7 @@ class MaterialFlowCard extends StatelessWidget {
                     ),
                   )
                 else
-                  const Spacer(), // Add Spacer for missing pipeline
+                  const Spacer(),
                 Flexible(
                   child: Center(
                     child: DryerComponent(
@@ -423,7 +447,7 @@ class MaterialFlowCard extends StatelessWidget {
                     ),
                   )
                 else
-                  const Spacer(), // Add Spacer for missing pipeline
+                  const Spacer(),
                 Flexible(
                   child: Center(
                     child: ExtruderComponent(
