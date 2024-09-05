@@ -182,8 +182,25 @@ class _DashboardState extends State<Dashboard>
               return const Center(child: Text('No data available.'));
             } else {
               var stations = List.from(snapshot.data!['stations']);
-              stations.sort(
-                  (a, b) => (a['Station'] ?? '').compareTo(b['Station'] ?? ''));
+              stations.sort((a, b) {
+                // First, sort by whether the workplace is 'FREI'
+                String workplaceA = a['Arbeitsplatz'] ?? 'FREI';
+                String workplaceB = b['Arbeitsplatz'] ?? 'FREI';
+
+                if (workplaceA == 'FREI' && workplaceB == 'FREI') {
+                  // If both are 'FREI', sort by the station name
+                  return (a['Station'] ?? '').compareTo(b['Station'] ?? '');
+                } else if (workplaceA == 'FREI') {
+                  // If only A is 'FREI', it should go after B
+                  return 1;
+                } else if (workplaceB == 'FREI') {
+                  // If only B is 'FREI', it should go after A
+                  return -1;
+                } else {
+                  // If neither is 'FREI', sort by the workplace (Linie)
+                  return workplaceA.compareTo(workplaceB);
+                }
+              });
               return TabBarView(
                 children: [
                   StationOverview(stations: stations),
@@ -420,9 +437,10 @@ class MaterialFlowCard extends StatelessWidget {
               children: [
                 Flexible(
                   child: Center(
-                    child: StationComponent(
-                      stationName: stationName,
-                      materialName: materialNumber,
+                    child: ExtruderComponent(
+                      equipment: equipment,
+                      workstation: workplace,
+                      article: mainArticle,
                       isSmallScreen: isSmallScreen,
                     ),
                   ),
@@ -453,10 +471,9 @@ class MaterialFlowCard extends StatelessWidget {
                   const Spacer(), // Add Spacer for missing pipeline
                 Flexible(
                   child: Center(
-                    child: ExtruderComponent(
-                      equipment: equipment,
-                      workstation: workplace,
-                      article: mainArticle,
+                    child: StationComponent(
+                      stationName: stationName,
+                      materialName: materialNumber,
                       isSmallScreen: isSmallScreen,
                     ),
                   ),
@@ -668,8 +685,8 @@ class MovingGradientPipelinePainter extends CustomPainter {
         Colors.blue,
       ],
       stops: [movingStop, movingStop + 0.2, movingStop + 0.4],
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
+      begin: Alignment.centerRight, // Change direction to right to left
+      end: Alignment.centerLeft,
       tileMode: TileMode.repeated,
     );
 
