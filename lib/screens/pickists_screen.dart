@@ -51,53 +51,79 @@ class _PdfReaderPageState extends State<PdfReaderPage> {
       if (value is String) {
         // It's a file
         final isDone = key.startsWith('ERLEDIGT_');
+
+        // Use Builder to detect current theme and apply appropriate color
         fileWidgets.add(
-          ListTile(
-            title: Text(
-              key.replaceFirst('ERLEDIGT_', ''),
-              style: TextStyle(
-                decoration:
-                    isDone ? TextDecoration.lineThrough : TextDecoration.none,
-                color: isDone ? Colors.grey : Colors.white,
-              ),
-            ),
-            leading: Icon(
-              Icons.check_circle,
-              color: isDone ? Colors.green : Colors.transparent,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.check),
-                  color: isDone ? Colors.grey : Colors.green,
-                  tooltip: isDone
-                      ? 'Bereits als erledigt markiert'
-                      : 'Als erledigt markieren',
-                  onPressed: isDone ? null : () => _markPdfAsDone(fullPath),
+          Builder(
+            builder: (context) {
+              final isLightMode =
+                  Theme.of(context).brightness == Brightness.light;
+
+              return ListTile(
+                title: Text(
+                  key.replaceFirst('ERLEDIGT_', ''),
+                  style: TextStyle(
+                    decoration: isDone
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    color: isDone
+                        ? Colors.grey
+                        : isLightMode
+                            ? Colors.black // Use black text for light mode
+                            : Colors.white, // Use white text for dark mode
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  color: Colors.red,
-                  tooltip: 'PDF löschen',
-                  onPressed: () => _deletePdf(fullPath),
+                leading: Icon(
+                  Icons.check_circle,
+                  color: isDone ? Colors.green : Colors.transparent,
                 ),
-              ],
-            ),
-            onTap: () {
-              if (kDebugMode) {
-                print('Tapped on PDF: $fullPath');
-              }
-              _openPdf(fullPath);
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.check),
+                      color: isDone ? Colors.grey : Colors.green,
+                      tooltip: isDone
+                          ? 'Bereits als erledigt markiert'
+                          : 'Als erledigt markieren',
+                      onPressed: isDone ? null : () => _markPdfAsDone(fullPath),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      color: Colors.red,
+                      tooltip: 'PDF löschen',
+                      onPressed: () => _deletePdf(fullPath),
+                    ),
+                  ],
+                ),
+                onTap: () {
+                  if (kDebugMode) {
+                    print('Tapped on PDF: $fullPath');
+                  }
+                  _openPdf(fullPath);
+                },
+              );
             },
           ),
         );
       } else if (value is Map<String, dynamic>) {
         // It's a folder, recursively build the list
         fileWidgets.add(
-          ExpansionTile(
-            title: Text(key),
-            children: _buildFileList(value, fullPath),
+          Builder(
+            builder: (context) {
+              final isLightMode =
+                  Theme.of(context).brightness == Brightness.light;
+
+              return ExpansionTile(
+                title: Text(
+                  key,
+                  style: TextStyle(
+                    color: isLightMode ? Colors.black : Colors.white,
+                  ),
+                ),
+                children: _buildFileList(value, fullPath),
+              );
+            },
           ),
         );
       }
