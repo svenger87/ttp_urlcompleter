@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'dart:io'; // For overriding HttpClient to bypass SSL certificate validation
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +8,16 @@ import 'package:webview_flutter/webview_flutter.dart';
 // Import platform-specific WebView components.
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+
+// Custom HttpOverrides to bypass SSL certificate validation
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
 
 class WebViewModule extends StatefulWidget {
   final String url;
@@ -27,6 +37,9 @@ class _WebViewModuleState extends State<WebViewModule> {
   @override
   void initState() {
     super.initState();
+
+    // Apply the custom HttpOverrides globally for HTTP requests
+    HttpOverrides.global = MyHttpOverrides();
 
     // Platform-specific WebViewController creation parameters
     late final PlatformWebViewControllerCreationParams params;
