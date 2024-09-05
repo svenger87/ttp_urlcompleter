@@ -1,10 +1,20 @@
-import 'dart:io';
+import 'dart:io'; // For overriding HttpClient to bypass SSL certificate validation
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path; // Import for extracting file names
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+
+// Custom HttpOverrides to bypass SSL certificate verification
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
 
 class PDFReaderModule extends StatefulWidget {
   final String pdfUrl;
@@ -26,6 +36,8 @@ class _PDFReaderModuleState extends State<PDFReaderModule> {
   @override
   void initState() {
     super.initState();
+    // Override HttpClient for the entire app
+    HttpOverrides.global = MyHttpOverrides();
     _downloadAndOpenPdf();
   }
 
