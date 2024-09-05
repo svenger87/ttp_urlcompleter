@@ -1,23 +1,10 @@
 import 'dart:async';
-import 'dart:io'; // For overriding HttpClient to bypass SSL certificate validation
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart'; // For parsing HTML
-import 'package:webview_flutter/webview_flutter.dart';
-// Import platform-specific WebView components.
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
-
-// Custom HttpOverrides to bypass SSL certificate validation
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
-  }
-}
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class WebViewModule extends StatefulWidget {
   final String url;
@@ -30,75 +17,31 @@ class WebViewModule extends StatefulWidget {
 }
 
 class _WebViewModuleState extends State<WebViewModule> {
-  late final WebViewController _controller;
+  InAppWebViewController? _controller;
   bool _isLoading = true;
   String _pageTitle = 'Lade...';
+  double progress = 0;
+  PullToRefreshController? pullToRefreshController;
+  final TextEditingController urlController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
 
-    // Apply the custom HttpOverrides globally for HTTP requests
-    HttpOverrides.global = MyHttpOverrides();
-
-    // Platform-specific WebViewController creation parameters
-    late final PlatformWebViewControllerCreationParams params;
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      // For iOS/macOS
-      params = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
-      );
-    } else {
-      // Default params for Android
-      params = const PlatformWebViewControllerCreationParams();
-    }
-
-    // WebViewController initialization with platform params
-    final WebViewController controller =
-        WebViewController.fromPlatformCreationParams(params);
-
-    // Set JavaScript and NavigationDelegate
-    controller
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            debugPrint('WebView is loading (progress: $progress%)');
-          },
-          onPageStarted: (String url) {
-            setState(() {
-              _isLoading = true;
-            });
-          },
-          onPageFinished: (String url) async {
-            setState(() {
-              _isLoading = false;
-            });
-            String? title = await _controller.getTitle();
-            setState(() {
-              _pageTitle = title ?? 'Web Page';
-            });
-          },
-          onWebResourceError: (WebResourceError error) {
-            debugPrint('''
-Page resource error:
-  code: ${error.errorCode}
-  description: ${error.description}
-          ''');
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.url));
-
-    // Platform-specific behavior for Android and iOS/macOS
-    if (controller.platform is AndroidWebViewController) {
-      AndroidWebViewController.enableDebugging(true);
-      (controller.platform as AndroidWebViewController)
-          .setMediaPlaybackRequiresUserGesture(false);
-    }
-
-    _controller = controller;
+    // Pull to refresh controller (not available on web)
+    pullToRefreshController = kIsWeb
+        ? null
+        : PullToRefreshController(
+            settings: PullToRefreshSettings(
+              color: Colors.blue,
+            ),
+            onRefresh: () async {
+              if (defaultTargetPlatform == TargetPlatform.android ||
+                  defaultTargetPlatform == TargetPlatform.iOS) {
+                _controller?.reload();
+              }
+            },
+          );
 
     // Extract initial page title
     extractPageTitleFromUrl(widget.url);
@@ -131,35 +74,107 @@ Page resource error:
           IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
-              if (await _controller.canGoBack()) {
-                _controller.goBack();
+              if (await _controller?.canGoBack() ?? false) {
+                _controller?.goBack();
               }
             },
           ),
           IconButton(
             icon: const Icon(Icons.arrow_forward),
             onPressed: () async {
-              if (await _controller.canGoForward()) {
-                _controller.goForward();
+              if (await _controller?.canGoForward() ?? false) {
+                _controller?.goForward();
               }
             },
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              _controller.reload();
+              _controller?.reload();
             },
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  InAppWebView(
+                    initialUrlRequest:
+                        URLRequest(url: WebUri.uri(Uri.parse(widget.url))),
+                    pullToRefreshController: pullToRefreshController,
+                    initialSettings: InAppWebViewSettings(
+                      javaScriptEnabled: true,
+                      mediaPlaybackRequiresUserGesture: false,
+                      allowsInlineMediaPlayback: true,
+                    ),
+                    onWebViewCreated: (controller) {
+                      _controller = controller;
+                    },
+                    onLoadStart: (controller, url) {
+                      setState(() {
+                        _isLoading =
+                            true; // Start showing the loading indicator
+                      });
+                    },
+                    onLoadStop: (controller, url) async {
+                      setState(() {
+                        _isLoading =
+                            false; // Hide the loading indicator when done
+                      });
+                      pullToRefreshController?.endRefreshing();
+                    },
+                    onReceivedServerTrustAuthRequest:
+                        (controller, challenge) async {
+                      return ServerTrustAuthResponse(
+                          action: ServerTrustAuthResponseAction.PROCEED);
+                    },
+                    shouldOverrideUrlLoading:
+                        (controller, navigationAction) async {
+                      var uri = navigationAction.request.url!;
+
+                      if (![
+                        "http",
+                        "https",
+                        "file",
+                        "chrome",
+                        "data",
+                        "javascript",
+                        "about"
+                      ].contains(uri.scheme)) {
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                          return NavigationActionPolicy.CANCEL;
+                        }
+                      }
+
+                      return NavigationActionPolicy.ALLOW;
+                    },
+                    onProgressChanged: (controller, progress) {
+                      setState(() {
+                        this.progress = progress / 100;
+                      });
+                    },
+                    onConsoleMessage: (controller, consoleMessage) {
+                      if (kDebugMode) {
+                        print(consoleMessage);
+                      }
+                    },
+                  ),
+                  if (_isLoading)
+                    const Center(
+                        child:
+                            CircularProgressIndicator()), // Display loading indicator
+                  progress < 1.0
+                      ? LinearProgressIndicator(value: progress)
+                      : Container(),
+                ],
+              ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
