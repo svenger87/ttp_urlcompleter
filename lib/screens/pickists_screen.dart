@@ -341,6 +341,7 @@ class _PdfViewerPageState extends State<PdfViewerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF104382),
         title: Text(widget.fileName),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

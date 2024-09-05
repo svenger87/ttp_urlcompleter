@@ -18,3 +18,7 @@ const String picklist = 'https://wim-solution.sip.local:8443/s/mYYc2cJyWG795BM';
 const String apiUrl =
     'https://wim-solution.sip.local:8081/rest/v2/short-urls?itemsPerPage=10000';
 const String apiKey = 'b2380a66-c965-4177-8bbf-6ecf03fbaa32';
+const String matplan =
+    'https://wim-solution.sip.local:8443/s/rp8aedp2iaMerFD/download/MPlan.pdf';
+const String matplanNextcloud =
+    'https://wim-solution.sip.local:8443/s/rp8aedp2iaMerFD';

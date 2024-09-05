@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:http/http.dart' as http;
-import 'package:html/parser.dart';
+import 'package:html/parser.dart'; // For parsing HTML
+import 'package:webview_flutter/webview_flutter.dart';
+// Import platform-specific WebView components.
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 class WebViewModule extends StatefulWidget {
   final String url;
@@ -15,55 +20,81 @@ class WebViewModule extends StatefulWidget {
 }
 
 class _WebViewModuleState extends State<WebViewModule> {
-  final FlutterWebviewPlugin _webviewPlugin = FlutterWebviewPlugin();
+  late final WebViewController _controller;
   bool _isLoading = true;
-  String _pageTitle = '';
+  String _pageTitle = 'Lade...';
 
   @override
   void initState() {
     super.initState();
 
-    _webviewPlugin.launch(widget.url, debuggingEnabled: true);
+    // Platform-specific WebViewController creation parameters
+    late final PlatformWebViewControllerCreationParams params;
+    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+      // For iOS/macOS
+      params = WebKitWebViewControllerCreationParams(
+        allowsInlineMediaPlayback: true,
+        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+      );
+    } else {
+      // Default params for Android
+      params = const PlatformWebViewControllerCreationParams();
+    }
 
-    _webviewPlugin.onStateChanged.listen((WebViewStateChanged state) {
-      if (kDebugMode) {
-        print('WebView State Changed:');
-        print('  Type: ${state.type}');
-        print('  URL: ${state.url}');
-      }
+    // WebViewController initialization with platform params
+    final WebViewController controller =
+        WebViewController.fromPlatformCreationParams(params);
 
-      if (state.type == WebViewState.finishLoad) {
-        if (kDebugMode) {
-          print('Page finished loading');
-        }
-        setState(() {
-          _isLoading = false;
-        });
-      } else if (state.type == WebViewState.startLoad) {
-        if (kDebugMode) {
-          print('Page started loading');
-        }
-        setState(() {
-          _isLoading = true;
-        });
-      }
-    });
+    // Set JavaScript and NavigationDelegate
+    controller
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (int progress) {
+            debugPrint('WebView is loading (progress: $progress%)');
+          },
+          onPageStarted: (String url) {
+            setState(() {
+              _isLoading = true;
+            });
+          },
+          onPageFinished: (String url) async {
+            setState(() {
+              _isLoading = false;
+            });
+            String? title = await _controller.getTitle();
+            setState(() {
+              _pageTitle = title ?? 'Web Page';
+            });
+          },
+          onWebResourceError: (WebResourceError error) {
+            debugPrint('''
+Page resource error:
+  code: ${error.errorCode}
+  description: ${error.description}
+          ''');
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.url));
 
-    _webviewPlugin.onUrlChanged.listen((String url) {
-      if (kDebugMode) {
-        print('URL Changed: $url');
-      }
+    // Platform-specific behavior for Android and iOS/macOS
+    if (controller.platform is AndroidWebViewController) {
+      AndroidWebViewController.enableDebugging(true);
+      (controller.platform as AndroidWebViewController)
+          .setMediaPlaybackRequiresUserGesture(false);
+    }
 
-      // Extract the page title from the URL using flutter_html
-      extractPageTitleFromUrl(url);
-    });
+    _controller = controller;
+
+    // Extract initial page title
+    extractPageTitleFromUrl(widget.url);
   }
 
   Future<void> extractPageTitleFromUrl(String url) async {
     try {
       final response = await http.get(Uri.parse(url));
-      final htmlContent = response.body;
-      final document = parse(htmlContent);
+      final document = parse(response.body);
       final titleElement = document.head?.querySelector('title');
       final pageTitle = titleElement?.text ?? 'Externer Link';
 
@@ -74,14 +105,7 @@ class _WebViewModuleState extends State<WebViewModule> {
       if (kDebugMode) {
         print('Error extracting page title: $e');
       }
-      // Handle error gracefully, e.g., show error message to user
     }
-  }
-
-  @override
-  void dispose() {
-    _webviewPlugin.dispose();
-    super.dispose();
   }
 
   @override
@@ -94,52 +118,30 @@ class _WebViewModuleState extends State<WebViewModule> {
           IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
-              final canGoBack = await _webviewPlugin.canGoBack();
-              if (kDebugMode) {
-                print('Can Go Back: $canGoBack');
-              }
-              if (canGoBack) {
-                _webviewPlugin.goBack();
-              } else {
-                if (kDebugMode) {
-                  print('Cannot go back.');
-                }
+              if (await _controller.canGoBack()) {
+                _controller.goBack();
               }
             },
           ),
           IconButton(
             icon: const Icon(Icons.arrow_forward),
             onPressed: () async {
-              final canGoForward = await _webviewPlugin.canGoForward();
-              if (kDebugMode) {
-                print('Can Go Forward: $canGoForward');
-              }
-              if (canGoForward) {
-                _webviewPlugin.goForward();
-              } else {
-                if (kDebugMode) {
-                  print('Cannot go forward.');
-                }
+              if (await _controller.canGoForward()) {
+                _controller.goForward();
               }
             },
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              _webviewPlugin.reload();
+              _controller.reload();
             },
           ),
         ],
       ),
       body: Stack(
         children: [
-          WebviewScaffold(
-            url: widget.url,
-            withZoom: true,
-            withLocalStorage: true,
-            ignoreSSLErrors: true,
-            hidden: false,
-          ),
+          WebViewWidget(controller: _controller),
           if (_isLoading)
             const Center(
               child: CircularProgressIndicator(),

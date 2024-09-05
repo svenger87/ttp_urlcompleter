@@ -1,16 +1,16 @@
-// ignore_for_file: prefer_const_constructors, prefer_adjacent_string_concatenation, prefer_interpolation_to_compose_strings, use_build_context_synchronously
+// ignore_for_file: library_private_types_in_public_api
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:pdfx/pdfx.dart';
 import 'package:flutter/services.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class ConverterModule extends StatefulWidget {
   const ConverterModule({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ConverterModuleState createState() => _ConverterModuleState();
 }
 
@@ -69,7 +69,7 @@ class _ConverterModuleState extends State<ConverterModule> {
                 children: [
                   const Text('Neue Bezeichnung'),
                   TypeAheadField<String>(
-                    textFieldConfiguration: TextFieldConfiguration(
+                    textFieldConfiguration: const TextFieldConfiguration(
                       decoration: InputDecoration(),
                     ),
                     suggestionsCallback: (pattern) async {
@@ -102,7 +102,7 @@ class _ConverterModuleState extends State<ConverterModule> {
                 children: [
                   const Text('Alte Bezeichnung'),
                   TypeAheadField<String>(
-                    textFieldConfiguration: TextFieldConfiguration(
+                    textFieldConfiguration: const TextFieldConfiguration(
                       decoration: InputDecoration(),
                     ),
                     suggestionsCallback: (pattern) async {
@@ -158,6 +158,7 @@ class _ConverterModuleState extends State<ConverterModule> {
     final pdfFileName = "${item["Alte_Bezeichnung"]}.pdf";
     final pdfExists = await _pdfFileExists(pdfFileName);
 
+    // ignore: use_build_context_synchronously
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -266,27 +267,26 @@ class _ConverterModuleState extends State<ConverterModule> {
 
   Future<void> _openPDFFile(String pdfFileName) async {
     try {
-      final pdfController = PdfController(
-        document: PdfDocument.openAsset('assets/wzabt_pdfs/$pdfFileName'),
-      );
-
+      // Syncfusion does not use a PdfController like pdfx. Instead, we directly open the PDF.
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PDFViewerPage(pdfController),
+          builder: (context) =>
+              PDFViewerPage(filePath: 'assets/wzabt_pdfs/$pdfFileName'),
         ),
       );
     } catch (error) {
-      // ignore: avoid_print
-      print('Error: $error');
+      if (kDebugMode) {
+        print('Error: $error');
+      }
     }
   }
 }
 
 class PDFViewerPage extends StatelessWidget {
-  final PdfController pdfController;
+  final String filePath;
 
-  const PDFViewerPage(this.pdfController, {super.key});
+  const PDFViewerPage({super.key, required this.filePath});
 
   @override
   Widget build(BuildContext context) {
@@ -297,15 +297,14 @@ class PDFViewerPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.close),
-            color: const Color(0xFF104382),
             onPressed: () {
               Navigator.pop(context);
             },
           ),
         ],
       ),
-      body: PdfView(
-        controller: pdfController,
+      body: SfPdfViewer.asset(
+        filePath,
       ),
     );
   }
