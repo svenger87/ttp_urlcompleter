@@ -4,6 +4,7 @@ import '../models/tool.dart';
 import 'edit_tool_screen.dart';
 import 'storage_utilization_screen.dart';
 
+
 class ToolInventoryScreen extends StatefulWidget {
   const ToolInventoryScreen({super.key});
 
@@ -196,42 +197,114 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     );
   }
 
-  // Build the tool table with headers and content
-  Widget _buildToolTable(List<Tool> tools) {
-    if (tools.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(8.0),
-        child: Text('Keine Werkzeuge gefunden'),
-      );
-    }
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal, // Enable horizontal scrolling
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Werkzeugnummer')),
-          DataColumn(label: Text('Lagerplatz 1')),
-          DataColumn(label: Text('Belegter Platz 1')),
-          DataColumn(label: Text('Lagerplatz 2')),
-          DataColumn(label: Text('Belegter Platz 2')),
-          DataColumn(label: Text('Lagerstatus')),
-        ],
-        rows: tools.map((tool) {
-          return DataRow(
-            cells: [
-              DataCell(Text(tool.toolNumber),
-                  onTap: () => _navigateToEditTool(tool)),
-              DataCell(Text(tool.storageLocationOne ?? 'Ohne')),
-              DataCell(Text(tool.usedSpacePitchOne ?? 'Ohne')),
-              DataCell(Text(tool.storageLocationTwo ?? 'Ohne')),
-              DataCell(Text(tool.usedSpacePitchTwo ?? 'Ohne')),
-              DataCell(_buildStockStatusCell(tool.storageStatus)),
-            ],
-          );
-        }).toList(),
-      ),
+// Build the tool table with headers and content
+Widget _buildToolTable(List<Tool> tools) {
+  if (tools.isEmpty) {
+    return const Padding(
+      padding: EdgeInsets.all(8.0),
+      child: Text('Keine Werkzeuge gefunden'),
     );
   }
+
+  // Get screen width to adjust table layout based on screen size
+  final double screenWidth = MediaQuery.of(context).size.width;
+
+  // Adjust font size and paddings based on screen size
+  double fontSize = screenWidth < 600 ? 12.0 : 14.0; // Smaller font on mobile
+  double cellPadding = screenWidth < 600 ? 4.0 : 8.0; // Compact padding
+
+  // Adjust the columns to display on smaller screens (mobile)
+  bool isMobileView = screenWidth < 600;
+
+  // Define flexible width for Lagerplatz columns and constrain other columns
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal, // Enable horizontal scrolling
+    child: DataTable(
+      columnSpacing: 16, // Adjust column spacing for better clarity in headers
+      columns: [
+        DataColumn(
+          label: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 100), // Ensure header has enough space
+            child: Text('Werkzeugnummer', style: TextStyle(fontSize: fontSize)),
+          ),
+        ),
+        DataColumn(
+          label: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 100), // Ensure header has enough space
+            child: Text('Lagerplatz 1', style: TextStyle(fontSize: fontSize)),
+          ),
+        ),
+        DataColumn(
+          label: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 60), // Adjust Belegter Platz 1
+            child: Text('Belegter Platz 1', style: TextStyle(fontSize: fontSize)),
+          ),
+        ),
+        DataColumn(
+          label: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 100, maxWidth: 120), // Ensure Lagerplatz 2 adapts to content
+            child: Text('Lagerplatz 2', style: TextStyle(fontSize: fontSize)),
+          ),
+        ),
+        DataColumn(
+          label: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 60), // Adjust Belegter Platz 2
+            child: Text('Belegter Platz 2', style: TextStyle(fontSize: fontSize)),
+          ),
+        ),
+        DataColumn(
+          label: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 60), // Ensure Lagerstatus doesn't waste space
+            child: Text('Lagerstatus', style: TextStyle(fontSize: fontSize)),
+          ),
+        ),
+      ],
+      rows: tools.map((tool) {
+        return DataRow(
+          cells: [
+            DataCell(
+              Padding(
+                padding: EdgeInsets.all(cellPadding),
+                child: Text(tool.toolNumber, style: TextStyle(fontSize: fontSize)),
+              ),
+              onTap: () => _navigateToEditTool(tool),
+            ),
+            DataCell(
+              Padding(
+                padding: EdgeInsets.all(cellPadding),
+                child: Text(tool.storageLocationOne ?? 'Ohne', style: TextStyle(fontSize: fontSize)),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: EdgeInsets.all(cellPadding),
+                child: Text(tool.usedSpacePitchOne ?? 'Ohne', style: TextStyle(fontSize: fontSize)),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: EdgeInsets.all(cellPadding),
+                child: Text(tool.storageLocationTwo ?? 'Ohne', style: TextStyle(fontSize: fontSize)),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: EdgeInsets.all(cellPadding),
+                child: Text(tool.usedSpacePitchTwo ?? 'Ohne', style: TextStyle(fontSize: fontSize)),
+              ),
+            ),
+            DataCell(
+              Padding(
+                padding: EdgeInsets.all(cellPadding),
+                child: _buildStockStatusCell(tool.storageStatus),
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    ),
+  );
+}
 
   // Build the stock status cell with icon and color
   Widget _buildStockStatusCell(String status) {
@@ -255,37 +328,37 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   }
 
   // Build the collapsible section for tools without storage
-  Widget _buildToolsWithoutStorageSection() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: ExpansionPanelList(
-        expansionCallback: (int index, bool isExpanded) {
-          setState(() {
-            _isToolsWithoutStorageCollapsed = !isExpanded;
-          });
-        },
-        children: [
-          ExpansionPanel(
-            headerBuilder: (BuildContext context, bool isExpanded) {
-              return const ListTile(
-                title: Text(
-                  'Werkzeuge ohne Lagerplatz',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              );
-            },
-            body: Align(
-              alignment:
-                  Alignment.centerLeft, // Ensure the table is aligned left
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _buildToolTable(_filterTools(_toolsWithoutStorage)),
+  // Modify the tools without storage section in the same way
+Widget _buildToolsWithoutStorageSection() {
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: ExpansionPanelList(
+      expansionCallback: (int index, bool isExpanded) {
+        setState(() {
+          _isToolsWithoutStorageCollapsed = !isExpanded;
+        });
+      },
+      children: [
+        ExpansionPanel(
+          headerBuilder: (BuildContext context, bool isExpanded) {
+            return const ListTile(
+              title: Text(
+                'Werkzeuge ohne Lagerplatz',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
+            );
+          },
+          body: Align(
+            alignment: Alignment.centerLeft, // Ensure the table is aligned left
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: _buildToolTable(_filterTools(_toolsWithoutStorage)),
             ),
-            isExpanded: !_isToolsWithoutStorageCollapsed,
           ),
-        ],
-      ),
-    );
-  }
+          isExpanded: !_isToolsWithoutStorageCollapsed,
+        ),
+      ],
+    ),
+  );
+}
 }
