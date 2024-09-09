@@ -29,73 +29,37 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
 
   Future<void> _loadStorageData() async {
     try {
-      // Fetch and parse the data
-      final allStoragesResponse = await http
-          .get(Uri.parse('http://wim-solution.sip.local:3000/all-storages'));
-      final freeStoragesResponse = await http
-          .get(Uri.parse('http://wim-solution.sip.local:3000/free-storages'));
+      final response = await http.get(
+          Uri.parse('http://wim-solution.sip.local:3000/storage-utilization'));
 
-      if (allStoragesResponse.statusCode == 200 &&
-          freeStoragesResponse.statusCode == 200) {
-        // Parse the 'all-storages' response as List<String>
-        final List<String> allStorages = List<String>.from(
-          json.decode(allStoragesResponse.body),
-        );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
 
-        // Debug print for allStorages
-        if (kDebugMode) {
-          print('allStorages: $allStorages');
-        }
-        if (kDebugMode) {
-          print('Total items in allStorages: ${allStorages.length}');
-        }
-
-        // Parse the 'free-storages' response as List<String>
-        final List<String> freeStorages = List<String>.from(
-          json.decode(freeStoragesResponse.body),
-        );
-
-        // Debug print for freeStorages
-        if (kDebugMode) {
-          print('freeStorages: $freeStorages');
-        }
-        if (kDebugMode) {
-          print('Total items in freeStorages: ${freeStorages.length}');
-        }
-
-        // Calculate capacities
-        final int freeCapacity =
-            freeStorages.where((item) => allStorages.contains(item)).length;
-        final int usedCapacity = allStorages.length - freeCapacity;
-
-        // Update the state
         setState(() {
-          _maxCapacity = allStorages.length;
-          _freeCapacity = freeCapacity;
-          _usedCapacity = usedCapacity;
+          // Handle maxCapacity and freeCapacity by casting them as double and converting to int
+          _maxCapacity =
+              double.tryParse(data['maxCapacity'].toString())?.toInt() ?? 0;
+          _freeCapacity =
+              double.tryParse(data['freeCapacity'].toString())?.toInt() ?? 0;
+          _usedCapacity =
+              double.tryParse(data['usedCapacity'].toString())?.toInt() ?? 0;
+
+          // Handle usagePercentage as double
           _usagePercentage =
-              _maxCapacity > 0 ? (_usedCapacity / _maxCapacity) * 100 : 0.0;
+              double.tryParse(data['usagePercentage'].toString()) ?? 0.0;
+
           _isLoading = false;
         });
 
-        // Print the results
         if (kDebugMode) {
           print('Max Capacity: $_maxCapacity');
-        }
-        if (kDebugMode) {
           print('Free Capacity: $_freeCapacity');
-        }
-        if (kDebugMode) {
           print('Used Capacity: $_usedCapacity');
-        }
-        if (kDebugMode) {
           print('Usage Percentage: $_usagePercentage%');
         }
       } else {
-        // Handle non-200 responses
         if (kDebugMode) {
-          print(
-              'Error: ${allStoragesResponse.statusCode}, ${freeStoragesResponse.statusCode}');
+          print('Error: ${response.statusCode}');
         }
         setState(() {
           _isLoading = false;
@@ -103,7 +67,6 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
         });
       }
     } catch (e) {
-      // Catch and print any exceptions
       if (kDebugMode) {
         print('Exception: $e');
       }

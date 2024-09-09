@@ -222,6 +222,11 @@ class StationOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sort stations by station name
+    List<dynamic> sortedStations = List.from(stations);
+    sortedStations
+        .sort((a, b) => (a['Station'] ?? '').compareTo(b['Station'] ?? ''));
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
@@ -259,9 +264,9 @@ class StationOverview extends StatelessWidget {
             mainAxisSpacing: 2.0,
             childAspectRatio: childAspectRatio,
           ),
-          itemCount: stations.length,
+          itemCount: sortedStations.length,
           itemBuilder: (context, index) {
-            var station = stations[index];
+            var station = sortedStations[index];
             return StationCard(
                 station: station, isSmallScreen: screenWidth < 600);
           },

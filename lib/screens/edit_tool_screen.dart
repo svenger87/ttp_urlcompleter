@@ -1,115 +1,80 @@
-// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously, prefer_const_constructors
-
 import 'package:flutter/material.dart';
-import '../services/tool_service.dart';
 import '../models/tool.dart';
-import 'free_storages_screen.dart';
+import '../services/tool_service.dart';
 
 class EditToolScreen extends StatefulWidget {
   final Tool tool;
   const EditToolScreen({Key? key, required this.tool}) : super(key: key);
 
   @override
+  // ignore: library_private_types_in_public_api
   _EditToolScreenState createState() => _EditToolScreenState();
 }
 
 class _EditToolScreenState extends State<EditToolScreen> {
+  final ToolService _toolService = ToolService();
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _storageLocationController;
-  late String _storageStatus;
+
+  List<String> _freeStorages = [];
+  String? _selectedStorageOne;
+  String? _selectedStorageTwo;
+
+  // Variables to track selected used space pitch for both storages
+  String? _selectedUsedSpacePitchOne;
+  String? _selectedUsedSpacePitchTwo;
+
+  // Variable to track stock status (in English for backend storage)
+  String? _selectedStockStatus;
+
   bool _isLoading = false;
-  bool _hasError = false;
-  bool _forceUpdate = false;
 
   @override
   void initState() {
     super.initState();
+    _fetchFreeStorages();
 
-    // Initialize the controller with the existing storage location
-    _storageLocationController =
-        TextEditingController(text: widget.tool.storageLocation);
+    // Pre-select values if they exist in the tool data
+    _selectedStorageOne = widget.tool.storageLocationOne;
+    _selectedStorageTwo = widget.tool.storageLocationTwo;
 
-    // Normalize _storageStatus to lowercase for case-insensitive handling
-    _storageStatus = widget.tool.storageStatus.toLowerCase();
+    // Initialize used space pitch with existing data from the tool
+    _selectedUsedSpacePitchOne =
+        widget.tool.usedSpacePitchOne?.replaceAll('.', ',') ?? '0,5';
+    _selectedUsedSpacePitchTwo =
+        widget.tool.usedSpacePitchTwo?.replaceAll('.', ',') ?? '0,5';
 
-    // Ensure _storageStatus matches one of the dropdown values
-    if (_storageStatus != 'in stock' && _storageStatus != 'out of stock') {
-      _storageStatus = 'in stock'; // Default to 'in stock' if no match
-    }
+    // Initialize stock status (convert English status to German for display)
+    _selectedStockStatus = _translateStatusToGerman(widget.tool.storageStatus);
   }
 
-  @override
-  void dispose() {
-    // Dispose the controller when the widget is disposed
-    _storageLocationController.dispose();
-    super.dispose();
+  // Translate stock status from English (backend) to German (UI display)
+  String _translateStatusToGerman(String status) {
+    if (status == 'In stock') return 'Eingelagert';
+    if (status == 'Out of stock') return 'Ausgelagert';
+    return status; // Return the original if unknown
   }
 
-  Future<void> _selectFreeStorage() async {
-    final selectedStorage = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (context) => FreeStoragesScreen()),
-    );
-
-    if (selectedStorage != null) {
-      setState(() {
-        // Update the text field's value via the controller
-        _storageLocationController.text = selectedStorage;
-      });
-    }
+// Translate stock status from German (UI input) to English (backend)
+  String _translateStatusToEnglish(String status) {
+    if (status == 'Eingelagert') return 'In stock';
+    if (status == 'Ausgelagert') return 'Out of stock';
+    return status; // Return the original if unknown
   }
 
-  Future<void> _updateTool() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    const doNotUpdate = true;
-
+  // Fetch free storages from the backend
+  Future<void> _fetchFreeStorages() async {
     setState(() {
       _isLoading = true;
-      _hasError = false;
     });
 
     try {
-      final result = await ToolService().updateTool(
-        widget.tool.id,
-        _storageLocationController.text, // Use the controller's value
-        storageStatus: _storageStatus,
-        doNotUpdate: doNotUpdate,
-        forceUpdate: _forceUpdate,
-      );
-
-      if (result == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')),
-        );
-        Navigator.pop(context);
-      } else if (result == 'ignored') {
-        if (_storageLocationController.text.toLowerCase() !=
-            widget.tool.storageLocation.toLowerCase()) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Lagerplatz wurde nicht aktualisiert! Erzwingen Sie die Änderung, wenn erforderlich.'),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Werkzeugstatus erfolgreich aktualisiert')),
-          );
-          Navigator.pop(context);
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unbekannter Fehler')),
-        );
-      }
+      _freeStorages = await _toolService.fetchFreeStorages();
+      setState(() {});
     } catch (e) {
-      setState(() {
-        _hasError = true;
-      });
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Update des Werkzeugs fehlgeschlagen')),
+        const SnackBar(
+            content: Text('Fehler beim Laden der freien Lagerplätze')),
       );
     } finally {
       setState(() {
@@ -118,58 +83,36 @@ class _EditToolScreenState extends State<EditToolScreen> {
     }
   }
 
-  Future<void> _confirmDeleteTool() async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Werkzeug löschen'),
-          content: const Text(
-              'Möchten Sie dieses Werkzeug wirklich löschen?\nDiese Aktion kann nicht rückgängig gemacht werden.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false); // User cancels the deletion
-              },
-              child: const Text('Abbrechen'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(true); // User confirms the deletion
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: const Text('Löschen'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldDelete == true) {
-      await _deleteTool(); // Proceed with the deletion if confirmed
-    }
-  }
-
-  Future<void> _deleteTool() async {
+  Future<void> _updateTool() async {
     setState(() {
       _isLoading = true;
-      _hasError = false;
     });
 
     try {
-      await ToolService().deleteTool(widget.tool.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Werkzeug erfolgreich gelöscht')),
+      await _toolService.updateTool(
+        widget.tool.toolNumber,
+        _selectedStorageOne ?? '',
+        _selectedStorageTwo ?? '',
+        usedSpacePitchOne:
+            _selectedUsedSpacePitchOne?.replaceAll(',', '.') ?? '0.5',
+        usedSpacePitchTwo:
+            _selectedUsedSpacePitchTwo?.replaceAll(',', '.') ?? '0.5',
+        storageStatus:
+            _translateStatusToEnglish(_selectedStockStatus ?? 'Ausgelagert'),
       );
-      Navigator.pop(context);
-    } catch (e) {
-      setState(() {
-        _hasError = true;
-      });
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Löschen des Werkzeugs fehlgeschlagen')),
+        const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')),
+      );
+
+      // Indicate that the tool was successfully updated
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Fehler beim Aktualisieren des Werkzeugs')),
       );
     } finally {
       setState(() {
@@ -180,143 +123,172 @@ class _EditToolScreenState extends State<EditToolScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<String> stockStatusOptions = ['Eingelagert', 'Ausgelagert'];
+
+    // Generate list of comma-separated values from 0,5 to 9,0
+    final List<String> usedSpaceValues = List.generate(18, (index) {
+      return ((index + 1) * 0.5).toStringAsFixed(1).replaceAll('.', ',');
+    });
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Werkzeuglagerverwaltung'),
         backgroundColor: const Color(0xFF104382),
+        title: Text('Werkzeug bearbeiten ${widget.tool.toolNumber}'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _hasError
-                ? const Center(child: Text('Error updating tool'))
-                : Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _storageLocationController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Lagerplatz',
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Bitte Lagerplatz eingeben';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.search),
-                              onPressed: _selectFreeStorage,
-                              tooltip: 'Freie Lagerplätze anzeigen',
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    // Stock status indicator
+                    _buildStockStatusIndicator(),
+                    const SizedBox(height: 16.0),
 
-                        // Dropdown for storage status with colored indicators
-                        DropdownButtonFormField<String>(
-                          value: _storageStatus
-                              .toLowerCase(), // Ensure value is lowercase
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'in stock',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.circle,
-                                      color: Colors.green, size: 12),
-                                  SizedBox(width: 8),
-                                  Text('Auf Lager'),
-                                ],
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 'out of stock',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.circle,
-                                      color: Colors.red, size: 12),
-                                  SizedBox(width: 8),
-                                  Text('Nicht auf Lager'),
-                                ],
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _storageStatus =
-                                  value!.toLowerCase(); // Normalize on change
-                            });
-                          },
-                          decoration: const InputDecoration(
-                            labelText: 'Lagerstatus',
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        Container(
-                          padding: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(4.0),
-                          ),
-                          child: const Text(
-                            'Verwenden Sie diese Option, um den Lagerplatz zu '
-                            'aktualisieren, selbst wenn das Werkzeug als nicht '
-                            'aktualisierbar markiert ist. Diese Aktion sollte nur '
-                            'durchgeführt werden, wenn Sie sicher sind, dass die '
-                            'Änderung notwendig ist.',
-                            style:
-                                TextStyle(fontSize: 14, color: Colors.black87),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        SwitchListTile(
-                          title:
-                              const Text('Änderung vom Lagerplatz erzwingen'),
-                          value: _forceUpdate,
-                          onChanged: (value) {
-                            setState(() {
-                              _forceUpdate = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        Center(
-                          child: ElevatedButton(
-                            onPressed: _updateTool,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF104382),
-                            ),
-                            child: const Text('Lagerplatz speichern'),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Add a delete button
-                        Center(
-                          child: ElevatedButton(
-                            onPressed: _confirmDeleteTool,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                            ),
-                            child: const Text('Werkzeug löschen'),
-                          ),
-                        ),
-                      ],
+                    // Dropdown for Storage Location One
+                    DropdownButtonFormField<String>(
+                      value: _freeStorages.contains(_selectedStorageOne)
+                          ? _selectedStorageOne
+                          : null,
+                      hint: const Text('Wähle Lagerplatz 1'),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedStorageOne = value;
+                        });
+                      },
+                      items: _freeStorages.map((storage) {
+                        return DropdownMenuItem<String>(
+                          value: storage,
+                          child: Text(storage),
+                        );
+                      }).toList(),
+                      decoration:
+                          const InputDecoration(labelText: 'Lagerplatz 1'),
                     ),
-                  ),
-      ),
+                    const SizedBox(height: 16.0),
+
+                    // Dropdown for Storage Location Two
+                    DropdownButtonFormField<String>(
+                      value: _freeStorages.contains(_selectedStorageTwo)
+                          ? _selectedStorageTwo
+                          : null,
+                      hint: const Text('Wähle Lagerplatz 2'),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedStorageTwo = value;
+                        });
+                      },
+                      items: _freeStorages.map((storage) {
+                        return DropdownMenuItem<String>(
+                          value: storage,
+                          child: Text(storage),
+                        );
+                      }).toList(),
+                      decoration:
+                          const InputDecoration(labelText: 'Lagerplatz 2'),
+                    ),
+                    const SizedBox(height: 16.0),
+
+                    // Dropdown for Used Space Pitch One
+                    DropdownButtonFormField<String>(
+                      value:
+                          usedSpaceValues.contains(_selectedUsedSpacePitchOne)
+                              ? _selectedUsedSpacePitchOne
+                              : null,
+                      decoration:
+                          const InputDecoration(labelText: 'Belegter Platz 1'),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedUsedSpacePitchOne = value!;
+                        });
+                      },
+                      items: usedSpaceValues.map((value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16.0),
+
+                    // Dropdown for Used Space Pitch Two
+                    DropdownButtonFormField<String>(
+                      value:
+                          usedSpaceValues.contains(_selectedUsedSpacePitchTwo)
+                              ? _selectedUsedSpacePitchTwo
+                              : null,
+                      decoration:
+                          const InputDecoration(labelText: 'Belegter Platz 2'),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedUsedSpacePitchTwo = value!;
+                        });
+                      },
+                      items: usedSpaceValues.map((value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16.0),
+
+                    // Dropdown for Stock Status
+                    DropdownButtonFormField<String>(
+                      value: _selectedStockStatus,
+                      decoration:
+                          const InputDecoration(labelText: 'Lagerstatus'),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedStockStatus = value!;
+                        });
+                      },
+                      items: stockStatusOptions.map((status) {
+                        return DropdownMenuItem<String>(
+                          value: status,
+                          child: Text(status),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Update Button
+                    ElevatedButton(
+                      onPressed: _updateTool,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color(0xFF104382), // Custom background color
+                      ),
+                      child: const Text('Werkzeug aktualisieren'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  // Widget to display stock status with an icon and color
+  Widget _buildStockStatusIndicator() {
+    bool isInStock = _selectedStockStatus == 'Eingelagert';
+
+    return Row(
+      children: [
+        Icon(
+          isInStock ? Icons.check_circle : Icons.cancel,
+          color: isInStock ? Colors.green : Colors.red,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          isInStock ? 'Eingelagert' : 'Ausgelagert',
+          style: TextStyle(
+            color: isInStock ? Colors.green : Colors.red,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

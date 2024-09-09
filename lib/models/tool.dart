@@ -1,40 +1,47 @@
 class Tool {
-  final int id;
   final String toolNumber;
   final String name;
-  final String storageLocation;
+  final String? storageLocationOne;
+  final String? storageLocationTwo;
+  final String? usedSpacePitchOne;
+  final String? usedSpacePitchTwo;
   final String storageStatus;
-  final bool doNotUpdate;
 
   Tool({
-    required this.id,
     required this.toolNumber,
     required this.name,
-    required this.storageLocation,
+    this.storageLocationOne,
+    this.storageLocationTwo,
+    this.usedSpacePitchOne,
+    this.usedSpacePitchTwo,
     required this.storageStatus,
-    required this.doNotUpdate,
   });
 
   factory Tool.fromJson(Map<String, dynamic> json) {
     return Tool(
-      id: json['id'],
-      toolNumber: json['tool_number'],
-      name: json['name'],
-      storageLocation: json['storage_location'],
-      storageStatus: json['storage_status'],
-      doNotUpdate:
-          json['do_not_update'] == 1, // Convert DB boolean to Dart bool
+      toolNumber: json['tool_number'] ??
+          'Unknown Tool Number', // Handle null tool number
+      name: json['name'] ?? 'Unknown Name', // Handle null name
+      storageLocationOne: json['storage_location_one'] as String?, // Nullable
+      storageLocationTwo: json['storage_location_two'] as String?, // Nullable
+      usedSpacePitchOne:
+          json['used_space_pitch_one']?.toString(), // Handle null with toString
+      usedSpacePitchTwo:
+          json['used_space_pitch_two']?.toString(), // Handle null with toString
+      storageStatus:
+          json['storage_status'] ?? 'Out of stock', // Provide default value
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'tool_number': toolNumber,
       'name': name,
-      'storage_location': storageLocation,
+      'storage_location_one': storageLocationOne,
+      'storage_location_two': storageLocationTwo,
+      'used_space_pitch_one': usedSpacePitchOne,
+      'used_space_pitch_two': usedSpacePitchTwo,
       'storage_status': storageStatus,
-      'do_not_update': doNotUpdate ? 1 : 0, // Convert Dart bool to DB boolean
     };
   }
 }

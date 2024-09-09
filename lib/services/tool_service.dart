@@ -4,80 +4,55 @@ import '../models/tool.dart';
 
 class ToolService {
   final String localApiUrl = 'http://wim-solution:3000/tools';
-  final String updateToolsApiUrl = 'http://wim-solution:3000/update-tools';
+  final String updateToolApiUrl = 'http://wim-solution:3000/update-tool';
   final String freeStoragesApiUrl = 'http://wim-solution:3000/free-storages';
+  final String storageUtilizationApiUrl =
+      'http://wim-solution:3000/storage-utilization';
 
-  // Fetch tools from local API
-  Future<List<Tool>> fetchTools() async {
+  // Fetch tools from local API and separate them into has_storage and has_no_storage
+  Future<Map<String, List<Tool>>> fetchTools() async {
     final response = await http.get(Uri.parse(localApiUrl));
 
     if (response.statusCode == 200) {
-      List<dynamic> body = json.decode(response.body);
-      return body.map((dynamic item) => Tool.fromJson(item)).toList();
+      final body = json.decode(response.body);
+      List<Tool> hasStorage = (body['has_storage'] as List)
+          .map((item) => Tool.fromJson(item))
+          .toList();
+      List<Tool> hasNoStorage = (body['has_no_storage'] as List)
+          .map((item) => Tool.fromJson(item))
+          .toList();
+
+      return {
+        'has_storage': hasStorage,
+        'has_no_storage': hasNoStorage,
+      };
     } else {
       throw Exception('Failed to load tools from local API');
     }
   }
 
-  // Add a new tool
-  Future<void> addTool(Tool tool) async {
-    final response = await http.post(
-      Uri.parse(localApiUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(tool.toJson()),
-    );
+  // Update an existing tool, now with the stock status
 
-    if (response.statusCode != 201) {
-      throw Exception('Failed to add tool: ${response.body}');
-    }
-  }
-
-  // Update an existing tool
-  Future<String> updateTool(int id, String storageLocation,
-      {required String storageStatus,
-      required bool doNotUpdate,
-      bool forceUpdate = false}) async {
+  Future<void> updateTool(
+      String toolNumber, String storageLocationOne, String storageLocationTwo,
+      {required String usedSpacePitchOne,
+      required String usedSpacePitchTwo,
+      required String storageStatus // Add storage status parameter
+      }) async {
     final response = await http.put(
-      Uri.parse('$localApiUrl/$id'),
+      Uri.parse('$updateToolApiUrl/$toolNumber'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'storage_location': storageLocation,
-        'storage_status': storageStatus,
-        'do_not_update': doNotUpdate ? 1 : 0,
-        'force_update': forceUpdate,
+        'storage_location_one': storageLocationOne,
+        'used_space_pitch_one': usedSpacePitchOne,
+        'storage_location_two': storageLocationTwo,
+        'used_space_pitch_two': usedSpacePitchTwo,
+        'storage_status': storageStatus, // Pass storage status
       }),
     );
 
-    if (response.statusCode == 200) {
-      final responseBody = response.body;
-      if (responseBody.contains('Tool updated successfully')) {
-        return 'success';
-      } else if (responseBody.contains(
-          'Storage location update ignored due to do_not_update flag')) {
-        return 'ignored'; // Storage location update ignored
-      } else {
-        return 'unknown'; // Handle other responses
-      }
-    } else {
+    if (response.statusCode != 200) {
       throw Exception('Failed to update tool: ${response.body}');
-    }
-  }
-
-  // Delete a tool (soft delete)
-  Future<void> deleteTool(int id) async {
-    final response = await http.delete(Uri.parse('$localApiUrl/$id'));
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete tool: ${response.body}');
-    }
-  }
-
-  // Update tools from API
-  Future<void> updateTools() async {
-    final response = await http.get(Uri.parse(updateToolsApiUrl));
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update tools: ${response.body}');
     }
   }
 
@@ -90,6 +65,17 @@ class ToolService {
       return body.map((dynamic item) => item as String).toList();
     } else {
       throw Exception('Failed to load free storages from API');
+    }
+  }
+
+  // Fetch storage utilization data from API
+  Future<Map<String, dynamic>> fetchStorageUtilization() async {
+    final response = await http.get(Uri.parse(storageUtilizationApiUrl));
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load storage utilization from API');
     }
   }
 }
