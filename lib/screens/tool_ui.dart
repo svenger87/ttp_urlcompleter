@@ -98,18 +98,13 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   // Filters a given tool list by the current filter query (tool number, storage location, or stock status)
   List<Tool> _filterTools(List<Tool> tools) {
     return tools.where((tool) {
-      return tool.toolNumber
-              .toLowerCase()
-              .contains(_filterQuery.toLowerCase()) ||
-          (tool.storageLocationOne
-                  ?.toLowerCase()
-                  .contains(_filterQuery.toLowerCase()) ??
+      final lowerCaseQuery = _filterQuery.toLowerCase();
+      return tool.toolNumber.toLowerCase().contains(lowerCaseQuery) ||
+          (tool.storageLocationOne?.toLowerCase().contains(lowerCaseQuery) ??
               false) ||
-          (tool.storageLocationTwo
-                  ?.toLowerCase()
-                  .contains(_filterQuery.toLowerCase()) ??
+          (tool.storageLocationTwo?.toLowerCase().contains(lowerCaseQuery) ??
               false) ||
-          tool.storageStatus.toLowerCase().contains(_filterQuery.toLowerCase());
+          tool.storageStatus.toLowerCase().contains(lowerCaseQuery);
     }).toList();
   }
 
