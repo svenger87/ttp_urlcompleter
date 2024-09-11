@@ -15,7 +15,6 @@ import '../modules/converter_module.dart';
 //import '../screens/stations_screen.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:hangerstations_dashboard_module/screens/hangerstations_dashboard_module.dart';
-import '../modules/pdf_reader_module.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({Key? key}) : super(key: key);
@@ -154,13 +153,22 @@ class MainDrawer extends StatelessWidget {
                 leading: const Icon(Icons.grain_rounded),
                 title: const Text('Materialplan'),
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const PDFReaderModule(pdfUrl: matplan),
-                    ),
-                  );
+                  if (Platform.isWindows) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const WebViewWindowsModule(initialUrl: matplan),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebViewModule(url: matplan),
+                      ),
+                    );
+                  }
                 },
               ),
             ],
