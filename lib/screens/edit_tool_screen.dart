@@ -19,11 +19,9 @@ class _EditToolScreenState extends State<EditToolScreen> {
   String? _selectedStorageOne;
   String? _selectedStorageTwo;
 
-  // Variables to track selected used space pitch for both storages
   String? _selectedUsedSpacePitchOne;
   String? _selectedUsedSpacePitchTwo;
 
-  // Variable to track stock status (in English for backend storage)
   String? _selectedStockStatus;
 
   bool _isLoading = false;
@@ -33,35 +31,27 @@ class _EditToolScreenState extends State<EditToolScreen> {
     super.initState();
     _fetchFreeStorages();
 
-    // Pre-select values if they exist in the tool data
     _selectedStorageOne = widget.tool.storageLocationOne;
     _selectedStorageTwo = widget.tool.storageLocationTwo;
-
-    // Initialize used space pitch with existing data from the tool
     _selectedUsedSpacePitchOne =
         widget.tool.usedSpacePitchOne?.replaceAll('.', ',') ?? '0,5';
     _selectedUsedSpacePitchTwo =
         widget.tool.usedSpacePitchTwo?.replaceAll('.', ',') ?? '0,5';
-
-    // Initialize stock status (convert English status to German for display)
     _selectedStockStatus = _translateStatusToGerman(widget.tool.storageStatus);
   }
 
-  // Translate stock status from English (backend) to German (UI display)
   String _translateStatusToGerman(String status) {
     if (status == 'In stock') return 'Eingelagert';
     if (status == 'Out of stock') return 'Ausgelagert';
-    return status; // Return the original if unknown
+    return status;
   }
 
-// Translate stock status from German (UI input) to English (backend)
   String _translateStatusToEnglish(String status) {
     if (status == 'Eingelagert') return 'In stock';
     if (status == 'Ausgelagert') return 'Out of stock';
-    return status; // Return the original if unknown
+    return status;
   }
 
-  // Fetch free storages from the backend
   Future<void> _fetchFreeStorages() async {
     setState(() {
       _isLoading = true;
@@ -106,7 +96,6 @@ class _EditToolScreenState extends State<EditToolScreen> {
         const SnackBar(content: Text('Werkzeug erfolgreich aktualisiert')),
       );
 
-      // Indicate that the tool was successfully updated
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -124,8 +113,6 @@ class _EditToolScreenState extends State<EditToolScreen> {
   @override
   Widget build(BuildContext context) {
     final List<String> stockStatusOptions = ['Eingelagert', 'Ausgelagert'];
-
-    // Generate list of comma-separated values from 0,5 to 9,0
     final List<String> usedSpaceValues = List.generate(18, (index) {
       return ((index + 1) * 0.5).toStringAsFixed(1).replaceAll('.', ',');
     });
@@ -135,142 +122,151 @@ class _EditToolScreenState extends State<EditToolScreen> {
         backgroundColor: const Color(0xFF104382),
         title: Text('Werkzeug bearbeiten ${widget.tool.toolNumber}'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    // Stock status indicator
-                    _buildStockStatusIndicator(),
-                    const SizedBox(height: 16.0),
-
-                    // Dropdown for Storage Location One
-                    DropdownButtonFormField<String>(
-                      value: _freeStorages.contains(_selectedStorageOne)
-                          ? _selectedStorageOne
-                          : null,
-                      hint: const Text('Wähle Lagerplatz 1'),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedStorageOne = value;
-                        });
-                      },
-                      items: _freeStorages.map((storage) {
-                        return DropdownMenuItem<String>(
-                          value: storage,
-                          child: Text(storage),
-                        );
-                      }).toList(),
-                      decoration:
-                          const InputDecoration(labelText: 'Lagerplatz 1'),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        _buildStockStatusIndicator(),
+                        const SizedBox(height: 16.0),
+                        DropdownButtonFormField<String>(
+                          value: _selectedStorageOne,
+                          hint: const Text('Wähle Lagerplatz 1'),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedStorageOne = value;
+                            });
+                          },
+                          items: [
+                            if (_selectedStorageOne != null &&
+                                !_freeStorages.contains(_selectedStorageOne))
+                              DropdownMenuItem<String>(
+                                value: _selectedStorageOne,
+                                child: Text(_selectedStorageOne!),
+                              ),
+                            ..._freeStorages.map((storage) {
+                              return DropdownMenuItem<String>(
+                                value: storage,
+                                child: Text(storage),
+                              );
+                            }).toList(),
+                          ],
+                          decoration:
+                              const InputDecoration(labelText: 'Lagerplatz 1'),
+                        ),
+                        DropdownButtonFormField<String>(
+                          value: _selectedStorageTwo,
+                          hint: const Text('Wähle Lagerplatz 2'),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedStorageTwo = value;
+                            });
+                          },
+                          items: [
+                            if (_selectedStorageTwo != null &&
+                                !_freeStorages.contains(_selectedStorageTwo))
+                              DropdownMenuItem<String>(
+                                value: _selectedStorageTwo,
+                                child: Text(_selectedStorageTwo!),
+                              ),
+                            ..._freeStorages.map((storage) {
+                              return DropdownMenuItem<String>(
+                                value: storage,
+                                child: Text(storage),
+                              );
+                            }).toList(),
+                          ],
+                          decoration:
+                              const InputDecoration(labelText: 'Lagerplatz 2'),
+                        ),
+                        DropdownButtonFormField<String>(
+                          value: _selectedUsedSpacePitchOne,
+                          decoration: const InputDecoration(
+                              labelText: 'Belegter Platz 1'),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedUsedSpacePitchOne = value!;
+                            });
+                          },
+                          items: [
+                            if (_selectedUsedSpacePitchOne != null &&
+                                !usedSpaceValues
+                                    .contains(_selectedUsedSpacePitchOne))
+                              DropdownMenuItem<String>(
+                                value: _selectedUsedSpacePitchOne,
+                                child: Text(_selectedUsedSpacePitchOne!),
+                              ),
+                            ...usedSpaceValues.map((value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                        DropdownButtonFormField<String>(
+                          value: _selectedUsedSpacePitchTwo,
+                          decoration: const InputDecoration(
+                              labelText: 'Belegter Platz 2'),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedUsedSpacePitchTwo = value!;
+                            });
+                          },
+                          items: [
+                            if (_selectedUsedSpacePitchTwo != null &&
+                                !usedSpaceValues
+                                    .contains(_selectedUsedSpacePitchTwo))
+                              DropdownMenuItem<String>(
+                                value: _selectedUsedSpacePitchTwo,
+                                child: Text(_selectedUsedSpacePitchTwo!),
+                              ),
+                            ...usedSpaceValues.map((value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                        DropdownButtonFormField<String>(
+                          value: _selectedStockStatus,
+                          decoration:
+                              const InputDecoration(labelText: 'Lagerstatus'),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedStockStatus = value!;
+                            });
+                          },
+                          items: stockStatusOptions.map((status) {
+                            return DropdownMenuItem<String>(
+                              value: status,
+                              child: Text(status),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: _updateTool,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF104382),
+                          ),
+                          child: const Text('Werkzeug aktualisieren'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16.0),
-
-                    // Dropdown for Storage Location Two
-                    DropdownButtonFormField<String>(
-                      value: _freeStorages.contains(_selectedStorageTwo)
-                          ? _selectedStorageTwo
-                          : null,
-                      hint: const Text('Wähle Lagerplatz 2'),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedStorageTwo = value;
-                        });
-                      },
-                      items: _freeStorages.map((storage) {
-                        return DropdownMenuItem<String>(
-                          value: storage,
-                          child: Text(storage),
-                        );
-                      }).toList(),
-                      decoration:
-                          const InputDecoration(labelText: 'Lagerplatz 2'),
-                    ),
-                    const SizedBox(height: 16.0),
-
-                    // Dropdown for Used Space Pitch One
-                    DropdownButtonFormField<String>(
-                      value:
-                          usedSpaceValues.contains(_selectedUsedSpacePitchOne)
-                              ? _selectedUsedSpacePitchOne
-                              : null,
-                      decoration:
-                          const InputDecoration(labelText: 'Belegter Platz 1'),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedUsedSpacePitchOne = value!;
-                        });
-                      },
-                      items: usedSpaceValues.map((value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16.0),
-
-                    // Dropdown for Used Space Pitch Two
-                    DropdownButtonFormField<String>(
-                      value:
-                          usedSpaceValues.contains(_selectedUsedSpacePitchTwo)
-                              ? _selectedUsedSpacePitchTwo
-                              : null,
-                      decoration:
-                          const InputDecoration(labelText: 'Belegter Platz 2'),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedUsedSpacePitchTwo = value!;
-                        });
-                      },
-                      items: usedSpaceValues.map((value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16.0),
-
-                    // Dropdown for Stock Status
-                    DropdownButtonFormField<String>(
-                      value: _selectedStockStatus,
-                      decoration:
-                          const InputDecoration(labelText: 'Lagerstatus'),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedStockStatus = value!;
-                        });
-                      },
-                      items: stockStatusOptions.map((status) {
-                        return DropdownMenuItem<String>(
-                          value: status,
-                          child: Text(status),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Update Button
-                    ElevatedButton(
-                      onPressed: _updateTool,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color(0xFF104382), // Custom background color
-                      ),
-                      child: const Text('Werkzeug aktualisieren'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
-  // Widget to display stock status with an icon and color
   Widget _buildStockStatusIndicator() {
     bool isInStock = _selectedStockStatus == 'Eingelagert';
 

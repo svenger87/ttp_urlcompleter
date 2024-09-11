@@ -19,7 +19,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   String _filterQuery = '';
   bool _isLoading = true;
   String? _errorMessage;
-  bool _isToolsWithoutStorageCollapsed = true;
+  bool _isToolsWithStorageCollapsed = false; // Uncollapsed by default
+  bool _isToolsWithoutStorageCollapsed = true; // Collapsed by default
 
   // Add TextEditingController for managing filter input
   final TextEditingController _filterController = TextEditingController();
@@ -27,20 +28,17 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Use addPostFrameCallback to ensure the screen has completed building
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showPinScreen();
     });
   }
 
-  // Show the PIN screen before showing the tool UI
   void _showPinScreen() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PinEntryScreen(
           onSubmit: (pin) {
-            // Assuming '3006' is the correct PIN
             if (pin == '3006') {
               Navigator.pop(context, true); // PIN is correct
             } else {
@@ -51,11 +49,10 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
       ),
     );
 
-    // Check if the PIN was correct, and if not, go back
     if (result == true) {
-      _loadTools(); // Load the tools if PIN is correct
+      _loadTools();
     } else {
-      // If PIN is incorrect, go back
+      // ignore: use_build_context_synchronously
       Navigator.pop(context);
     }
   }
@@ -67,13 +64,11 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     });
 
     try {
-      // Fetch tools from the API
       final toolsData = await toolService.fetchTools();
-
       setState(() {
         _toolsWithStorage = toolsData['has_storage']!;
         _toolsWithoutStorage = toolsData['has_no_storage']!;
-        _applyFilters(); // Apply initial filter (if needed)
+        _applyFilters();
         _isLoading = false;
       });
     } catch (e) {
@@ -84,18 +79,14 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     }
   }
 
-  // Apply filter to tools with and without storage
   void _applyFilters() {
     setState(() {
       bool hasFilteredWithoutStorage =
           _filterTools(_toolsWithoutStorage).isNotEmpty;
-
-      // Automatically expand "Tools without Storage" section if filter applies to them
       _isToolsWithoutStorageCollapsed = !hasFilteredWithoutStorage;
     });
   }
 
-  // Filters a given tool list by the current filter query (tool number, storage location, or stock status)
   List<Tool> _filterTools(List<Tool> tools) {
     return tools.where((tool) {
       final lowerCaseQuery = _filterQuery.toLowerCase();
@@ -109,21 +100,17 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   }
 
   Future<void> _navigateToEditTool(Tool tool) async {
-    // After editing, refresh the list only if the tool was updated
     final isUpdated = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EditToolScreen(tool: tool),
       ),
     );
-
-    // Check if the tool was updated, if true, reload the tools
     if (isUpdated == true) {
-      await _loadTools(); // This re-fetches tools from the backend
+      await _loadTools();
     }
   }
 
-  // Clears the current filter
   void _clearFilter() {
     setState(() {
       _filterController.clear();
@@ -134,7 +121,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
 
   @override
   void dispose() {
-    _filterController.dispose(); // Dispose of the controller when done
+    _filterController.dispose();
     super.dispose();
   }
 
@@ -171,16 +158,14 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSearchBar(),
-                      _buildSectionTitle('Werkzeuge mit Lagerplatz'),
-                      _buildToolTable(_filterTools(_toolsWithStorage)),
-                      _buildToolsWithoutStorageSection(),
+                      _buildToolsWithStorageSection(), // Uncollapsed by default
+                      _buildToolsWithoutStorageSection(), // Collapsed by default
                     ],
                   ),
                 ),
     );
   }
 
-  // Search bar to filter tools by their number, storage, or stock status
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -210,19 +195,73 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     );
   }
 
-  // Build the section title
-  Widget _buildSectionTitle(String title) {
+  Widget _buildToolsWithStorageSection() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-            fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue),
+      child: ExpansionPanelList(
+        expansionCallback: (int index, bool isExpanded) {
+          setState(() {
+            _isToolsWithStorageCollapsed = !isExpanded;
+          });
+        },
+        children: [
+          ExpansionPanel(
+            headerBuilder: (BuildContext context, bool isExpanded) {
+              return const ListTile(
+                title: Text(
+                  'Werkzeuge mit Lagerplatz',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              );
+            },
+            body: Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: _buildToolTable(_filterTools(_toolsWithStorage)),
+              ),
+            ),
+            isExpanded: !_isToolsWithStorageCollapsed,
+          ),
+        ],
       ),
     );
   }
 
-  // Build the tool table with headers and content
+  Widget _buildToolsWithoutStorageSection() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: ExpansionPanelList(
+        expansionCallback: (int index, bool isExpanded) {
+          setState(() {
+            _isToolsWithoutStorageCollapsed = isExpanded;
+          });
+        },
+        children: [
+          ExpansionPanel(
+            headerBuilder: (BuildContext context, bool isExpanded) {
+              return const ListTile(
+                title: Text(
+                  'Werkzeuge ohne Lagerplatz',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              );
+            },
+            body: Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: _buildToolTable(_filterTools(_toolsWithoutStorage)),
+              ),
+            ),
+            isExpanded:
+                _isToolsWithoutStorageCollapsed, // Collapse the section by default
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildToolTable(List<Tool> tools) {
     if (tools.isEmpty) {
       return const Padding(
@@ -232,8 +271,11 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     }
 
     return SingleChildScrollView(
-      scrollDirection: Axis.horizontal, // Enable horizontal scrolling
+      scrollDirection: Axis.horizontal,
       child: DataTable(
+        columnSpacing: 10, // Reduce spacing between columns
+        // ignore: deprecated_member_use
+        dataRowHeight: 40, // Reduce the height of each row
         columns: const [
           DataColumn(label: Text('Werkzeugnummer')),
           DataColumn(label: Text('Lagerplatz 1')),
@@ -259,7 +301,6 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     );
   }
 
-  // Build the stock status cell with icon and color
   Widget _buildStockStatusCell(String status) {
     bool isInStock = status == 'In stock';
     return Row(
@@ -270,48 +311,13 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
         ),
         const SizedBox(width: 4),
         Text(
-          isInStock ? 'Eingelagert' : 'Ausgelagert', // Translate for display
+          isInStock ? 'Eingelagert' : 'Ausgelagert',
           style: TextStyle(
             color: isInStock ? Colors.green : Colors.red,
             fontWeight: FontWeight.bold,
           ),
         ),
       ],
-    );
-  }
-
-  // Build the collapsible section for tools without storage
-  Widget _buildToolsWithoutStorageSection() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: ExpansionPanelList(
-        expansionCallback: (int index, bool isExpanded) {
-          setState(() {
-            _isToolsWithoutStorageCollapsed = !isExpanded;
-          });
-        },
-        children: [
-          ExpansionPanel(
-            headerBuilder: (BuildContext context, bool isExpanded) {
-              return const ListTile(
-                title: Text(
-                  'Werkzeuge ohne Lagerplatz',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              );
-            },
-            body: Align(
-              alignment:
-                  Alignment.centerLeft, // Ensure the table is aligned left
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _buildToolTable(_filterTools(_toolsWithoutStorage)),
-              ),
-            ),
-            isExpanded: !_isToolsWithoutStorageCollapsed,
-          ),
-        ],
-      ),
     );
   }
 }
