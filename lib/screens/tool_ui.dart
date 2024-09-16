@@ -293,7 +293,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
               DataCell(Text(tool.usedSpacePitchOne ?? 'Ohne')),
               DataCell(Text(tool.storageLocationTwo ?? 'Ohne')),
               DataCell(Text(tool.usedSpacePitchTwo ?? 'Ohne')),
-              DataCell(_buildStockStatusCell(tool.storageStatus)),
+              DataCell(_buildStockStatusCell(tool)), // Use the modified method
             ],
           );
         }).toList(),
@@ -301,19 +301,20 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     );
   }
 
-  Widget _buildStockStatusCell(String status) {
-    bool isInStock = status == 'In stock';
+  Widget _buildStockStatusCell(Tool tool) {
+    bool isOutOfStock = tool.provided; // Use the 'provided' field directly
+
     return Row(
       children: [
         Icon(
-          isInStock ? Icons.check_circle : Icons.cancel,
-          color: isInStock ? Colors.green : Colors.red,
+          isOutOfStock ? Icons.cancel : Icons.check_circle,
+          color: isOutOfStock ? Colors.red : Colors.green,
         ),
         const SizedBox(width: 4),
         Text(
-          isInStock ? 'Eingelagert' : 'Ausgelagert',
+          isOutOfStock ? 'Ausgelagert' : 'Eingelagert',
           style: TextStyle(
-            color: isInStock ? Colors.green : Colors.red,
+            color: isOutOfStock ? Colors.red : Colors.green,
             fontWeight: FontWeight.bold,
           ),
         ),
