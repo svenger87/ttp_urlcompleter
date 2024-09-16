@@ -280,7 +280,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
                           DropdownButtonFormField<String>(
                             value: _selectedUserId,
                             decoration: const InputDecoration(
-                                labelText: 'Verantwortlicher Mitarbeiter'),
+                                labelText: 'Durchgeführt von'),
                             items: _users
                                 .map((user) => DropdownMenuItem<String>(
                                       value: user['user_id'],
