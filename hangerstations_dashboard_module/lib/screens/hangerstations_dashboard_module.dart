@@ -222,53 +222,33 @@ class StationOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sort stations by station name
-    List<dynamic> sortedStations = List.from(stations);
-    sortedStations
-        .sort((a, b) => (a['Station'] ?? '').compareTo(b['Station'] ?? ''));
+    // Get screen width and height
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Define the target card width and height
+    const double cardWidth = 250; // Width of each card
+    const double cardHeight = 200; // Fixed height of each card
+
+    // Calculate crossAxisCount by dividing screen width by the target card width
+    int crossAxisCount = (screenWidth / cardWidth).floor();
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-
-        int crossAxisCount;
-        double childAspectRatio;
-
-        if (screenWidth < 600) {
-          // Mobile Portrait
-          crossAxisCount = 2;
-          childAspectRatio = 1.2;
-        } else if (screenWidth >= 600 && screenWidth < 900) {
-          // Mobile Landscape / Small Tablets
-          crossAxisCount = 3;
-          childAspectRatio = 1.5;
-        } else if (screenWidth >= 900 && screenWidth < 1200) {
-          // Tablets
-          crossAxisCount = 4;
-          childAspectRatio = 1.5;
-        } else if (screenWidth >= 1200 && screenWidth < 1600) {
-          // Laptops / Small Desktops
-          crossAxisCount = 6;
-          childAspectRatio = 1.6;
-        } else {
-          // Large Desktops
-          crossAxisCount = 8;
-          childAspectRatio = 1.6;
-        }
-
         return GridView.builder(
           padding: const EdgeInsets.all(2.0),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 2.0,
             mainAxisSpacing: 2.0,
-            childAspectRatio: childAspectRatio,
+            mainAxisExtent: cardHeight, // Set the fixed height for each card
           ),
-          itemCount: sortedStations.length,
+          itemCount: stations.length,
           itemBuilder: (context, index) {
-            var station = sortedStations[index];
+            var station = stations[index];
             return StationCard(
-                station: station, isSmallScreen: screenWidth < 600);
+              station: station,
+              isSmallScreen: screenWidth < 600,
+            );
           },
         );
       },
@@ -348,61 +328,117 @@ class StationCard extends StatelessWidget {
     String type = station['Name'] ?? 'N/A';
     String wbz = station['WBZ'] ?? 'N/A';
 
-    Color statusColor = materialNumber == 'FREI' ? Colors.white : Colors.blue;
+    // Parse the remainingWeight to double
+    double remainingWeight = station['RemainingWeight'] != null
+        ? double.tryParse(station['RemainingWeight'].toString()) ?? 0
+        : 0;
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.grey[900],
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.settings,
-                    color: statusColor, size: isSmallScreen ? 20 : 24),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Station: $stationName',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+    // Determine the color based on the remaining weight and material
+    Color statusColor = materialNumber == 'FREI'
+        ? Colors.white
+        : remainingWeight == 0
+            ? Colors.blue
+            : remainingWeight < 100 && remainingWeight > 0
+                ? Colors.red
+                : Colors.blue;
+
+    // Set a fixed height for all cards to avoid overflow
+    double fixedCardHeight = 300.0; // Adjust this height as needed
+
+    return SizedBox(
+      height: fixedCardHeight, // Use fixed height for all cards
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        color: Colors.grey[900],
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.settings,
+                      color: statusColor, size: isSmallScreen ? 20 : 24),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Station: $stationName',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 12 : 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Ensure text doesn't overflow by using flexible layout
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Typ: $type',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 14,
+                        color: Colors.white70,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Material: $materialNumber',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 14,
+                        color: Colors.white70,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'WBZ: $wbz',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 14,
+                        color: Colors.white70,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Linie: $workplace',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 14,
+                        color: Colors.white70,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Bemerkung: $remark',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 14,
+                        color: Colors.white70,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Restgewicht: ${remainingWeight.toStringAsFixed(2)} kg',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 14,
+                        color: Colors.orangeAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Typ: $type',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
-            ),
-            Text(
-              'Material: $materialNumber',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
-            ),
-            Text(
-              'WBZ: $wbz',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
-            ),
-            Text(
-              'Linie: $workplace',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
-            ),
-            Text(
-              'Bemerkung: $remark',
-              style: TextStyle(
-                  fontSize: isSmallScreen ? 10 : 14, color: Colors.white70),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
