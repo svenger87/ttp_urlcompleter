@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -19,7 +20,9 @@ class _DashboardState extends State<Dashboard>
   bool isUpdating = false;
   late AnimationController _controller;
   Timer? _timer; // Timer for background updates
+  Timer? _weightUpdateTimer; // Timer for real-time weight updates
   Map<String, dynamic>? _fetchedData;
+  List<dynamic>? _fetchedWeights; // New weight data
 
   @override
   void initState() {
@@ -32,14 +35,17 @@ class _DashboardState extends State<Dashboard>
 
     _fetchDataSilently(); // Initial data fetch
     _startBackgroundUpdate(); // Start the background update timer
+    _startWeightUpdate(); // Start weight update for real-time data
   }
 
   // Function to silently fetch data without showing any loading indicators
   Future<void> _fetchDataSilently() async {
     try {
       final data = await fetchData();
+      final weights = await fetchWeightData(); // Fetch weight data
       setState(() {
         _fetchedData = data;
+        _fetchedWeights = weights; // Store the fetched weights
       });
     } catch (e) {
       // Handle error if necessary, or leave it silent for background tasks
@@ -53,15 +59,11 @@ class _DashboardState extends State<Dashboard>
     });
   }
 
-  // Fetch the actual data from the API
-  Future<Map<String, dynamic>> fetchData() async {
-    final response = await http.get(
-        Uri.parse('http://wim-solution.sip.local:5000/api/dashboard_data'));
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load data');
-    }
+  // Timer to update weight data every 1 second for real-time updates
+  void _startWeightUpdate() {
+    _weightUpdateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _fetchWeightDataRealtime(); // Fetch weight data every second
+    });
   }
 
   // Manual update cache function (preserving existing functionality)
@@ -77,7 +79,7 @@ class _DashboardState extends State<Dashboard>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cache update triggered.')),
         );
-        await _pollCacheUpdateStatus();
+        await _pollCacheUpdateStatus(); // Poll cache update status
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -96,7 +98,7 @@ class _DashboardState extends State<Dashboard>
     }
   }
 
-  // Poll cache update status (unchanged)
+// Poll cache update status (unchanged)
   Future<void> _pollCacheUpdateStatus() async {
     bool updateComplete = false;
     while (!updateComplete) {
@@ -132,11 +134,77 @@ class _DashboardState extends State<Dashboard>
     }
   }
 
+  // Fetch the actual station data from the API
+  Future<Map<String, dynamic>> fetchData() async {
+    final response = await http.get(
+        Uri.parse('http://wim-solution.sip.local:5000/api/dashboard_data'));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load data');
+    }
+  }
+
+  // Fetch weight data from the new API
+  Future<List<dynamic>> fetchWeightData() async {
+    final response = await http.get(Uri.parse(
+        'http://wim-solution.sip.local:5001/api/weight_measurement')); // Adjust the port if needed
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load weight data');
+    }
+  }
+
+  // Fetch weight data in real-time every second
+  Future<void> _fetchWeightDataRealtime() async {
+    try {
+      final weights = await fetchWeightData(); // Fetch weight data
+      setState(() {
+        _fetchedWeights = weights; // Update weight data in real-time
+      });
+    } catch (e) {
+      // Handle errors during weight data fetch
+      if (kDebugMode) {
+        print("Error fetching weight data: $e");
+      }
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
-    _timer?.cancel(); // Cancel the timer when the widget is disposed
+    _timer?.cancel(); // Cancel the background timer
+    _weightUpdateTimer?.cancel(); // Cancel the real-time weight update timer
     super.dispose();
+  }
+
+  // Merge station data and weight data into a unified structure
+  List<dynamic> mergeDataWithWeights() {
+    if (_fetchedData == null || _fetchedWeights == null) {
+      return [];
+    }
+
+    List<dynamic> stations = List.from(_fetchedData!['stations']);
+    for (var station in stations) {
+      String stationName = station['Station'];
+      // Find corresponding weight entry
+      var weightEntry = _fetchedWeights!.firstWhere(
+          (entry) => entry['station'] == stationName,
+          orElse: () => null);
+
+      // Add weight and time_remaining to the station
+      if (weightEntry != null) {
+        station['RemainingWeight'] = weightEntry['weight'];
+        station['TimeRemaining'] =
+            weightEntry['time_remaining']; // Add time remaining
+      } else {
+        station['RemainingWeight'] = 0; // Default if no weight is found
+        station['TimeRemaining'] =
+            'Unknown'; // Default if no time remaining is found
+      }
+    }
+    return stations;
   }
 
   @override
@@ -181,7 +249,8 @@ class _DashboardState extends State<Dashboard>
             } else if (!snapshot.hasData || snapshot.data == null) {
               return const Center(child: Text('No data available.'));
             } else {
-              var stations = List.from(snapshot.data!['stations']);
+              var stations =
+                  mergeDataWithWeights(); // Merge stations with weights
               stations.sort((a, b) {
                 // First, sort by whether the workplace is 'FREI'
                 String workplaceA = a['Arbeitsplatz'] ?? 'FREI';
@@ -227,7 +296,7 @@ class StationOverview extends StatelessWidget {
 
     // Define the target card width and height
     const double cardWidth = 250; // Width of each card
-    const double cardHeight = 200; // Fixed height of each card
+    const double cardHeight = 225; // Fixed height of each card
 
     // Calculate crossAxisCount by dividing screen width by the target card width
     int crossAxisCount = (screenWidth / cardWidth).floor();
@@ -333,6 +402,9 @@ class StationCard extends StatelessWidget {
         ? double.tryParse(station['RemainingWeight'].toString()) ?? 0
         : 0;
 
+    // Retrieve the time remaining from the station data
+    String timeRemaining = station['TimeRemaining'] ?? 'Unknown';
+
     // Determine the color based on the remaining weight and material
     Color statusColor = materialNumber == 'FREI'
         ? Colors.white
@@ -431,6 +503,16 @@ class StationCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: isSmallScreen ? 10 : 14,
                         color: Colors.orangeAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Display time remaining
+                    Text(
+                      'Verbleibende Zeit: $timeRemaining',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 14,
+                        color: Colors.lightGreenAccent,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
