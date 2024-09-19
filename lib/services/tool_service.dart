@@ -140,17 +140,35 @@ class ToolService {
 
   // Method to fetch tool forecast
   Future<List<Map<String, dynamic>>> fetchToolForecast() async {
-    final response = await http.get(Uri.parse(toolForecastApiUrl));
+    final forecastResponse = await http.get(Uri.parse(toolForecastApiUrl));
 
-    if (response.statusCode == 200) {
-      List<dynamic> body = json.decode(response.body)['data'];
+    if (forecastResponse.statusCode == 200) {
+      List<dynamic> forecastBody = json.decode(forecastResponse.body)['data'];
 
-      // Filter out entries where Fertigungssteuerer is not "1"
-      return body.where((item) {
+      // Fetch tools and create a map of tool numbers to provided status
+      Map<String, bool> toolProvidedMap = await fetchAllToolsAsMap();
+
+      // Filter out entries where Fertigungssteuerer is not "1" or provided is true
+      return forecastBody.where((item) {
         final workingPlan = item['workingPlan'] ?? {};
+
         // Check Fertigungssteuerer in both main node and subnode
-        return item['Fertigungssteuerer'] == '1' ||
+        final fertigungssteuererIsOne = item['Fertigungssteuerer'] == '1' ||
             workingPlan['Fertigungssteuerer'] == '1';
+
+        // Extract Equipment number from workingPlan or item
+        String? equipmentNumber =
+            (workingPlan['Equipment'] ?? item['Equipment'])?.trim();
+
+        // Check provided status from the tools map
+        bool providedStatus = false;
+        if (equipmentNumber != null &&
+            toolProvidedMap.containsKey(equipmentNumber)) {
+          providedStatus = toolProvidedMap[equipmentNumber]!;
+        }
+
+        // Exclude tools where provided is true
+        return fertigungssteuererIsOne && !providedStatus;
       }).map((item) {
         // Extract Equipment and Arbeitsplatz from the subnode workingPlan if it exists
         final workingPlan = item['workingPlan'] ?? {};
@@ -196,6 +214,32 @@ class ToolService {
         print('Error fetching tool by number: $e');
       }
       return null; // Handle error
+    }
+  }
+
+  // Add this method to ToolService
+  Future<Map<String, bool>> fetchAllToolsAsMap() async {
+    final response = await http.get(Uri.parse(localApiUrl));
+
+    if (response.statusCode == 200) {
+      final body = json.decode(response.body);
+      List<dynamic> allTools = [
+        ...body['has_storage'],
+        ...body['has_no_storage']
+      ];
+
+      // Create a map of tool numbers to provided status
+      Map<String, bool> toolProvidedMap = {};
+      for (var item in allTools) {
+        String toolNumber = item['tool_number'];
+        bool providedStatus =
+            item['provided'] == true || item['provided'] == '1';
+        toolProvidedMap[toolNumber] = providedStatus;
+      }
+
+      return toolProvidedMap;
+    } else {
+      throw Exception('Failed to load tools from local API');
     }
   }
 }

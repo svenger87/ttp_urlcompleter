@@ -33,71 +33,96 @@ class ToolForecastScreen extends StatelessWidget {
         title: const Text('Werkzeugvorschau'),
         backgroundColor: const Color(0xFF104382),
       ),
-      body: SingleChildScrollView(
-        child: DataTable(
-          showCheckboxColumn: false,
-          columnSpacing: 20,
-          columns: const [
-            DataColumn(
-              label: Text(
-                'Starttermin',
-                style: TextStyle(fontWeight: FontWeight.bold),
+      body: Column(
+        children: [
+          // Add the hint message at the top
+          Container(
+            padding: const EdgeInsets.all(8.0),
+            color: Colors.yellow[100],
+            child: const Text(
+              'Wenn das Werkzeug den Status "Ausgelagert" hat, erscheint dieses NICHT mehr in der Tabelle!',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            DataColumn(
-              label: Text(
-                'Schicht',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Hauptartikel',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Auftragsnummer',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Werkzeug',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Arbeitsplatz',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-          rows: forecastData.map((tool) {
-            return DataRow(
-              cells: [
-                DataCell(Text(_formatDate(tool['Eckstarttermin']))),
-                DataCell(Text(tool['Schicht'] ?? 'N/A')),
-                DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
-                DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
-                DataCell(
-                  Text(tool['Equipment'] ?? 'N/A'),
-                  onTap: () {
-                    _navigateToEditTool(context, tool['Equipment']);
-                  },
-                ),
-                DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
-              ],
-              onSelectChanged: (selected) {
-                if (selected == true) {
-                  _navigateToEditTool(context, tool['Equipment']);
-                }
-              },
-            );
-          }).toList(),
-        ),
+          ),
+          Expanded(
+            child: forecastData.isNotEmpty
+                ? SingleChildScrollView(
+                    child: DataTable(
+                      showCheckboxColumn: false,
+                      columnSpacing: 20,
+                      columns: const [
+                        DataColumn(
+                          label: Text(
+                            'Starttermin',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Schicht',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Hauptartikel',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Auftragsnummer',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Werkzeug',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Arbeitsplatz',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                      rows: forecastData.map((tool) {
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(_formatDate(tool['Eckstarttermin']))),
+                            DataCell(Text(tool['Schicht'] ?? 'N/A')),
+                            DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
+                            DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
+                            DataCell(
+                              Text(tool['Equipment'] ?? 'N/A'),
+                              onTap: () {
+                                _navigateToEditTool(context, tool['Equipment']);
+                              },
+                            ),
+                            DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
+                          ],
+                          onSelectChanged: (selected) {
+                            if (selected == true) {
+                              _navigateToEditTool(context, tool['Equipment']);
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  )
+                : const Center(
+                    child: Text(
+                      'Keine Werkzeuge verfügbar.',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
