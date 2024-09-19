@@ -46,7 +46,19 @@ class ToolForecastScreen extends StatelessWidget {
             ),
             DataColumn(
               label: Text(
+                'Schicht',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
                 'Hauptartikel',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'Auftragsnummer',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -67,7 +79,9 @@ class ToolForecastScreen extends StatelessWidget {
             return DataRow(
               cells: [
                 DataCell(Text(_formatDate(tool['Eckstarttermin']))),
+                DataCell(Text(tool['Schicht'] ?? 'N/A')),
                 DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
+                DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
                 DataCell(
                   Text(tool['Equipment'] ?? 'N/A'),
                   onTap: () {

@@ -156,7 +156,9 @@ class ToolService {
         final workingPlan = item['workingPlan'] ?? {};
         return {
           'Eckstarttermin': item['Eckstarttermin'],
+          'Schicht': item['Schicht'],
           'Hauptartikel': item['Hauptartikel'],
+          'Auftragsnummer': item['Auftragsnummer'],
           'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
           'Arbeitsplatz':
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
