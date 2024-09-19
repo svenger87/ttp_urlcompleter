@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/tool.dart';
 import 'package:intl/intl.dart'; // Importing intl for date formatting
@@ -10,6 +11,7 @@ class ToolService {
   final String storageUtilizationApiUrl =
       'http://wim-solution:3000/storage-utilization';
   final String users = 'http://wim-solution:3000/users';
+  final String toolForecastApiUrl = 'http://wim-solution:3000/tool-forecast';
 
   // Fetch tools from local API and separate them into has_storage and has_no_storage
   // Already included
@@ -133,6 +135,65 @@ class ToolService {
       return data['user_id'].toString();
     } else {
       throw Exception('Failed to load user ID from API');
+    }
+  }
+
+  // Method to fetch tool forecast
+  Future<List<Map<String, dynamic>>> fetchToolForecast() async {
+    final response = await http.get(Uri.parse(toolForecastApiUrl));
+
+    if (response.statusCode == 200) {
+      List<dynamic> body = json.decode(response.body)['data'];
+
+      // Filter out entries where Fertigungssteuerer is not "1"
+      return body.where((item) {
+        final workingPlan = item['workingPlan'] ?? {};
+        // Check Fertigungssteuerer in both main node and subnode
+        return item['Fertigungssteuerer'] == '1' ||
+            workingPlan['Fertigungssteuerer'] == '1';
+      }).map((item) {
+        // Extract Equipment and Arbeitsplatz from the subnode workingPlan if it exists
+        final workingPlan = item['workingPlan'] ?? {};
+        return {
+          'Eckstarttermin': item['Eckstarttermin'],
+          'Hauptartikel': item['Hauptartikel'],
+          'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
+          'Arbeitsplatz':
+              workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
+        };
+      }).toList();
+    } else {
+      throw Exception('Failed to load tool forecast from API');
+    }
+  }
+
+  // Method to fetch tool by number
+  Future<Tool?> fetchToolByNumber(String toolNumber) async {
+    try {
+      // Make a GET request to fetch tool data by tool number
+      final response = await http.get(Uri.parse('$localApiUrl/$toolNumber'));
+
+      // Log the response status and body for debugging
+      if (kDebugMode) {
+        print('Response status: ${response.statusCode}');
+      }
+      if (kDebugMode) {
+        print('Response body: ${response.body}');
+      }
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> toolData = json.decode(response.body);
+        return Tool.fromJson(toolData); // Convert response data to Tool model
+      } else if (response.statusCode == 404) {
+        throw Exception('Tool not found');
+      } else {
+        throw Exception('Failed to load tool data for $toolNumber');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching tool by number: $e');
+      }
+      return null; // Handle error
     }
   }
 }

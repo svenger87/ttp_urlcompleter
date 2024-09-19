@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ttp_app/screens/tool_forecast_screen.dart';
 import 'pin_entry_screen.dart';
 import '../services/tool_service.dart';
 import '../models/tool.dart';
@@ -21,16 +22,14 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   String? _errorMessage;
   bool _isToolsWithStorageCollapsed = false; // Uncollapsed by default
   bool _isToolsWithoutStorageCollapsed = true; // Collapsed by default
+  bool _toolsLoaded = false; // Track if tools are loaded
 
-  // Add TextEditingController for managing filter input
   final TextEditingController _filterController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showPinScreen();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showPinScreen());
   }
 
   void _showPinScreen() async {
@@ -49,11 +48,12 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
       ),
     );
 
-    if (result == true) {
+    if (result == true && !_toolsLoaded) {
       _loadTools();
-    } else {
+    } else if (!_toolsLoaded) {
+      // Prevent loading if tools are already loaded
       // ignore: use_build_context_synchronously
-      Navigator.pop(context);
+      Navigator.pop(context); // Close the screen if PIN is incorrect
     }
   }
 
@@ -70,6 +70,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
         _toolsWithoutStorage = toolsData['has_no_storage']!;
         _applyFilters();
         _isLoading = false;
+        _toolsLoaded = true; // Mark tools as loaded
       });
     } catch (e) {
       setState(() {
@@ -125,6 +126,36 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     super.dispose();
   }
 
+  Future<void> _loadToolForecast() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final forecastData = await toolService.fetchToolForecast();
+      // ignore: use_build_context_synchronously
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ToolForecastScreen(forecastData: forecastData),
+        ),
+      );
+
+      // Ensure toolsLoaded is set to true after returning
+      setState(() {
+        _isLoading = false;
+        _toolsLoaded = true;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage =
+            'Fehler beim Laden der Werkzeugbereitstellungsvorhersage: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,6 +177,12 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
                 ),
               );
             },
+          ),
+          IconButton(
+            icon:
+                const Icon(Icons.timeline), // Add new button for tool forecast
+            onPressed:
+                _loadToolForecast, // Call the method to load the tool forecast
           ),
         ],
       ),
