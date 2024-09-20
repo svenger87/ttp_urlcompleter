@@ -179,8 +179,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
             },
           ),
           IconButton(
-            icon:
-                const Icon(Icons.timeline), // Add new button for tool forecast
+            icon: const Icon(
+                Icons.pending_actions), // Add new button for tool forecast
             onPressed:
                 _loadToolForecast, // Call the method to load the tool forecast
           ),

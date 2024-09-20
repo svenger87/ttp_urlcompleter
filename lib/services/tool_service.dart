@@ -170,13 +170,16 @@ class ToolService {
         // Exclude tools where provided is true
         return fertigungssteuererIsOne && !providedStatus;
       }).map((item) {
-        // Extract Equipment and Arbeitsplatz from the subnode workingPlan if it exists
         final workingPlan = item['workingPlan'] ?? {};
+
+        // Set PlanStartDatum to item['PlanStartDatum'] or item['Eckstarttermin']
+        final planStartDatum = item['PlanStartDatum'] ?? item['Eckstarttermin'];
+
         return {
-          'Eckstarttermin': item['Eckstarttermin'],
-          'Schicht': item['Schicht'],
-          'Hauptartikel': item['Hauptartikel'],
-          'Auftragsnummer': item['Auftragsnummer'],
+          'PlanStartDatum': planStartDatum ?? 'N/A',
+          'Schicht': item['Schicht'] ?? 'N/A',
+          'Hauptartikel': item['Hauptartikel'] ?? 'N/A',
+          'Auftragsnummer': item['Auftragsnummer'] ?? 'N/A',
           'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
           'Arbeitsplatz':
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',

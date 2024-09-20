@@ -6,20 +6,6 @@ import 'package:ttp_app/models/tool.dart';
 import '../services/tool_service.dart';
 import 'edit_tool_screen.dart';
 
-class ToolSimple {
-  final String toolNumber;
-
-  ToolSimple({
-    required this.toolNumber,
-  });
-
-  factory ToolSimple.fromJson(Map<String, dynamic> json) {
-    return ToolSimple(
-      toolNumber: json['tool_number'] ?? 'Unknown Tool Number',
-    );
-  }
-}
-
 class ToolForecastScreen extends StatelessWidget {
   final List<Map<String, dynamic>> forecastData;
   final ToolService _toolService = ToolService(); // Initialize the tool service
@@ -35,12 +21,12 @@ class ToolForecastScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Add the hint message at the top
+          // Hint message
           Container(
             padding: const EdgeInsets.all(8.0),
             color: Colors.yellow[100],
             child: const Text(
-              'Wenn das Werkzeug den Status "Ausgelagert" hat, erscheint dieses NICHT mehr in der Tabelle!',
+              'Wenn das Werkzeug den Status "Ausgelagert" hat erscheint dieses NICHT mehr in der Tabelle!',
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -94,20 +80,27 @@ class ToolForecastScreen extends StatelessWidget {
                       rows: forecastData.map((tool) {
                         return DataRow(
                           cells: [
-                            DataCell(Text(_formatDate(tool['Eckstarttermin']))),
+                            DataCell(Text(_formatDate(
+                                tool['PlanStartDatum'] as String?))),
                             DataCell(Text(tool['Schicht'] ?? 'N/A')),
                             DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
                             DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
                             DataCell(
                               Text(tool['Equipment'] ?? 'N/A'),
                               onTap: () {
-                                _navigateToEditTool(context, tool['Equipment']);
+                                if (tool['Equipment'] != null &&
+                                    tool['Equipment'] != 'N/A') {
+                                  _navigateToEditTool(
+                                      context, tool['Equipment']);
+                                }
                               },
                             ),
                             DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
                           ],
                           onSelectChanged: (selected) {
-                            if (selected == true) {
+                            if (selected == true &&
+                                tool['Equipment'] != null &&
+                                tool['Equipment'] != 'N/A') {
                               _navigateToEditTool(context, tool['Equipment']);
                             }
                           },
@@ -127,22 +120,28 @@ class ToolForecastScreen extends StatelessWidget {
     );
   }
 
-  // Helper method to format the date
-  String _formatDate(String dateString) {
-    if (dateString.isEmpty) return 'N/A';
-    final DateTime date = DateTime.parse(dateString);
-    return DateFormat('yyyy-MM-dd').format(date);
+  // Updated _formatDate method
+  String _formatDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return 'N/A';
+    try {
+      final DateTime date = DateTime.parse(dateString);
+      return DateFormat('yyyy-MM-dd').format(date);
+    } catch (e) {
+      return 'N/A';
+    }
   }
 
   // Method to navigate to the EditToolScreen with the selected tool number
   void _navigateToEditTool(
       BuildContext context, String? equipmentNumber) async {
-    if (equipmentNumber == null) return;
+    if (equipmentNumber == null ||
+        equipmentNumber.isEmpty ||
+        equipmentNumber == 'N/A') return;
 
     try {
       _showLoadingDialog(context);
 
-      // Fetch the full tool data for editing (This should happen here, not earlier)
+      // Fetch the full tool data for editing
       final Tool? tool = await _toolService.fetchToolByNumber(equipmentNumber);
 
       Navigator.pop(context); // Close the loading dialog
