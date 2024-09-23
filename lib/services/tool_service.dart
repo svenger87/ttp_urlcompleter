@@ -177,7 +177,6 @@ class ToolService {
 
         return {
           'PlanStartDatum': planStartDatum ?? 'N/A',
-          'Schicht': item['Schicht'] ?? 'N/A',
           'Hauptartikel': item['Hauptartikel'] ?? 'N/A',
           'Auftragsnummer': item['Auftragsnummer'] ?? 'N/A',
           'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
