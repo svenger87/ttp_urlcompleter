@@ -2,18 +2,40 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:data_table_2/data_table_2.dart';
+import 'package:flutter/gestures.dart'; // Necessary for PointerDeviceKind
 import 'package:ttp_app/models/tool.dart';
 import '../services/tool_service.dart';
 import 'edit_tool_screen.dart';
 
+// Custom ScrollBehavior to enable mouse wheel scrolling
+class MyCustomScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        // You can add more pointer device kinds if needed
+      };
+}
+
 class ToolForecastScreen extends StatelessWidget {
   final List<Map<String, dynamic>> forecastData;
-  final ToolService _toolService = ToolService(); // Initialize the tool service
+  final ToolService _toolService = ToolService();
 
   ToolForecastScreen({Key? key, required this.forecastData}) : super(key: key);
 
+  // Method to check if lengthcuttoolgroup starts with 'Gr.1'
+  bool startsWithGr1(String? lengthcuttoolgroup) {
+    if (lengthcuttoolgroup == null) return false;
+    return lengthcuttoolgroup.startsWith('Gr.1');
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Determine font size based on screen width
+    double screenWidth = MediaQuery.of(context).size.width;
+    double fontSize = screenWidth < 360 ? 12 : 14;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Werkzeugvorschau'),
@@ -26,7 +48,7 @@ class ToolForecastScreen extends StatelessWidget {
             padding: const EdgeInsets.all(8.0),
             color: Colors.yellow[100],
             child: const Text(
-              'Wenn das Werkzeug den Status "Ausgelagert" hat erscheint dieses NICHT mehr in der Tabelle!',
+              'Wenn das Werkzeug den Status "Ausgelagert" hat, erscheint dieses NICHT mehr in der Tabelle!',
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -35,79 +57,188 @@ class ToolForecastScreen extends StatelessWidget {
           ),
           Expanded(
             child: forecastData.isNotEmpty
-                ? SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      showCheckboxColumn: false,
-                      columnSpacing: 20,
-                      columns: const [
-                        DataColumn(
-                          label: Text(
-                            'Starttermin',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Hauptartikel',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Auftragsnummer',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Werkzeug',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Arbeitsplatz',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Längsschnittwerkzeuggruppe',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                      rows: forecastData.map((tool) {
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(_formatDate(
-                                tool['PlanStartDatum'] as String?))),
-                            DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
-                            DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
-                            DataCell(
-                              Text(tool['Equipment'] ?? 'N/A'),
-                              onTap: () {
-                                if (tool['Equipment'] != null &&
-                                    tool['Equipment'] != 'N/A') {
-                                  _navigateToEditTool(
-                                      context, tool['Equipment']);
-                                }
-                              },
-                            ),
-                            DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
-                            DataCell(Text(tool['lengthcuttoolgroup'] ?? 'N/A')),
-                          ],
-                          onSelectChanged: (selected) {
-                            if (selected == true &&
-                                tool['Equipment'] != null &&
-                                tool['Equipment'] != 'N/A') {
-                              _navigateToEditTool(context, tool['Equipment']);
-                            }
+                ? LayoutBuilder(
+                    builder:
+                        (BuildContext context, BoxConstraints constraints) {
+                      if (constraints.maxWidth < 600) {
+                        // Small screen layout
+                        return ListView.builder(
+                          itemCount: forecastData.length,
+                          itemBuilder: (context, index) {
+                            final tool = forecastData[index];
+                            return Card(
+                              color: !startsWithGr1(
+                                      tool['lengthcuttoolgroup'] as String?)
+                                  ? Colors.orange.withOpacity(0.3)
+                                  : null,
+                              child: ListTile(
+                                title: Text(
+                                  tool['Hauptartikel'] ?? 'N/A',
+                                  style: TextStyle(fontSize: fontSize),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Starttermin: ${_formatDate(tool['PlanStartDatum'] as String?)}',
+                                      style: TextStyle(fontSize: fontSize),
+                                    ),
+                                    Text(
+                                      'Auftragsnummer: ${tool['Auftragsnummer'] ?? 'N/A'}',
+                                      style: TextStyle(fontSize: fontSize),
+                                    ),
+                                    Text(
+                                      'Werkzeug: ${tool['Equipment'] ?? 'N/A'}',
+                                      style: TextStyle(fontSize: fontSize),
+                                    ),
+                                    Text(
+                                      'Arbeitsplatz: ${tool['Arbeitsplatz'] ?? 'N/A'}',
+                                      style: TextStyle(fontSize: fontSize),
+                                    ),
+                                    Text(
+                                      'Längsschnittwerkzeuggruppe: ${tool['lengthcuttoolgroup'] ?? 'N/A'}',
+                                      style: TextStyle(fontSize: fontSize),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  if (tool['Equipment'] != null &&
+                                      tool['Equipment'] != 'N/A') {
+                                    _navigateToEditTool(
+                                        context, tool['Equipment']);
+                                  }
+                                },
+                              ),
+                            );
                           },
                         );
-                      }).toList(),
-                    ),
+                      } else {
+                        // Large screen layout with custom scroll behavior
+                        return ScrollConfiguration(
+                          behavior: MyCustomScrollBehavior(),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: DataTable2(
+                                columnSpacing: 12,
+                                horizontalMargin: 12,
+                                minWidth: 800,
+                                columns: const [
+                                  DataColumn2(
+                                    label: Text(
+                                      'Starttermin',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    size: ColumnSize.S,
+                                  ),
+                                  DataColumn2(
+                                    label: Text(
+                                      'Hauptartikel',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    size: ColumnSize.M,
+                                  ),
+                                  DataColumn2(
+                                    label: Text(
+                                      'Auftragsnummer',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    size: ColumnSize.S,
+                                  ),
+                                  DataColumn2(
+                                    label: Text(
+                                      'Werkzeug',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    size: ColumnSize.S,
+                                  ),
+                                  DataColumn2(
+                                    label: Text(
+                                      'Arbeitsplatz',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    size: ColumnSize.S,
+                                  ),
+                                  DataColumn2(
+                                    label: Text(
+                                      'Längsschnittwerkzeuggruppe',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    size: ColumnSize.L,
+                                  ),
+                                ],
+                                rows: forecastData.map((tool) {
+                                  return DataRow(
+                                    color: MaterialStateProperty.resolveWith<
+                                        Color?>(
+                                      (Set<MaterialState> states) {
+                                        if (!startsWithGr1(
+                                            tool['lengthcuttoolgroup']
+                                                as String?)) {
+                                          return Colors.orange.withOpacity(0.3);
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    cells: [
+                                      DataCell(Text(
+                                        _formatDate(
+                                            tool['PlanStartDatum'] as String?),
+                                        style: TextStyle(fontSize: fontSize),
+                                      )),
+                                      DataCell(Text(
+                                        tool['Hauptartikel'] ?? 'N/A',
+                                        style: TextStyle(fontSize: fontSize),
+                                      )),
+                                      DataCell(Text(
+                                        tool['Auftragsnummer'] ?? 'N/A',
+                                        style: TextStyle(fontSize: fontSize),
+                                      )),
+                                      DataCell(
+                                        Text(
+                                          tool['Equipment'] ?? 'N/A',
+                                          style: TextStyle(fontSize: fontSize),
+                                        ),
+                                        onTap: () {
+                                          if (tool['Equipment'] != null &&
+                                              tool['Equipment'] != 'N/A') {
+                                            _navigateToEditTool(
+                                                context, tool['Equipment']);
+                                          }
+                                        },
+                                      ),
+                                      DataCell(Text(
+                                        tool['Arbeitsplatz'] ?? 'N/A',
+                                        style: TextStyle(fontSize: fontSize),
+                                      )),
+                                      DataCell(Text(
+                                        tool['lengthcuttoolgroup'] ?? 'N/A',
+                                        style: TextStyle(fontSize: fontSize),
+                                      )),
+                                    ],
+                                    onSelectChanged: (selected) {
+                                      if (selected == true &&
+                                          tool['Equipment'] != null &&
+                                          tool['Equipment'] != 'N/A') {
+                                        _navigateToEditTool(
+                                            context, tool['Equipment']);
+                                      }
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   )
                 : const Center(
                     child: Text(
@@ -121,7 +252,7 @@ class ToolForecastScreen extends StatelessWidget {
     );
   }
 
-  // Updated _formatDate method
+  // Helper method to format the date
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'N/A';
     try {
