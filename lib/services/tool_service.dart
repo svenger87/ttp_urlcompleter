@@ -175,6 +175,9 @@ class ToolService {
         // Set PlanStartDatum to item['PlanStartDatum'] or item['Eckstarttermin']
         final planStartDatum = item['PlanStartDatum'] ?? item['Eckstarttermin'];
 
+        // Extract projectData fields
+        final projectData = item['projectData'] ?? {};
+
         return {
           'PlanStartDatum': planStartDatum ?? 'N/A',
           'Hauptartikel': item['Hauptartikel'] ?? 'N/A',
@@ -182,6 +185,7 @@ class ToolService {
           'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
           'Arbeitsplatz':
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
+          'lengthcuttoolgroup': projectData['lengthcuttoolgroup'] ?? 'N/A',
         };
       }).toList();
     } else {

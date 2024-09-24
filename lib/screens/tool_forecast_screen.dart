@@ -36,6 +36,7 @@ class ToolForecastScreen extends StatelessWidget {
           Expanded(
             child: forecastData.isNotEmpty
                 ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
                     child: DataTable(
                       showCheckboxColumn: false,
                       columnSpacing: 20,
@@ -70,6 +71,12 @@ class ToolForecastScreen extends StatelessWidget {
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
+                        DataColumn(
+                          label: Text(
+                            'Längsschnittwerkzeuggruppe',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ],
                       rows: forecastData.map((tool) {
                         return DataRow(
@@ -89,6 +96,7 @@ class ToolForecastScreen extends StatelessWidget {
                               },
                             ),
                             DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
+                            DataCell(Text(tool['lengthcuttoolgroup'] ?? 'N/A')),
                           ],
                           onSelectChanged: (selected) {
                             if (selected == true &&
