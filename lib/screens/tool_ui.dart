@@ -96,7 +96,10 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
               false) ||
           (tool.storageLocationTwo?.toLowerCase().contains(lowerCaseQuery) ??
               false) ||
-          tool.storageStatus.toLowerCase().contains(lowerCaseQuery);
+          tool.storageStatus.toLowerCase().contains(lowerCaseQuery) ||
+          tool.internalStatus
+              .toLowerCase()
+              .contains(lowerCaseQuery); // Filter by internalstatus
     }).toList();
   }
 
@@ -320,20 +323,61 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
           DataColumn(label: Text('Lagerplatz 2')),
           DataColumn(label: Text('Belegter Platz 2')),
           DataColumn(label: Text('Lagerstatus')),
+          DataColumn(
+              label: Text('Internalstatus')), // New column for internalstatus
         ],
         rows: tools.map((tool) {
+          bool isInactive = tool.internalStatus.toLowerCase() !=
+              'aktiv'; // Check internalstatus
+
           return DataRow(
+            color: MaterialStateProperty.resolveWith<Color?>(
+                (Set<MaterialState> states) {
+              if (isInactive) {
+                return Colors.red
+                    .withOpacity(0.3); // Highlight in red for non-aktiv
+              }
+              return null; // Default color
+            }),
             cells: [
-              DataCell(Text(tool.toolNumber),
+              DataCell(_buildPulsatingCell(tool.toolNumber, isInactive),
                   onTap: () => _navigateToEditTool(tool)),
               DataCell(Text(tool.storageLocationOne ?? 'Ohne')),
               DataCell(Text(tool.usedSpacePitchOne ?? 'Ohne')),
               DataCell(Text(tool.storageLocationTwo ?? 'Ohne')),
               DataCell(Text(tool.usedSpacePitchTwo ?? 'Ohne')),
-              DataCell(_buildStockStatusCell(tool)), // Use the modified method
+              DataCell(_buildStockStatusCell(tool)),
+              DataCell(_buildPulsatingCell(tool.internalStatus,
+                  isInactive)), // Pulsating effect for internalstatus
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPulsatingCell(String text, bool isInactive) {
+    if (!isInactive) {
+      return Text(text);
+    }
+
+    return TweenAnimationBuilder(
+      tween: Tween<double>(begin: 0.5, end: 1.0),
+      duration: const Duration(seconds: 1),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: child,
+        );
+      },
+      onEnd: () {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          setState(() {}); // Rebuild to create pulsating effect
+        });
+      },
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.red),
       ),
     );
   }

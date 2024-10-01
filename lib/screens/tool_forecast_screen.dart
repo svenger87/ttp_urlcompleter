@@ -93,6 +93,12 @@ class ToolForecastScreen extends StatelessWidget {
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
+                        DataColumn(
+                          label: Text(
+                            'Status',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ],
                       rows: forecastData.map((tool) {
                         String lengthcuttoolgroup =
@@ -104,41 +110,27 @@ class ToolForecastScreen extends StatelessWidget {
                           highlightRow = false;
                         }
 
-                        return DataRow(
-                          color: MaterialStateProperty.resolveWith<Color?>(
-                              (Set<MaterialState> states) {
-                            if (highlightRow) {
-                              return Colors.orange
-                                  .withOpacity(0.3); // Highlight in orange
-                            }
-                            return null; // Default color
-                          }),
-                          cells: [
-                            DataCell(Text(_formatDate(
-                                tool['PlanStartDatum'] as String?))),
-                            DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
-                            DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
-                            DataCell(
-                              Text(tool['Equipment'] ?? 'N/A'),
-                              onTap: () {
-                                if (tool['Equipment'] != null &&
-                                    tool['Equipment'] != 'N/A') {
-                                  _navigateToEditTool(
-                                      context, tool['Equipment']);
-                                }
-                              },
-                            ),
-                            DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
-                            DataCell(Text(lengthcuttoolgroup)),
-                          ],
-                          onSelectChanged: (selected) {
-                            if (selected == true &&
-                                tool['Equipment'] != null &&
-                                tool['Equipment'] != 'N/A') {
-                              _navigateToEditTool(context, tool['Equipment']);
-                            }
-                          },
-                        );
+                        bool isInactive = tool['internalstatus'] !=
+                            'aktiv'; // Check internalstatus
+
+                        return _buildPulsatingRow(
+                            tool, highlightRow, isInactive, [
+                          DataCell(Text(_formatDate(tool['PlanStartDatum']))),
+                          DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
+                          DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
+                          DataCell(
+                            Text(tool['Equipment'] ?? 'N/A'),
+                            onTap: () {
+                              if (tool['Equipment'] != null &&
+                                  tool['Equipment'] != 'N/A') {
+                                _navigateToEditTool(context, tool['Equipment']);
+                              }
+                            },
+                          ),
+                          DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
+                          DataCell(Text(lengthcuttoolgroup)),
+                          DataCell(Text(tool['internalstatus'] ?? 'N/A')),
+                        ]);
                       }).toList(),
                     ),
                   ),
@@ -151,7 +143,52 @@ class ToolForecastScreen extends StatelessWidget {
     );
   }
 
-  // Updated _formatDate method
+  // Method to handle the pulsating effect for inactive tools
+  DataRow _buildPulsatingRow(Map<String, dynamic> tool, bool highlightRow,
+      bool isInactive, List<DataCell> cells) {
+    if (!isInactive) {
+      return DataRow(
+        color: MaterialStateProperty.resolveWith<Color?>(
+            (Set<MaterialState> states) {
+          if (highlightRow) {
+            return Colors.orange.withOpacity(0.3); // Highlight in orange
+          }
+          return null; // Default color
+        }),
+        cells: cells,
+      );
+    }
+
+    // If inactive, apply the pulsating effect
+    return DataRow(
+      cells: cells.map((cell) {
+        return DataCell(
+          TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0.5, end: 1.0),
+            duration: const Duration(seconds: 1),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: cell.child,
+              );
+            },
+            onEnd: () {
+              Future.delayed(const Duration(milliseconds: 500), () {
+                // Rebuild to create pulsating effect
+                _verticalController.jumpTo(_verticalController.offset);
+              });
+            },
+          ),
+        );
+      }).toList(),
+      color: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
+        return Colors.red.withOpacity(0.3); // Highlight in red for inactive
+      }),
+    );
+  }
+
+  // Format the date string to 'yyyy-MM-dd'
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'N/A';
     try {

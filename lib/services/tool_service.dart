@@ -14,7 +14,6 @@ class ToolService {
   final String toolForecastApiUrl = 'http://wim-solution:3000/tool-forecast';
 
   // Fetch tools from local API and separate them into has_storage and has_no_storage
-  // Already included
   Future<Map<String, List<Tool>>> fetchTools() async {
     final response = await http.get(Uri.parse(localApiUrl));
 
@@ -50,7 +49,7 @@ class ToolService {
     required String returnedById,
     required bool providedStatus,
   }) async {
-    // Format the dates as 'YYYY-MM-DD HH:MM:SS'
+    // Format the dates as 'YYYY-MM-DD HH:mm:ss'
     final String formattedProvidedDate =
         DateFormat('yyyy-MM-dd HH:mm:ss').format(providedDate);
     final String formattedReturnedDate =
@@ -186,6 +185,7 @@ class ToolService {
           'Arbeitsplatz':
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
           'lengthcuttoolgroup': projectData['lengthcuttoolgroup'] ?? 'N/A',
+          'internalstatus': projectData['internalstatus'] ?? 'N/A',
         };
       }).toList();
     } else {
