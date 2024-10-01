@@ -98,7 +98,7 @@ class _DashboardState extends State<Dashboard>
     }
   }
 
-// Poll cache update status (unchanged)
+  // Poll cache update status (unchanged)
   Future<void> _pollCacheUpdateStatus() async {
     bool updateComplete = false;
     while (!updateComplete) {
@@ -207,6 +207,53 @@ class _DashboardState extends State<Dashboard>
     return stations;
   }
 
+  // Function to zero a specific scale
+  Future<void> _zeroScale(String ip) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://wim-solution.sip.local:5050/zero-scale'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'ip': ip}), // Pass the specific scale's IP
+      );
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Waage erfolgreich genullt.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Fehler beim Nullen der Waage: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Nullen der Waage: $e')),
+      );
+    }
+  }
+
+  // Function to open the zero scale dialog
+  void _openZeroScaleDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Waage nullen'),
+          content: ScaleList(onScaleSelected: _zeroScale),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Schließen'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -214,8 +261,13 @@ class _DashboardState extends State<Dashboard>
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: const Color(0xFF104382),
-          title: const Text('Status Aufhängestationen'),
+          title: const Text(
+            'Status Aufhängestationen',
+            style: TextStyle(color: Colors.white),
+          ),
           bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.grey,
             tabs: [
               Tab(text: 'Aufhängestationen'),
               Tab(text: 'Materialfluss'),
@@ -226,14 +278,28 @@ class _DashboardState extends State<Dashboard>
               icon: isUpdating
                   ? RotationTransition(
                       turns: _controller,
-                      child: const Icon(Icons.refresh),
+                      child: const Icon(
+                        Icons.refresh,
+                        color: Colors.white, // Icon color when updating
+                      ),
                     )
-                  : const Icon(Icons.refresh),
+                  : const Icon(
+                      Icons.refresh,
+                      color: Colors.white, // Icon color when not updating
+                    ),
               onPressed: isUpdating
                   ? null
                   : () async {
                       await _updateCache();
                     },
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.scale,
+                color: Colors.white,
+              ),
+              onPressed: _openZeroScaleDialog,
+              tooltip: 'Waage nullen',
             ),
           ],
         ),
@@ -284,6 +350,52 @@ class _DashboardState extends State<Dashboard>
   }
 }
 
+class ScaleList extends StatelessWidget {
+  final Function(String ip) onScaleSelected;
+
+  const ScaleList({super.key, required this.onScaleSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, String> scaleIps = {
+      "AUFHÄNGESTATION NR.01": "10.152.102.10",
+      "AUFHÄNGESTATION NR.02": "10.152.102.12",
+      "AUFHÄNGESTATION NR.03": "10.152.102.13",
+      "AUFHÄNGESTATION NR.04": "10.152.102.14",
+      "AUFHÄNGESTATION NR.05": "10.152.102.15",
+      "AUFHÄNGESTATION NR.06": "10.152.102.16",
+      "AUFHÄNGESTATION NR.07": "10.152.102.17",
+      "AUFHÄNGESTATION NR.08": "10.152.102.18",
+      "AUFHÄNGESTATION NR.09": "10.152.102.19",
+      "AUFHÄNGESTATION NR.10": "10.152.10.86",
+      "AUFHÄNGESTATION MISCH. NR.21": "10.152.102.21",
+      "AUFHÄNGESTATION MISCH. NR.22": "10.152.102.22",
+      "AUFHÄNGESTATION MISCH. NR.23": "10.152.102.23",
+      "AUFHÄNGESTATION MISCH. NR.24": "10.152.102.24",
+      "AUFHÄNGESTATION MISCH. NR.25": "10.152.102.25",
+      "AUFHÄNGESTATION RESYSTA LINKS": "10.152.102.26",
+      "AUFHÄNGESTATION RESYSTA RE.": "10.152.102.27",
+      "AUFHÄNGESTATION S090 TECHNIKUM": "10.152.102.28",
+    };
+
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: scaleIps.entries.map((entry) {
+          return ListTile(
+            title: Text(entry.key), // Display station name
+            subtitle: Text('IP: ${entry.value}'),
+            onTap: () {
+              Navigator.of(context).pop(); // Close dialog on selection
+              onScaleSelected(entry.value); // Pass IP to the callback function
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
 class StationOverview extends StatelessWidget {
   final List<dynamic> stations;
 
@@ -291,88 +403,31 @@ class StationOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get screen width and height
+    // Get screen width
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Define the target card width and height
     const double cardWidth = 250; // Width of each card
-    const double cardHeight = 225; // Fixed height of each card
+    const double cardHeight = 300; // Fixed height of each card
 
     // Calculate crossAxisCount by dividing screen width by the target card width
     int crossAxisCount = (screenWidth / cardWidth).floor();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GridView.builder(
-          padding: const EdgeInsets.all(2.0),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 2.0,
-            mainAxisSpacing: 2.0,
-            mainAxisExtent: cardHeight, // Set the fixed height for each card
-          ),
-          itemCount: stations.length,
-          itemBuilder: (context, index) {
-            var station = stations[index];
-            return StationCard(
-              station: station,
-              isSmallScreen: screenWidth < 600,
-            );
-          },
+    return GridView.builder(
+      padding: const EdgeInsets.all(2.0),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount > 0 ? crossAxisCount : 1,
+        crossAxisSpacing: 2.0,
+        mainAxisSpacing: 2.0,
+        mainAxisExtent: cardHeight, // Set the fixed height for each card
+      ),
+      itemCount: stations.length,
+      itemBuilder: (context, index) {
+        var station = stations[index];
+        return StationCard(
+          station: station,
+          isSmallScreen: screenWidth < 600,
         );
-      },
-    );
-  }
-}
-
-class MaterialFlowDashboard extends StatelessWidget {
-  final List<dynamic> stations;
-
-  const MaterialFlowDashboard({super.key, required this.stations});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-        final isSmallScreen = screenWidth < 600;
-
-        if (screenWidth >= 1200) {
-          // For large screens, use a grid layout with two rows and reduced spacing
-          return Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 5.0), // Reduced overall padding
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4, // Display in 4 columns
-                crossAxisSpacing: 2.0, // Reduce horizontal spacing
-                mainAxisSpacing: 2.0, // Reduce vertical spacing
-                childAspectRatio: 2.5, // Adjust aspect ratio
-              ),
-              itemCount: stations.length,
-              itemBuilder: (context, index) {
-                var station = stations[index];
-                return MaterialFlowCard(
-                  station: station,
-                  isSmallScreen: false,
-                );
-              },
-            ),
-          );
-        } else {
-          // For smaller screens, use the regular single-row list layout
-          return ListView.builder(
-            padding: const EdgeInsets.all(10.0),
-            itemCount: stations.length,
-            itemBuilder: (context, index) {
-              var station = stations[index];
-              return MaterialFlowCard(
-                station: station,
-                isSmallScreen: isSmallScreen,
-              );
-            },
-          );
-        }
       },
     );
   }
@@ -523,6 +578,59 @@ class StationCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class MaterialFlowDashboard extends StatelessWidget {
+  final List<dynamic> stations;
+
+  const MaterialFlowDashboard({super.key, required this.stations});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isSmallScreen = screenWidth < 600;
+
+        if (screenWidth >= 1200) {
+          // For large screens, use a grid layout with two rows and reduced spacing
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 5.0), // Reduced overall padding
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4, // Display in 4 columns
+                crossAxisSpacing: 2.0, // Reduce horizontal spacing
+                mainAxisSpacing: 2.0, // Reduce vertical spacing
+                childAspectRatio: 2.5, // Adjust aspect ratio
+              ),
+              itemCount: stations.length,
+              itemBuilder: (context, index) {
+                var station = stations[index];
+                return MaterialFlowCard(
+                  station: station,
+                  isSmallScreen: false,
+                );
+              },
+            ),
+          );
+        } else {
+          // For smaller screens, use the regular single-row list layout
+          return ListView.builder(
+            padding: const EdgeInsets.all(10.0),
+            itemCount: stations.length,
+            itemBuilder: (context, index) {
+              var station = stations[index];
+              return MaterialFlowCard(
+                station: station,
+                isSmallScreen: isSmallScreen,
+              );
+            },
+          );
+        }
+      },
     );
   }
 }
