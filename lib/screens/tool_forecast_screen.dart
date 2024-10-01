@@ -148,8 +148,8 @@ class ToolForecastScreen extends StatelessWidget {
       bool isInactive, List<DataCell> cells) {
     if (!isInactive) {
       return DataRow(
-        color: MaterialStateProperty.resolveWith<Color?>(
-            (Set<MaterialState> states) {
+        color: WidgetStateProperty.resolveWith<Color?>(
+            (Set<WidgetState> states) {
           if (highlightRow) {
             return Colors.orange.withOpacity(0.3); // Highlight in orange
           }
@@ -181,8 +181,8 @@ class ToolForecastScreen extends StatelessWidget {
           ),
         );
       }).toList(),
-      color: MaterialStateProperty.resolveWith<Color?>(
-          (Set<MaterialState> states) {
+      color: WidgetStateProperty.resolveWith<Color?>(
+          (Set<WidgetState> states) {
         return Colors.red.withOpacity(0.3); // Highlight in red for inactive
       }),
     );

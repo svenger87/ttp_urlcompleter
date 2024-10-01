@@ -1,4 +1,4 @@
-// ignore_for_file: library_private_types_in_public_api
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -158,7 +158,6 @@ class _ConverterModuleState extends State<ConverterModule> {
     final pdfFileName = "${item["Alte_Bezeichnung"]}.pdf";
     final pdfExists = await _pdfFileExists(pdfFileName);
 
-    // ignore: use_build_context_synchronously
     showDialog(
       context: context,
       builder: (BuildContext context) {

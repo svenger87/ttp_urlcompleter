@@ -139,6 +139,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
       final forecastData = await toolService.fetchToolForecast();
       // ignore: use_build_context_synchronously
       await Navigator.push(
+        // ignore: use_build_context_synchronously
         context,
         MaterialPageRoute(
           builder: (context) => ToolForecastScreen(forecastData: forecastData),
@@ -331,8 +332,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
               'aktiv'; // Check internalstatus
 
           return DataRow(
-            color: MaterialStateProperty.resolveWith<Color?>(
-                (Set<MaterialState> states) {
+            color: WidgetStateProperty.resolveWith<Color?>(
+                (Set<WidgetState> states) {
               if (isInactive) {
                 return Colors.red
                     .withOpacity(0.3); // Highlight in red for non-aktiv
