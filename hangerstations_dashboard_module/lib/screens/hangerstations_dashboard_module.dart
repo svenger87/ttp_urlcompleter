@@ -403,7 +403,7 @@ class StationCard extends StatelessWidget {
         : 0;
 
     // Retrieve the time remaining from the station data
-    String timeRemaining = station['TimeRemaining'] ?? 'Unknown';
+    String timeRemaining = station['TimeRemaining'] ?? 'Nicht genug Daten';
 
     // Determine the color based on the remaining weight and material
     Color statusColor = materialNumber == 'FREI'
