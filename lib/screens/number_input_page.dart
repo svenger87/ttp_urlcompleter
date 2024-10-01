@@ -11,7 +11,6 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../modules/webview_module.dart';
-import '../modules/webviewwindows_module.dart';
 import 'dart:convert';
 import 'package:http/io_client.dart' as http;
 
@@ -167,23 +166,12 @@ class _NumberInputPageState extends State<NumberInputPage> {
         alignment: Alignment.centerLeft,
         child: GestureDetector(
           onTap: () {
-            if (Platform.isWindows) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WebViewWindowsModule(
-                    initialUrl: url,
-                  ),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WebViewModule(url: url),
-                ),
-              );
-            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => WebViewModule(url: url),
+              ),
+            );
           },
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -291,21 +279,12 @@ class _NumberInputPageState extends State<NumberInputPage> {
   }
 
   void _navigateToUrl(String url) {
-    if (Platform.isWindows) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => WebViewWindowsModule(initialUrl: url),
-        ),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => WebViewModule(url: url),
-        ),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebViewModule(url: url),
+      ),
+    );
   }
 
   void _openUrlWithNumber() async {

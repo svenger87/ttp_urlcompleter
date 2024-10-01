@@ -1,13 +1,8 @@
-// ignore_for_file: deprecated_member_use, unused_element
-
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import '../constants.dart';
 import '../modules/webview_module.dart';
-import '../modules/webviewwindows_module.dart';
 import '../screens/tool_ui.dart';
 import '../screens/pickists_screen.dart';
 import '../modules/torsteuerung_module.dart';
@@ -18,20 +13,6 @@ import 'package:hangerstations_dashboard_module/screens/hangerstations_dashboard
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({Key? key}) : super(key: key);
-
-  void _openUrl(BuildContext context, String url) async {
-    if (await canLaunch(url)) {
-      await launch(
-        url,
-        enableJavaScript: true,
-        forceWebView: true,
-      );
-    } else {
-      if (kDebugMode) {
-        print('Could not launch $url');
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +52,9 @@ class MainDrawer extends StatelessWidget {
                       path: 'it-support@ttp-papenburg.de',
                     );
 
+                    // ignore: deprecated_member_use
                     if (await canLaunch(emailUri.toString())) {
+                      // ignore: deprecated_member_use
                       await launch(emailUri.toString());
                     } else {
                       if (kDebugMode) {
@@ -100,23 +83,13 @@ class MainDrawer extends StatelessWidget {
                     width: 36, height: 36),
                 title: const Text('Produktionsplan 1W'),
                 onTap: () {
-                  if (Platform.isWindows) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const WebViewWindowsModule(initialUrl: prodPlan1w),
-                      ),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const WebViewModule(url: prodPlan1w),
-                      ),
-                    );
-                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const WebViewModule(url: prodPlan1w),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -124,23 +97,13 @@ class MainDrawer extends StatelessWidget {
                     width: 36, height: 36),
                 title: const Text('Produktionsplan 3W'),
                 onTap: () {
-                  if (Platform.isWindows) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const WebViewWindowsModule(initialUrl: prodPlan3w),
-                      ),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const WebViewModule(url: prodPlan3w),
-                      ),
-                    );
-                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const WebViewModule(url: prodPlan3w),
+                    ),
+                  );
                 },
               ),
             ],
@@ -153,22 +116,12 @@ class MainDrawer extends StatelessWidget {
                 leading: const Icon(Icons.grain_rounded),
                 title: const Text('Materialplan'),
                 onTap: () {
-                  if (Platform.isWindows) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const WebViewWindowsModule(initialUrl: matplan),
-                      ),
-                    );
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WebViewModule(url: matplan),
-                      ),
-                    );
-                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(url: matplan),
+                    ),
+                  );
                 },
               ),
             ],
@@ -178,66 +131,36 @@ class MainDrawer extends StatelessWidget {
                 width: 36, height: 36),
             title: const Text('Intranet'),
             onTap: () {
-              if (Platform.isWindows) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const WebViewWindowsModule(initialUrl: intranet),
-                  ),
-                );
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WebViewModule(url: intranet),
-                  ),
-                );
-              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const WebViewModule(url: intranet),
+                ),
+              );
             },
           ),
           ListTile(
             leading: Image.asset('assets/ac.png', width: 36, height: 36),
             title: const Text('ActiveCollab'),
             onTap: () {
-              if (Platform.isWindows) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const WebViewWindowsModule(initialUrl: ac),
-                  ),
-                );
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WebViewModule(url: ac),
-                  ),
-                );
-              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const WebViewModule(url: ac),
+                ),
+              );
             },
           ),
           ListTile(
             leading: Image.asset('assets/bookstack.png', width: 36, height: 36),
             title: const Text('ttpedia'),
             onTap: () {
-              if (Platform.isWindows) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        const WebViewWindowsModule(initialUrl: bookstack),
-                  ),
-                );
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WebViewModule(url: bookstack),
-                  ),
-                );
-              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const WebViewModule(url: bookstack),
+                ),
+              );
             },
           ),
           ListTile(
@@ -334,22 +257,12 @@ class RecentItemsDrawer extends StatelessWidget {
                   return ListTile(
                     title: Text(recentItems[index]),
                     onTap: () {
-                      if (Platform.isWindows) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                WebViewWindowsModule(initialUrl: recentUrl),
-                          ),
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => WebViewModule(url: recentUrl),
-                          ),
-                        );
-                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => WebViewModule(url: recentUrl),
+                        ),
+                      );
                     },
                   );
                 } else {

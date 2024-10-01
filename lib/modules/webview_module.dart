@@ -28,20 +28,18 @@ class _WebViewModuleState extends State<WebViewModule> {
   void initState() {
     super.initState();
 
-    // Pull to refresh controller (not available on web)
-    pullToRefreshController = kIsWeb
-        ? null
-        : PullToRefreshController(
-            settings: PullToRefreshSettings(
-              color: Colors.blue,
-            ),
-            onRefresh: () async {
-              if (defaultTargetPlatform == TargetPlatform.android ||
-                  defaultTargetPlatform == TargetPlatform.iOS) {
-                _controller?.reload();
-              }
-            },
-          );
+    // Pull to refresh controller (only for Android and iOS)
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      pullToRefreshController = PullToRefreshController(
+        settings: PullToRefreshSettings(
+          color: Colors.blue,
+        ),
+        onRefresh: () async {
+          _controller?.reload();
+        },
+      );
+    }
 
     // Extract initial page title
     extractPageTitleFromUrl(widget.url);
