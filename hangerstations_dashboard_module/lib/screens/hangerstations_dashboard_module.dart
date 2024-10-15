@@ -23,19 +23,41 @@ class _DashboardState extends State<Dashboard>
   Timer? _weightUpdateTimer; // Timer for real-time weight updates
   Map<String, dynamic>? _fetchedData;
   List<dynamic>? _fetchedWeights; // New weight data
+  bool _isPipelineVisible = true; // Flag to control pipeline animation
+  late TabController _tabController; // Controller for TabBarView
 
   @override
   void initState() {
     super.initState();
 
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 5), // Increased duration
       vsync: this,
-    )..repeat(); // Start the animation loop
+    );
 
     _fetchDataSilently(); // Initial data fetch
     _startBackgroundUpdate(); // Start the background update timer
     _startWeightUpdate(); // Start weight update for real-time data
+
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabChange);
+  }
+
+  // Handle tab changes to control pipeline animation
+  void _handleTabChange() {
+    if (_tabController.index == 1) {
+      // Materialfluss tab is active
+      setState(() {
+        _isPipelineVisible = true;
+      });
+      _controller.repeat(); // Start the animation
+    } else {
+      // Other tab is active
+      setState(() {
+        _isPipelineVisible = false;
+      });
+      _controller.stop(); // Stop the animation
+    }
   }
 
   // Function to silently fetch data without showing any loading indicators
@@ -176,6 +198,8 @@ class _DashboardState extends State<Dashboard>
     _controller.dispose();
     _timer?.cancel(); // Cancel the background timer
     _weightUpdateTimer?.cancel(); // Cancel the real-time weight update timer
+    _tabController.removeListener(_handleTabChange);
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -265,10 +289,11 @@ class _DashboardState extends State<Dashboard>
             'Status Aufhängestationen',
             style: TextStyle(color: Colors.white),
           ),
-          bottom: const TabBar(
+          bottom: TabBar(
+            controller: _tabController,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.grey,
-            tabs: [
+            tabs: const [
               Tab(text: 'Aufhängestationen'),
               Tab(text: 'Materialfluss'),
             ],
@@ -280,12 +305,12 @@ class _DashboardState extends State<Dashboard>
                       turns: _controller,
                       child: const Icon(
                         Icons.refresh,
-                        color: Colors.white, // Icon color when updating
+                        color: Colors.white,
                       ),
                     )
                   : const Icon(
                       Icons.refresh,
-                      color: Colors.white, // Icon color when not updating
+                      color: Colors.white,
                     ),
               onPressed: isUpdating
                   ? null
@@ -311,9 +336,9 @@ class _DashboardState extends State<Dashboard>
                 _fetchedData == null) {
               return const Center(child: CircularProgressIndicator());
             } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
+              return Center(child: Text('Fehler: ${snapshot.error}'));
             } else if (!snapshot.hasData || snapshot.data == null) {
-              return const Center(child: Text('No data available.'));
+              return const Center(child: Text('Keine Daten verfügbar.'));
             } else {
               var stations =
                   mergeDataWithWeights(); // Merge stations with weights
@@ -337,9 +362,14 @@ class _DashboardState extends State<Dashboard>
                 }
               });
               return TabBarView(
+                controller: _tabController,
                 children: [
                   StationOverview(stations: stations),
-                  MaterialFlowDashboard(stations: stations),
+                  MaterialFlowDashboard(
+                    stations: stations,
+                    isPipelineVisible: _isPipelineVisible,
+                    animationController: _controller,
+                  ),
                 ],
               );
             }
@@ -584,8 +614,15 @@ class StationCard extends StatelessWidget {
 
 class MaterialFlowDashboard extends StatelessWidget {
   final List<dynamic> stations;
+  final bool isPipelineVisible;
+  final AnimationController animationController;
 
-  const MaterialFlowDashboard({super.key, required this.stations});
+  const MaterialFlowDashboard({
+    super.key,
+    required this.stations,
+    required this.isPipelineVisible,
+    required this.animationController,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -597,8 +634,7 @@ class MaterialFlowDashboard extends StatelessWidget {
         if (screenWidth >= 1200) {
           // For large screens, use a grid layout with two rows and reduced spacing
           return Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 5.0), // Reduced overall padding
+            padding: const EdgeInsets.symmetric(horizontal: 5.0),
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4, // Display in 4 columns
@@ -612,6 +648,8 @@ class MaterialFlowDashboard extends StatelessWidget {
                 return MaterialFlowCard(
                   station: station,
                   isSmallScreen: false,
+                  isPipelineVisible: isPipelineVisible,
+                  animationController: animationController,
                 );
               },
             ),
@@ -626,6 +664,8 @@ class MaterialFlowDashboard extends StatelessWidget {
               return MaterialFlowCard(
                 station: station,
                 isSmallScreen: isSmallScreen,
+                isPipelineVisible: isPipelineVisible,
+                animationController: animationController,
               );
             },
           );
@@ -638,11 +678,15 @@ class MaterialFlowDashboard extends StatelessWidget {
 class MaterialFlowCard extends StatelessWidget {
   final Map<String, dynamic> station;
   final bool isSmallScreen;
+  final bool isPipelineVisible;
+  final AnimationController animationController;
 
   const MaterialFlowCard({
     super.key,
     required this.station,
     required this.isSmallScreen,
+    required this.isPipelineVisible,
+    required this.animationController,
   });
 
   @override
@@ -677,9 +721,12 @@ class MaterialFlowCard extends StatelessWidget {
                   ),
                 ),
                 if (materialNumber != 'FREI')
-                  const Flexible(
+                  Flexible(
                     child: Center(
-                      child: Pipeline(),
+                      child: Pipeline(
+                        isVisible: isPipelineVisible,
+                        animationController: animationController,
+                      ),
                     ),
                   )
                 else
@@ -693,9 +740,12 @@ class MaterialFlowCard extends StatelessWidget {
                   ),
                 ),
                 if (materialNumber != 'FREI')
-                  const Flexible(
+                  Flexible(
                     child: Center(
-                      child: Pipeline(),
+                      child: Pipeline(
+                        isVisible: isPipelineVisible,
+                        animationController: animationController,
+                      ),
                     ),
                   )
                 else
@@ -860,40 +910,32 @@ class ExtruderComponent extends StatelessWidget {
 }
 
 class Pipeline extends StatefulWidget {
-  const Pipeline({super.key});
+  final bool isVisible;
+  final AnimationController animationController;
+
+  const Pipeline({
+    super.key,
+    required this.isVisible,
+    required this.animationController,
+  });
 
   @override
   _PipelineState createState() => _PipelineState();
 }
 
-class _PipelineState extends State<Pipeline>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: false);
-    _animation = Tween<double>(begin: 0, end: 1).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _PipelineState extends State<Pipeline> {
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: MovingGradientPipelinePainter(animation: _animation),
-      child: const SizedBox(
-        width: double.infinity,
-        height: 10, // Ensure a consistent height for the pipeline
+    return TickerMode(
+      enabled: widget.isVisible, // Enable animation based on visibility
+      child: CustomPaint(
+        painter: MovingGradientPipelinePainter(
+          animation: widget.animationController,
+        ),
+        child: const SizedBox(
+          width: double.infinity,
+          height: 10, // Ensure a consistent height for the pipeline
+        ),
       ),
     );
   }
@@ -913,12 +955,11 @@ class MovingGradientPipelinePainter extends CustomPainter {
       colors: const [
         Colors.blue,
         Colors.lightBlueAccent,
-        Colors.blue,
-      ],
-      stops: [movingStop, movingStop + 0.2, movingStop + 0.4],
-      begin: Alignment.centerRight, // Change direction to right to left
+      ], // Simplified gradient
+      stops: [movingStop, movingStop + 0.2],
+      begin: Alignment.centerRight,
       end: Alignment.centerLeft,
-      tileMode: TileMode.repeated,
+      tileMode: TileMode.clamp,
     );
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
@@ -928,7 +969,7 @@ class MovingGradientPipelinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+  bool shouldRepaint(covariant MovingGradientPipelinePainter oldDelegate) {
     return true;
   }
 }

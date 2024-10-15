@@ -18,19 +18,9 @@
   <!-- Load any custom fonts if necessary -->
   <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"> -->
 </head>
-<body>
-  <!-- This script ensures that the service worker is registered if the browser supports it -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('flutter_service_worker.js');
-      });
-    }
-  </script>
-  
-  <!-- The app will be rendered inside this <div> -->
-  <div id="app-container">
-    <script src="main.dart.js" type="application/javascript"></script>
-  </div>
-</body>
+<html>
+  <body>
+    <script src="flutter_bootstrap.js" async></script>
+  </body>
+</html>
 </html>
