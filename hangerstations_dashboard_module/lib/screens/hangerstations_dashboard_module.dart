@@ -83,7 +83,7 @@ class _DashboardState extends State<Dashboard>
 
   // Timer to update weight data every 1 second for real-time updates
   void _startWeightUpdate() {
-    _weightUpdateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _weightUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       _fetchWeightDataRealtime(); // Fetch weight data every second
     });
   }
