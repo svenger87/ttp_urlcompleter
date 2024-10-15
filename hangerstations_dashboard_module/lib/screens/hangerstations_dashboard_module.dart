@@ -15,8 +15,7 @@ class Dashboard extends StatefulWidget {
   _DashboardState createState() => _DashboardState();
 }
 
-class _DashboardState extends State<Dashboard>
-    with SingleTickerProviderStateMixin {
+class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   bool isUpdating = false;
   late AnimationController _controller;
   Timer? _timer; // Timer for background updates

@@ -147,7 +147,7 @@ class ToolService {
       // Fetch tools and create a map of tool numbers to provided status
       Map<String, bool> toolProvidedMap = await fetchAllToolsAsMap();
 
-      // Filter out entries where Fertigungssteuerer is not "1" or provided is true
+      // Filter out entries where Fertigungssteuerer is not "1", provided is true, or Prioritaet <= 2
       return forecastBody.where((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
@@ -166,8 +166,12 @@ class ToolService {
           providedStatus = toolProvidedMap[equipmentNumber]!;
         }
 
-        // Exclude tools where provided is true
-        return fertigungssteuererIsOne && !providedStatus;
+        // Parse Prioritaet and ensure it's greater than 2
+        final int? prioritaet = int.tryParse(item['Prioritaet'] ?? '0');
+        final bool prioritaetValid = prioritaet != null && prioritaet >= 2;
+
+        // Exclude tools where provided is true and prioritaet is < 2
+        return fertigungssteuererIsOne && !providedStatus && prioritaetValid;
       }).map((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
@@ -186,6 +190,8 @@ class ToolService {
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
           'lengthcuttoolgroup': projectData['lengthcuttoolgroup'] ?? 'N/A',
           'internalstatus': projectData['internalstatus'] ?? 'N/A',
+          'Prioritaet':
+              item['Prioritaet'] ?? 'N/A', // Add Prioritaet to the result
         };
       }).toList();
     } else {
