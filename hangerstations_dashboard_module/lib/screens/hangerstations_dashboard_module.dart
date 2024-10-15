@@ -292,6 +292,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             controller: _tabController,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.grey,
+            labelStyle: const TextStyle(fontSize: 18.0),
+            unselectedLabelStyle: const TextStyle(fontSize: 16.0),
             tabs: const [
               Tab(text: 'Aufhängestationen'),
               Tab(text: 'Materialfluss'),
@@ -514,13 +516,13 @@ class StationCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(Icons.settings,
-                      color: statusColor, size: isSmallScreen ? 20 : 24),
+                      color: statusColor, size: isSmallScreen ? 24 : 28),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Station: $stationName',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 12 : 16,
+                        fontSize: isSmallScreen ? 16 : 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -539,7 +541,7 @@ class StationCard extends StatelessWidget {
                     Text(
                       'Typ: $type',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 14,
+                        fontSize: isSmallScreen ? 12 : 16,
                         color: Colors.white70,
                       ),
                       maxLines: 1,
@@ -548,7 +550,7 @@ class StationCard extends StatelessWidget {
                     Text(
                       'Material: $materialNumber',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 14,
+                        fontSize: isSmallScreen ? 12 : 16,
                         color: Colors.white70,
                       ),
                       maxLines: 1,
@@ -557,7 +559,7 @@ class StationCard extends StatelessWidget {
                     Text(
                       'WBZ: $wbz',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 14,
+                        fontSize: isSmallScreen ? 12 : 16,
                         color: Colors.white70,
                       ),
                       maxLines: 1,
@@ -566,7 +568,7 @@ class StationCard extends StatelessWidget {
                     Text(
                       'Linie: $workplace',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 14,
+                        fontSize: isSmallScreen ? 12 : 16,
                         color: Colors.white70,
                       ),
                       maxLines: 1,
@@ -575,17 +577,17 @@ class StationCard extends StatelessWidget {
                     Text(
                       'Bemerkung: $remark',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 14,
+                        fontSize: isSmallScreen ? 12 : 16,
                         color: Colors.white70,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Restgewicht: ${remainingWeight.toStringAsFixed(2)} kg',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 14,
+                        fontSize: isSmallScreen ? 14 : 18,
                         color: Colors.orangeAccent,
                         fontWeight: FontWeight.bold,
                       ),
@@ -595,7 +597,7 @@ class StationCard extends StatelessWidget {
                     Text(
                       'Verbleibende Zeit: $timeRemaining',
                       style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 14,
+                        fontSize: isSmallScreen ? 14 : 18,
                         color: Colors.lightGreenAccent,
                         fontWeight: FontWeight.bold,
                       ),
