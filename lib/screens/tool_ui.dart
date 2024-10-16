@@ -7,7 +7,7 @@ import 'edit_tool_screen.dart';
 import 'storage_utilization_screen.dart';
 
 class ToolInventoryScreen extends StatefulWidget {
-  const ToolInventoryScreen({Key? key}) : super(key: key);
+  const ToolInventoryScreen({super.key});
 
   @override
   ToolInventoryScreenState createState() => ToolInventoryScreenState();

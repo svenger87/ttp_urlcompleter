@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class PinEntryScreen extends StatefulWidget {
   final Function(String) onSubmit;
 
-  const PinEntryScreen({Key? key, required this.onSubmit}) : super(key: key);
+  const PinEntryScreen({super.key, required this.onSubmit});
 
   @override
   // ignore: library_private_types_in_public_api

@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 class WebViewModule extends StatefulWidget {
   final String url;
 
-  const WebViewModule({Key? key, required this.url}) : super(key: key);
+  const WebViewModule({super.key, required this.url});
 
   @override
   // ignore: library_private_types_in_public_api

@@ -13,7 +13,7 @@ class ToolForecastScreen extends StatelessWidget {
   final ScrollController _verticalController =
       ScrollController(); // For vertical scrolling
 
-  ToolForecastScreen({Key? key, required this.forecastData}) : super(key: key);
+  ToolForecastScreen({super.key, required this.forecastData});
 
   @override
   Widget build(BuildContext context) {

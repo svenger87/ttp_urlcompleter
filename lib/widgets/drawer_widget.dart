@@ -12,7 +12,7 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:hangerstations_dashboard_module/screens/hangerstations_dashboard_module.dart';
 
 class MainDrawer extends StatelessWidget {
-  const MainDrawer({Key? key}) : super(key: key);
+  const MainDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -224,10 +224,10 @@ class RecentItemsDrawer extends StatelessWidget {
   final void Function() clearRecentItems;
 
   const RecentItemsDrawer({
-    Key? key,
+    super.key,
     required this.recentItems,
     required this.clearRecentItems,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

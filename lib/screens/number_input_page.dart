@@ -15,7 +15,7 @@ import 'dart:convert';
 import 'package:http/io_client.dart' as http;
 
 class NumberInputPage extends StatefulWidget {
-  const NumberInputPage({Key? key}) : super(key: key);
+  const NumberInputPage({super.key});
 
   @override
   _NumberInputPageState createState() => _NumberInputPageState();
@@ -213,8 +213,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
             userEnteredValue,
             ...data
                 .map<String>((item) => item['title']?.toString() ?? '')
-                .where((suggestion) => suggestion.isNotEmpty)
-                .toList(),
+                .where((suggestion) => suggestion.isNotEmpty),
           ];
         });
       } else {

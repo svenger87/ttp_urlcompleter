@@ -9,7 +9,7 @@ import '../services/tool_service.dart';
 
 class EditToolScreen extends StatefulWidget {
   final Tool tool;
-  const EditToolScreen({Key? key, required this.tool}) : super(key: key);
+  const EditToolScreen({super.key, required this.tool});
 
   @override
   // ignore: library_private_types_in_public_api
@@ -330,7 +330,7 @@ class _EditToolScreenState extends State<EditToolScreen> {
             value: item,
             child: Text(item),
           );
-        }).toList(),
+        }),
       ],
       onChanged: onChanged,
     );

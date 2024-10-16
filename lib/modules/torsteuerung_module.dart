@@ -12,8 +12,7 @@ import 'package:video_player_win/video_player_win.dart';
 class TorsteuerungModule extends StatefulWidget {
   final String initialUrl;
 
-  const TorsteuerungModule({Key? key, required this.initialUrl})
-      : super(key: key);
+  const TorsteuerungModule({super.key, required this.initialUrl});
 
   @override
   _TorsteuerungModuleState createState() => _TorsteuerungModuleState();
@@ -60,6 +59,7 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
         });
       });
     } else {
+      // ignore: deprecated_member_use
       _videoController = VideoPlayerController.network(videoStreamUrl);
       _videoController!.initialize().then((_) {
         setState(() {
