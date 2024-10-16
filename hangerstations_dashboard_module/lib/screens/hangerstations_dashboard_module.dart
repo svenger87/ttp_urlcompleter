@@ -483,22 +483,20 @@ class StationCard extends StatelessWidget {
     String type = station['Name'] ?? 'N/A';
     String wbz = station['WBZ'] ?? 'N/A';
 
+    // Retrieve the time remaining from the station data
+    String timeRemaining = station['TimeRemaining'] ?? 'Nicht genug Daten';
+
     // Parse the remainingWeight to double
     double remainingWeight = station['RemainingWeight'] != null
         ? double.tryParse(station['RemainingWeight'].toString()) ?? 0
         : 0;
 
-    // Retrieve the time remaining from the station data
-    String timeRemaining = station['TimeRemaining'] ?? 'Nicht genug Daten';
-
-    // Determine the color based on the remaining weight and material
-    Color statusColor = (remainingWeight > 0 && remainingWeight < 100)
-        ? Colors.red // Red for weight between 0 and 100 kg
-        : remainingWeight == 0
-            ? Colors.blue // Blue for weight equal to 0
-            : materialNumber == 'FREI'
-                ? Colors.white // White if marked as "FREI"
-                : Colors.blue; // Default to blue for other cases
+// Determine the color based on the remaining weight and material
+    Color statusColor = (remainingWeight > 0 && remainingWeight <= 100)
+        ? Colors.red
+        : (materialNumber == 'FREI' && remainingWeight == 0)
+            ? Colors.white
+            : Colors.blue;
 
     // Set a fixed height for all cards to avoid overflow
     double fixedCardHeight = 300.0; // Adjust this height as needed

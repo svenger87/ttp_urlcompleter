@@ -215,7 +215,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
           Expanded(
             child: TextField(
               decoration: const InputDecoration(
-                labelText: 'Filter nach Werkzeug, Lagerplatz oder Lagerstatus',
+                labelText:
+                    'Filter nach Werkzeug, Lagerplatz, Lagerstatus oder Werkzeugstatus',
                 border: OutlineInputBorder(),
               ),
               controller: _filterController,
@@ -325,7 +326,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
           DataColumn(label: Text('Belegter Platz 2')),
           DataColumn(label: Text('Lagerstatus')),
           DataColumn(
-              label: Text('Internalstatus')), // New column for internalstatus
+              label:
+                  Text('Werkzeugstatus IKO')), // New column for internalstatus
         ],
         rows: tools.map((tool) {
           bool isInactive = tool.internalStatus.toLowerCase() !=

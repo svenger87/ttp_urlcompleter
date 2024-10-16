@@ -148,8 +148,8 @@ class ToolForecastScreen extends StatelessWidget {
       bool isInactive, List<DataCell> cells) {
     if (!isInactive) {
       return DataRow(
-        color: WidgetStateProperty.resolveWith<Color?>(
-            (Set<WidgetState> states) {
+        color:
+            WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
           if (highlightRow) {
             return Colors.orange.withOpacity(0.3); // Highlight in orange
           }
@@ -159,7 +159,7 @@ class ToolForecastScreen extends StatelessWidget {
       );
     }
 
-    // If inactive, apply the pulsating effect
+    // If inactive, apply the pulsating effect and preserve onTap handlers
     return DataRow(
       cells: cells.map((cell) {
         return DataCell(
@@ -179,10 +179,10 @@ class ToolForecastScreen extends StatelessWidget {
               });
             },
           ),
+          onTap: cell.onTap, // Preserve the onTap handler
         );
       }).toList(),
-      color: WidgetStateProperty.resolveWith<Color?>(
-          (Set<WidgetState> states) {
+      color: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
         return Colors.red.withOpacity(0.3); // Highlight in red for inactive
       }),
     );

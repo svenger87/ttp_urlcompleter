@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -147,17 +149,17 @@ class ToolService {
       // Fetch tools and create a map of tool numbers to provided status
       Map<String, bool> toolProvidedMap = await fetchAllToolsAsMap();
 
-      // Filter out entries where Fertigungssteuerer is not "1", provided is true, or Prioritaet <= 2
-      return forecastBody.where((item) {
+      // Adjusted filtering logic
+      final filteredList = forecastBody.where((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
         // Check Fertigungssteuerer in both main node and subnode
-        final fertigungssteuererIsOne = item['Fertigungssteuerer'] == '1' ||
-            workingPlan['Fertigungssteuerer'] == '1';
+        final fertigungssteuererIsOne = (item['Fertigungssteuerer'] == '1') ||
+            (workingPlan['Fertigungssteuerer'] == '1');
 
         // Extract Equipment number from workingPlan or item
         String? equipmentNumber =
-            (workingPlan['Equipment'] ?? item['Equipment'])?.trim();
+            (workingPlan['Equipment'] ?? item['Equipment'])?.toString().trim();
 
         // Check provided status from the tools map
         bool providedStatus = false;
@@ -166,20 +168,32 @@ class ToolService {
           providedStatus = toolProvidedMap[equipmentNumber]!;
         }
 
-        // Parse Prioritaet and ensure it's greater than 2
-        final int? prioritaet = int.tryParse(item['Prioritaet'] ?? '0');
-        final bool prioritaetValid = prioritaet != null && prioritaet >= 2;
+        // Extract Prioritaet from item or workingPlan, and trim whitespace
+        final prioritaetStr =
+            (item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? '0')
+                .toString()
+                .trim();
 
-        // Exclude tools where provided is true and prioritaet is < 2
+        // Parse Prioritaet and ensure it's greater than or equal to 2
+        final int? prioritaet = int.tryParse(prioritaetStr);
+        final bool prioritaetValid = prioritaet != null && prioritaet <= 2;
+
+        // Include tools where Fertigungssteuerer is "1", provided is false, and Prioritaet >= 2
         return fertigungssteuererIsOne && !providedStatus && prioritaetValid;
       }).map((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
-        // Set PlanStartDatum to item['PlanStartDatum'] or item['Eckstarttermin']
-        final planStartDatum = item['PlanStartDatum'] ?? item['Eckstarttermin'];
-
         // Extract projectData fields
         final projectData = item['projectData'] ?? {};
+
+        // Extract lengthcuttoolgroup and internalstatus
+        String lengthcuttoolgroup =
+            projectData['lengthcuttoolgroup']?.toString() ?? 'N/A';
+        String internalstatus =
+            projectData['internalstatus']?.toString() ?? 'N/A';
+
+        // Set PlanStartDatum to item['PlanStartDatum'] or item['Eckstarttermin']
+        final planStartDatum = item['PlanStartDatum'] ?? item['Eckstarttermin'];
 
         return {
           'PlanStartDatum': planStartDatum ?? 'N/A',
@@ -188,12 +202,14 @@ class ToolService {
           'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
           'Arbeitsplatz':
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
-          'lengthcuttoolgroup': projectData['lengthcuttoolgroup'] ?? 'N/A',
-          'internalstatus': projectData['internalstatus'] ?? 'N/A',
+          'lengthcuttoolgroup': lengthcuttoolgroup,
+          'internalstatus': internalstatus,
           'Prioritaet':
-              item['Prioritaet'] ?? 'N/A', // Add Prioritaet to the result
+              item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? 'N/A',
         };
       }).toList();
+
+      return filteredList;
     } else {
       throw Exception('Failed to load tool forecast from API');
     }
