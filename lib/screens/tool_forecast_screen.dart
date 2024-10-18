@@ -29,7 +29,7 @@ class ToolForecastScreen extends StatelessWidget {
             padding: const EdgeInsets.all(8.0),
             color: Colors.yellow[100],
             child: const Text(
-              'Wenn das Werkzeug den Status "Ausgelagert" hat erscheint dieses NICHT mehr in der Tabelle!',
+              'Werkzeuge, die den Status "Ausgelagert" haben, werden nun auch in der Tabelle angezeigt.',
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -71,12 +71,6 @@ class ToolForecastScreen extends StatelessWidget {
                         ),
                         DataColumn(
                           label: Text(
-                            'Auftragsnummer',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
                             'Werkzeug',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
@@ -95,29 +89,48 @@ class ToolForecastScreen extends StatelessWidget {
                         ),
                         DataColumn(
                           label: Text(
+                            'Verpackungswerkzeuggruppe', // New column for packagingtoolgroup
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
                             'Status',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Bereitstellung',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
                       rows: forecastData.map((tool) {
-                        String lengthcuttoolgroup =
-                            tool['lengthcuttoolgroup']?.toString() ?? 'N/A';
+                        // Truncate lengthcuttoolgroup and packagingtoolgroup to only show the part before the first space
+                        String lengthcuttoolgroup = (tool['lengthcuttoolgroup']
+                                ?.toString()
+                                .split(' ')[0] ??
+                            'Ohne');
+                        String packagingtoolgroup = (tool['packagingtoolgroup']
+                                ?.toString()
+                                .split(' ')[0] ??
+                            'Ohne');
 
-                        bool highlightRow = true;
-                        if (lengthcuttoolgroup.startsWith('Gr.1') ||
-                            lengthcuttoolgroup == 'N/A') {
-                          highlightRow = false;
-                        }
+                        // Modify highlightRow logic to not highlight if lengthcuttoolgroup is 'Ohne'
+                        bool highlightRow = !(lengthcuttoolgroup == 'Ohne' ||
+                            lengthcuttoolgroup.startsWith('Gr.1'));
 
                         bool isInactive = tool['internalstatus'] !=
                             'aktiv'; // Check internalstatus
+
+                        // Check the provided status of the tool (add this if it's part of the tool data)
+                        bool isOutOfStock = tool['provided'] ?? false;
 
                         return _buildPulsatingRow(
                             tool, highlightRow, isInactive, [
                           DataCell(Text(_formatDate(tool['PlanStartDatum']))),
                           DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
-                          DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
                           DataCell(
                             Text(tool['Equipment'] ?? 'N/A'),
                             onTap: () {
@@ -128,8 +141,13 @@ class ToolForecastScreen extends StatelessWidget {
                             },
                           ),
                           DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
-                          DataCell(Text(lengthcuttoolgroup)),
+                          DataCell(Text(
+                              lengthcuttoolgroup)), // Display truncated lengthcuttoolgroup
+                          DataCell(Text(
+                              packagingtoolgroup)), // Display truncated packagingtoolgroup
                           DataCell(Text(tool['internalstatus'] ?? 'N/A')),
+                          DataCell(_buildStockStatusCell(
+                              isOutOfStock)), // Added cell for stock status
                         ]);
                       }).toList(),
                     ),
@@ -255,6 +273,26 @@ class ToolForecastScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  // Build stock status cell with icons
+  Widget _buildStockStatusCell(bool isOutOfStock) {
+    return Row(
+      children: [
+        Icon(
+          isOutOfStock ? Icons.cancel : Icons.check_circle,
+          color: isOutOfStock ? Colors.red : Colors.green,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          isOutOfStock ? 'Ausgelagert' : 'Eingelagert',
+          style: TextStyle(
+            color: isOutOfStock ? Colors.red : Colors.green,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

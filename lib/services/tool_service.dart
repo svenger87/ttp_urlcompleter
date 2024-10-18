@@ -160,11 +160,8 @@ class ToolService {
             (workingPlan['Equipment'] ?? item['Equipment'])?.toString().trim();
 
         // Check provided status from the tools map
-        bool providedStatus = false;
         if (equipmentNumber != null &&
-            toolProvidedMap.containsKey(equipmentNumber)) {
-          providedStatus = toolProvidedMap[equipmentNumber]!;
-        }
+            toolProvidedMap.containsKey(equipmentNumber)) {}
 
         // Extract Prioritaet from item or workingPlan, and trim whitespace
         final prioritaetStr =
@@ -176,22 +173,34 @@ class ToolService {
         final int? prioritaet = int.tryParse(prioritaetStr);
         final bool prioritaetValid = prioritaet != null && prioritaet <= 2;
 
-        // Include tools where Fertigungssteuerer is "1", provided is false, and Prioritaet >= 2
-        return fertigungssteuererIsOne && !providedStatus && prioritaetValid;
+        // Include tools where Fertigungssteuerer is "1" and Prioritaet <= 2
+        return fertigungssteuererIsOne && prioritaetValid;
       }).map((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
         // Extract projectData fields
         final projectData = item['projectData'] ?? {};
 
+        // Debugging: Log the projectData to check for packagingtoolgroup
+        if (kDebugMode) {
+          print('projectData: $projectData');
+        }
+
         // Extract lengthcuttoolgroup and internalstatus
         String lengthcuttoolgroup =
-            projectData['lengthcuttoolgroup']?.toString() ?? 'N/A';
+            projectData['lengthcuttoolgroup']?.toString() ?? 'Ohne';
         String internalstatus =
-            projectData['internalstatus']?.toString() ?? 'N/A';
+            projectData['internalstatus']?.toString() ?? 'unbekannt';
+        String packagingtoolgroup =
+            projectData['packagingtoolgroup']?.toString() ?? 'unbekannt';
 
         // Set PlanStartDatum to item['PlanStartDatum'] or item['Eckstarttermin']
         final planStartDatum = item['PlanStartDatum'] ?? item['Eckstarttermin'];
+
+        // Include the provided status in the returned map
+        String? equipmentNumber =
+            (workingPlan['Equipment'] ?? item['Equipment'])?.toString().trim();
+        bool providedStatus = toolProvidedMap[equipmentNumber] ?? false;
 
         return {
           'PlanStartDatum': planStartDatum ?? 'N/A',
@@ -201,9 +210,11 @@ class ToolService {
           'Arbeitsplatz':
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
           'lengthcuttoolgroup': lengthcuttoolgroup,
+          'packagingtoolgroup': packagingtoolgroup,
           'internalstatus': internalstatus,
           'Prioritaet':
               item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? 'N/A',
+          'provided': providedStatus
         };
       }).toList();
 
