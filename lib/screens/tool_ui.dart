@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:ttp_app/screens/tool_forecast_screen.dart';
 import 'pin_entry_screen.dart';
@@ -20,9 +22,9 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   String _filterQuery = '';
   bool _isLoading = true;
   String? _errorMessage;
-  bool _isToolsWithStorageCollapsed = false; // Uncollapsed by default
-  bool _isToolsWithoutStorageCollapsed = true; // Collapsed by default
-  bool _toolsLoaded = false; // Track if tools are loaded
+  bool _isToolsWithStorageCollapsed = false;
+  bool _isToolsWithoutStorageCollapsed = true;
+  bool _toolsLoaded = false;
 
   final TextEditingController _filterController = TextEditingController();
 
@@ -39,9 +41,9 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
         builder: (context) => PinEntryScreen(
           onSubmit: (pin) {
             if (pin == '3006') {
-              Navigator.pop(context, true); // PIN is correct
+              Navigator.pop(context, true);
             } else {
-              Navigator.pop(context, false); // PIN is incorrect
+              Navigator.pop(context, false);
             }
           },
         ),
@@ -49,11 +51,11 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     );
 
     if (result == true && !_toolsLoaded) {
-      _loadTools();
-    } else if (!_toolsLoaded) {
-      // Prevent loading if tools are already loaded
-      // ignore: use_build_context_synchronously
-      Navigator.pop(context); // Close the screen if PIN is incorrect
+      if (mounted) {
+        _loadTools();
+      }
+    } else if (!_toolsLoaded && mounted) {
+      Navigator.pop(context);
     }
   }
 
@@ -65,18 +67,22 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
 
     try {
       final toolsData = await toolService.fetchTools();
-      setState(() {
-        _toolsWithStorage = toolsData['has_storage']!;
-        _toolsWithoutStorage = toolsData['has_no_storage']!;
-        _applyFilters();
-        _isLoading = false;
-        _toolsLoaded = true; // Mark tools as loaded
-      });
+      if (mounted) {
+        setState(() {
+          _toolsWithStorage = toolsData['has_storage']!;
+          _toolsWithoutStorage = toolsData['has_no_storage']!;
+          _applyFilters();
+          _isLoading = false;
+          _toolsLoaded = true;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Fehler beim Laden der Werkzeuge: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Fehler beim Laden der Werkzeuge: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -97,9 +103,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
           (tool.storageLocationTwo?.toLowerCase().contains(lowerCaseQuery) ??
               false) ||
           tool.storageStatus.toLowerCase().contains(lowerCaseQuery) ||
-          tool.internalStatus
-              .toLowerCase()
-              .contains(lowerCaseQuery); // Filter by internalstatus
+          tool.internalStatus.toLowerCase().contains(lowerCaseQuery);
     }).toList();
   }
 
@@ -136,27 +140,34 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     });
 
     try {
-      final forecastData = await toolService.fetchToolForecast();
-      // ignore: use_build_context_synchronously
-      await Navigator.push(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(
-          builder: (context) => ToolForecastScreen(forecastData: forecastData),
-        ),
-      );
+      final forecastResponse = await toolService.fetchToolForecast();
+      final forecastData = forecastResponse['data'];
+      final lastUpdated = forecastResponse['lastUpdated'];
 
-      // Ensure toolsLoaded is set to true after returning
-      setState(() {
-        _isLoading = false;
-        _toolsLoaded = true;
-      });
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ToolForecastScreen(
+              forecastData: forecastData,
+              lastUpdated: lastUpdated,
+            ),
+          ),
+        );
+
+        setState(() {
+          _isLoading = false;
+          _toolsLoaded = true;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage =
-            'Fehler beim Laden der Werkzeugbereitstellungsvorhersage: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Fehler beim Laden der Werkzeugbereitstellungsvorhersage: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -183,10 +194,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(
-                Icons.pending_actions), // Add new button for tool forecast
-            onPressed:
-                _loadToolForecast, // Call the method to load the tool forecast
+            icon: const Icon(Icons.pending_actions),
+            onPressed: _loadToolForecast,
           ),
         ],
       ),
@@ -199,8 +208,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSearchBar(),
-                      _buildToolsWithStorageSection(), // Uncollapsed by default
-                      _buildToolsWithoutStorageSection(), // Collapsed by default
+                      _buildToolsWithStorageSection(),
+                      _buildToolsWithoutStorageSection(),
                     ],
                   ),
                 ),
@@ -296,8 +305,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
                 child: _buildToolTable(_filterTools(_toolsWithoutStorage)),
               ),
             ),
-            isExpanded:
-                _isToolsWithoutStorageCollapsed, // Collapse the section by default
+            isExpanded: _isToolsWithoutStorageCollapsed,
           ),
         ],
       ),
@@ -315,9 +323,8 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        columnSpacing: 10, // Reduce spacing between columns
-        // ignore: deprecated_member_use
-        dataRowHeight: 40, // Reduce the height of each row
+        columnSpacing: 10,
+        dataRowHeight: 40,
         columns: const [
           DataColumn(label: Text('Werkzeugnummer')),
           DataColumn(label: Text('Lagerplatz 1')),
@@ -325,23 +332,20 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
           DataColumn(label: Text('Lagerplatz 2')),
           DataColumn(label: Text('Belegter Platz 2')),
           DataColumn(label: Text('Lagerstatus')),
-          DataColumn(
-              label:
-                  Text('Werkzeugstatus IKO')), // New column for internalstatus
+          DataColumn(label: Text('Werkzeugstatus IKO')),
         ],
         rows: tools.map((tool) {
-          bool isInactive = tool.internalStatus.toLowerCase() !=
-              'aktiv'; // Check internalstatus
+          bool isInactive = tool.internalStatus.toLowerCase() != 'aktiv';
 
           return DataRow(
-            color: WidgetStateProperty.resolveWith<Color?>(
-                (Set<WidgetState> states) {
-              if (isInactive) {
-                return Colors.red
-                    .withOpacity(0.3); // Highlight in red for non-aktiv
-              }
-              return null; // Default color
-            }),
+            color: MaterialStateProperty.resolveWith<Color?>(
+              (Set<MaterialState> states) {
+                if (isInactive) {
+                  return Colors.red.withOpacity(0.3);
+                }
+                return null;
+              },
+            ),
             cells: [
               DataCell(_buildPulsatingCell(tool.toolNumber, isInactive),
                   onTap: () => _navigateToEditTool(tool)),
@@ -350,8 +354,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
               DataCell(Text(tool.storageLocationTwo ?? 'Ohne')),
               DataCell(Text(tool.usedSpacePitchTwo ?? 'Ohne')),
               DataCell(_buildStockStatusCell(tool)),
-              DataCell(_buildPulsatingCell(tool.internalStatus,
-                  isInactive)), // Pulsating effect for internalstatus
+              DataCell(_buildPulsatingCell(tool.internalStatus, isInactive)),
             ],
           );
         }).toList(),
@@ -375,7 +378,9 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
       },
       onEnd: () {
         Future.delayed(const Duration(milliseconds: 500), () {
-          setState(() {}); // Rebuild to create pulsating effect
+          if (mounted) {
+            setState(() {});
+          }
         });
       },
       child: Text(
@@ -386,7 +391,7 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
   }
 
   Widget _buildStockStatusCell(Tool tool) {
-    bool isOutOfStock = tool.provided; // Use the 'provided' field directly
+    bool isOutOfStock = tool.provided;
 
     return Row(
       children: [
