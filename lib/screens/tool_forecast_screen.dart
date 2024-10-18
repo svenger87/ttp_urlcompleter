@@ -83,13 +83,13 @@ class ToolForecastScreen extends StatelessWidget {
                         ),
                         DataColumn(
                           label: Text(
-                            'Längsschnittwerkzeuggruppe',
+                            'Längswzgr',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'Verpackungswerkzeuggruppe',
+                            'Verpwzgr',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
