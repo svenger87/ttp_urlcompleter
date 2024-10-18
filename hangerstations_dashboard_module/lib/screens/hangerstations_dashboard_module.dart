@@ -328,6 +328,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               tooltip: 'Waage nullen',
             ),
           ],
+          titleTextStyle: const TextStyle(
+            color: Colors.white, // Set the text color to white
+            fontSize: 20, // Optionally adjust the font size
+            fontWeight: FontWeight.bold, // Optionally adjust the font weight
+          ),
         ),
         body: FutureBuilder<Map<String, dynamic>>(
           future:
