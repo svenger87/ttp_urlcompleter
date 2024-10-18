@@ -21,6 +21,11 @@ class ToolForecastScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Werkzeugvorschau'),
         backgroundColor: const Color(0xFF104382),
+        titleTextStyle: const TextStyle(
+          color: Colors.white, // Set the text color to white
+          fontSize: 20, // Optionally adjust the font size
+          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+        ),
       ),
       body: Column(
         children: [

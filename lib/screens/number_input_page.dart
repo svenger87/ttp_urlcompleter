@@ -75,6 +75,11 @@ class _NumberInputPageState extends State<NumberInputPage> {
             },
           ),
         ],
+        titleTextStyle: const TextStyle(
+          color: Colors.white, // Set the text color to white
+          fontSize: 20, // Optionally adjust the font size
+          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+        ),
       ),
       drawer: const MainDrawer(),
       endDrawer: RecentItemsDrawer(

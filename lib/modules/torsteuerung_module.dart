@@ -120,6 +120,11 @@ class _TorsteuerungModuleState extends State<TorsteuerungModule> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF104382),
         title: const Text('Torsteuerung Module'),
+        titleTextStyle: const TextStyle(
+          color: Colors.white, // Set the text color to white
+          fontSize: 20, // Optionally adjust the font size
+          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

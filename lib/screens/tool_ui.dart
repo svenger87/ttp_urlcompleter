@@ -189,6 +189,11 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
                 _loadToolForecast, // Call the method to load the tool forecast
           ),
         ],
+        titleTextStyle: const TextStyle(
+          color: Colors.white, // Set the text color to white
+          fontSize: 20, // Optionally adjust the font size
+          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

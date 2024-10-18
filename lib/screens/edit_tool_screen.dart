@@ -208,6 +208,11 @@ class _EditToolScreenState extends State<EditToolScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF104382),
         title: Text('Werkzeug bearbeiten ${widget.tool.toolNumber}'),
+        titleTextStyle: const TextStyle(
+          color: Colors.white, // Set the text color to white
+          fontSize: 20, // Optionally adjust the font size
+          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+        ),
       ),
       body: SafeArea(
         child: _isLoading

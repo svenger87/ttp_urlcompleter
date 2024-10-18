@@ -26,6 +26,11 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF104382),
         title: const Text('PIN eingeben'),
+        titleTextStyle: const TextStyle(
+          color: Colors.white, // Set the text color to white
+          fontSize: 20, // Optionally adjust the font size
+          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

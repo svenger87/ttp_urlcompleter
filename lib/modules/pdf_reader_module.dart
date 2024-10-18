@@ -109,6 +109,11 @@ class _PDFReaderModuleState extends State<PDFReaderModule> {
             },
           ),
         ],
+        titleTextStyle: const TextStyle(
+          color: Colors.white, // Set the text color to white
+          fontSize: 20, // Optionally adjust the font size
+          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
