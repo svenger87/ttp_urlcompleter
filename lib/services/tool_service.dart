@@ -192,7 +192,7 @@ class ToolService {
         String internalstatus =
             projectData['internalstatus']?.toString() ?? 'unbekannt';
         String packagingtoolgroup =
-            projectData['packagingtoolgroup']?.toString() ?? 'unbekannt';
+            projectData['packagingtoolgroup']?.toString() ?? 'Ohne';
 
         // Set PlanStartDatum to item['PlanStartDatum'] or item['Eckstarttermin']
         final planStartDatum = item['PlanStartDatum'] ?? item['Eckstarttermin'];
