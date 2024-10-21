@@ -137,17 +137,19 @@ class ToolService {
     }
   }
 
-  // Method to fetch tool forecast
-  Future<List<Map<String, dynamic>>> fetchToolForecast() async {
+  // Method to fetch tool forecast and lastUpdated
+  Future<Map<String, dynamic>> fetchToolForecast() async {
     final forecastResponse = await http.get(Uri.parse(toolForecastApiUrl));
 
     if (forecastResponse.statusCode == 200) {
-      List<dynamic> forecastBody = json.decode(forecastResponse.body)['data'];
+      // Parse the body to extract forecast data and lastUpdated timestamp
+      Map<String, dynamic> responseBody = json.decode(forecastResponse.body);
+      List<dynamic> forecastBody = responseBody['data'];
+      String lastUpdated = responseBody['lastUpdated'] ?? '';
 
       // Fetch tools and create a map of tool numbers to provided status
       Map<String, bool> toolProvidedMap = await fetchAllToolsAsMap();
 
-      // Adjusted filtering logic
       final filteredList = forecastBody.where((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
@@ -155,59 +157,49 @@ class ToolService {
         final fertigungssteuererIsOne = (item['Fertigungssteuerer'] == '1') ||
             (workingPlan['Fertigungssteuerer'] == '1');
 
-        // Extract Equipment number from workingPlan or item
-        String? equipmentNumber =
-            (workingPlan['Equipment'] ?? item['Equipment'])?.toString().trim();
-
-        // Check provided status from the tools map
-        bool providedStatus = false;
-        if (equipmentNumber != null &&
-            toolProvidedMap.containsKey(equipmentNumber)) {
-          providedStatus = toolProvidedMap[equipmentNumber]!;
-        }
-
         // Extract Prioritaet from item or workingPlan, and trim whitespace
         final prioritaetStr =
             (item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? '0')
                 .toString()
                 .trim();
-
-        // Parse Prioritaet and ensure it's greater than or equal to 2
         final int? prioritaet = int.tryParse(prioritaetStr);
         final bool prioritaetValid = prioritaet != null && prioritaet <= 2;
 
-        // Include tools where Fertigungssteuerer is "1", provided is false, and Prioritaet >= 2
-        return fertigungssteuererIsOne && !providedStatus && prioritaetValid;
+        // Include tools where Fertigungssteuerer is "1" and Prioritaet <= 2
+        return fertigungssteuererIsOne && prioritaetValid;
       }).map((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
         // Extract projectData fields
         final projectData = item['projectData'] ?? {};
-
-        // Extract lengthcuttoolgroup and internalstatus
         String lengthcuttoolgroup =
-            projectData['lengthcuttoolgroup']?.toString() ?? 'N/A';
+            projectData['lengthcuttoolgroup']?.toString() ?? 'Ohne';
         String internalstatus =
-            projectData['internalstatus']?.toString() ?? 'N/A';
+            projectData['internalstatus']?.toString() ?? 'unbekannt';
+        String packagingtoolgroup =
+            projectData['packagingtoolgroup']?.toString() ?? 'Ohne';
 
-        // Set PlanStartDatum to item['PlanStartDatum'] or item['Eckstarttermin']
-        final planStartDatum = item['PlanStartDatum'] ?? item['Eckstarttermin'];
+        // Include the provided status in the returned map
+        String? equipmentNumber =
+            (workingPlan['Equipment'] ?? item['Equipment'])?.toString().trim();
+        bool providedStatus = toolProvidedMap[equipmentNumber] ?? false;
 
         return {
-          'PlanStartDatum': planStartDatum ?? 'N/A',
+          'PlanStartDatum':
+              item['PlanStartDatum'] ?? item['Eckstarttermin'] ?? 'N/A',
           'Hauptartikel': item['Hauptartikel'] ?? 'N/A',
-          'Auftragsnummer': item['Auftragsnummer'] ?? 'N/A',
           'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
           'Arbeitsplatz':
               workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
           'lengthcuttoolgroup': lengthcuttoolgroup,
+          'packagingtoolgroup': packagingtoolgroup,
           'internalstatus': internalstatus,
-          'Prioritaet':
-              item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? 'N/A',
+          'provided': providedStatus
         };
       }).toList();
 
-      return filteredList;
+      // Return both filteredList and lastUpdated timestamp
+      return {'data': filteredList, 'lastUpdated': lastUpdated};
     } else {
       throw Exception('Failed to load tool forecast from API');
     }

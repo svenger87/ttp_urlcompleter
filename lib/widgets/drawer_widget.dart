@@ -222,11 +222,13 @@ class MainDrawer extends StatelessWidget {
 class RecentItemsDrawer extends StatelessWidget {
   final List<String> recentItems;
   final void Function() clearRecentItems;
+  final String wim;
 
   const RecentItemsDrawer({
     super.key,
     required this.recentItems,
     required this.clearRecentItems,
+    required this.wim,
   });
 
   @override

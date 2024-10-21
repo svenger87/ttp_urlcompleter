@@ -1,25 +1,36 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: deprecated_member_use
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:ttp_app/models/tool.dart';
 import '../services/tool_service.dart';
 import 'edit_tool_screen.dart';
 
 class ToolForecastScreen extends StatelessWidget {
   final List<Map<String, dynamic>> forecastData;
-  final ToolService _toolService = ToolService(); // Initialize the tool service
+  final String lastUpdated; // Add lastUpdated to the screen
+
+  final ToolService _toolService = ToolService();
   final ScrollController _horizontalController = ScrollController();
   final ScrollController _verticalController =
       ScrollController(); // For vertical scrolling
 
-  ToolForecastScreen({super.key, required this.forecastData});
+  ToolForecastScreen({
+    super.key,
+    required this.forecastData,
+    required this.lastUpdated, // Accept lastUpdated as a required argument
+  }) {
+    if (kDebugMode) {
+      print('Last Updated passed into ToolForecastScreen: $lastUpdated');
+    } // Debug print
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Werkzeugvorschau'),
+        title: Text('Werkzeugvorschau (Letzte Aktualisierung: $lastUpdated)'),
         backgroundColor: const Color(0xFF104382),
         titleTextStyle: const TextStyle(
           color: Colors.white, // Set the text color to white
@@ -29,35 +40,18 @@ class ToolForecastScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // Hint message
-          Container(
-            padding: const EdgeInsets.all(8.0),
-            color: Colors.yellow[100],
-            child: const Text(
-              'Wenn das Werkzeug den Status "Ausgelagert" hat erscheint dieses NICHT mehr in der Tabelle!',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
           Expanded(
             child: Scrollbar(
-              controller:
-                  _verticalController, // Attach controller for vertical scrolling
-              thumbVisibility:
-                  true, // Use thumbVisibility instead of isAlwaysShown
+              controller: _verticalController,
+              thumbVisibility: true,
               child: SingleChildScrollView(
-                controller:
-                    _verticalController, // Vertical scrolling controller
+                controller: _verticalController,
                 child: Scrollbar(
-                  controller:
-                      _horizontalController, // Attach controller for horizontal scrolling
-                  thumbVisibility:
-                      true, // Use thumbVisibility instead of isAlwaysShown
+                  controller: _horizontalController,
+                  thumbVisibility: true,
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    controller: _horizontalController, // Horizontal scrolling
+                    controller: _horizontalController,
                     child: DataTable(
                       showCheckboxColumn: false,
                       columnSpacing: 20,
@@ -70,13 +64,13 @@ class ToolForecastScreen extends StatelessWidget {
                         ),
                         DataColumn(
                           label: Text(
-                            'Hauptartikel',
+                            'Bereitstellung',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'Auftragsnummer',
+                            'Hauptartikel',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -94,7 +88,13 @@ class ToolForecastScreen extends StatelessWidget {
                         ),
                         DataColumn(
                           label: Text(
-                            'Längsschnittwerkzeuggruppe',
+                            'Längswzgr',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Verpwzgr',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -106,23 +106,26 @@ class ToolForecastScreen extends StatelessWidget {
                         ),
                       ],
                       rows: forecastData.map((tool) {
-                        String lengthcuttoolgroup =
-                            tool['lengthcuttoolgroup']?.toString() ?? 'N/A';
+                        String lengthcuttoolgroup = (tool['lengthcuttoolgroup']
+                                ?.toString()
+                                .split(' ')[0] ??
+                            'Ohne');
+                        String packagingtoolgroup = (tool['packagingtoolgroup']
+                                ?.toString()
+                                .split(' ')[0] ??
+                            'Ohne');
 
-                        bool highlightRow = true;
-                        if (lengthcuttoolgroup.startsWith('Gr.1') ||
-                            lengthcuttoolgroup == 'N/A') {
-                          highlightRow = false;
-                        }
+                        bool highlightRow = !(lengthcuttoolgroup == 'Ohne' ||
+                            lengthcuttoolgroup.startsWith('Gr.1'));
 
-                        bool isInactive = tool['internalstatus'] !=
-                            'aktiv'; // Check internalstatus
+                        bool isInactive = tool['internalstatus'] != 'aktiv';
+                        bool isOutOfStock = tool['provided'] ?? false;
 
                         return _buildPulsatingRow(
                             tool, highlightRow, isInactive, [
                           DataCell(Text(_formatDate(tool['PlanStartDatum']))),
+                          DataCell(_buildStockStatusCell(isOutOfStock)),
                           DataCell(Text(tool['Hauptartikel'] ?? 'N/A')),
-                          DataCell(Text(tool['Auftragsnummer'] ?? 'N/A')),
                           DataCell(
                             Text(tool['Equipment'] ?? 'N/A'),
                             onTap: () {
@@ -134,6 +137,7 @@ class ToolForecastScreen extends StatelessWidget {
                           ),
                           DataCell(Text(tool['Arbeitsplatz'] ?? 'N/A')),
                           DataCell(Text(lengthcuttoolgroup)),
+                          DataCell(Text(packagingtoolgroup)),
                           DataCell(Text(tool['internalstatus'] ?? 'N/A')),
                         ]);
                       }).toList(),
@@ -148,23 +152,21 @@ class ToolForecastScreen extends StatelessWidget {
     );
   }
 
-  // Method to handle the pulsating effect for inactive tools
   DataRow _buildPulsatingRow(Map<String, dynamic> tool, bool highlightRow,
       bool isInactive, List<DataCell> cells) {
     if (!isInactive) {
       return DataRow(
-        color:
-            WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+        color: MaterialStateProperty.resolveWith<Color?>(
+            (Set<MaterialState> states) {
           if (highlightRow) {
             return Colors.orange.withOpacity(0.3); // Highlight in orange
           }
-          return null; // Default color
+          return null;
         }),
         cells: cells,
       );
     }
 
-    // If inactive, apply the pulsating effect and preserve onTap handlers
     return DataRow(
       cells: cells.map((cell) {
         return DataCell(
@@ -179,32 +181,30 @@ class ToolForecastScreen extends StatelessWidget {
             },
             onEnd: () {
               Future.delayed(const Duration(milliseconds: 500), () {
-                // Rebuild to create pulsating effect
                 _verticalController.jumpTo(_verticalController.offset);
               });
             },
           ),
-          onTap: cell.onTap, // Preserve the onTap handler
+          onTap: cell.onTap,
         );
       }).toList(),
-      color: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+      color: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
         return Colors.red.withOpacity(0.3); // Highlight in red for inactive
       }),
     );
   }
 
-  // Format the date string to 'yyyy-MM-dd'
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'N/A';
     try {
       final DateTime date = DateTime.parse(dateString);
-      return DateFormat('yyyy-MM-dd').format(date);
+      return DateFormat('dd.MM.yyyy').format(date);
     } catch (e) {
       return 'N/A';
     }
   }
 
-  // Method to navigate to the EditToolScreen with the selected tool number
   void _navigateToEditTool(
       BuildContext context, String? equipmentNumber) async {
     if (equipmentNumber == null ||
@@ -213,11 +213,8 @@ class ToolForecastScreen extends StatelessWidget {
 
     try {
       _showLoadingDialog(context);
-
-      // Fetch the full tool data for editing
       final Tool? tool = await _toolService.fetchToolByNumber(equipmentNumber);
-
-      Navigator.pop(context); // Close the loading dialog
+      Navigator.pop(context);
 
       if (tool != null) {
         Navigator.push(
@@ -260,6 +257,25 @@ class ToolForecastScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStockStatusCell(bool isOutOfStock) {
+    return Row(
+      children: [
+        Icon(
+          isOutOfStock ? Icons.cancel : Icons.check_circle,
+          color: isOutOfStock ? Colors.red : Colors.green,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          isOutOfStock ? 'Ausgelagert' : 'Eingelagert',
+          style: TextStyle(
+            color: isOutOfStock ? Colors.red : Colors.green,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

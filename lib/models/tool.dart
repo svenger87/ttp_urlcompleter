@@ -7,7 +7,8 @@ class Tool {
   final String? usedSpacePitchTwo;
   final String storageStatus;
   final bool provided;
-  final String internalStatus; // Add the internalstatus field
+  final String internalStatus;
+  final String packagingtoolgroup;
 
   Tool({
     required this.toolNumber,
@@ -18,7 +19,8 @@ class Tool {
     this.usedSpacePitchTwo,
     required this.storageStatus,
     required this.provided,
-    required this.internalStatus, // Initialize internalStatus
+    required this.internalStatus,
+    required this.packagingtoolgroup,
   });
 
   factory Tool.fromJson(Map<String, dynamic> json) {
@@ -34,7 +36,8 @@ class Tool {
       storageStatus: json['storage_status'] ?? 'Out of stock',
       provided: json['provided'] ?? false,
       internalStatus: json['internalstatus'] ??
-          'Unknown', // Parse the internalstatus from the JSON
+          'unbekannt', // Parse the internalstatus from the JSON
+      packagingtoolgroup: json['packagingtoolgroup'] ?? 'Ohne',
     );
   }
 
@@ -48,7 +51,7 @@ class Tool {
       'used_space_pitch_two': usedSpacePitchTwo,
       'storage_status': storageStatus,
       'provided': provided,
-      'internalstatus': internalStatus, // Add internalstatus to the JSON output
+      'internalstatus': internalStatus,
     };
   }
 }

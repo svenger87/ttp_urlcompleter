@@ -39,11 +39,17 @@ class _NumberInputPageState extends State<NumberInputPage> {
   }
 
   void _loadRecentItems() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedItems = prefs.getStringList('recentItems') ?? [];
-    setState(() {
-      recentItems = savedItems;
-    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedItems = prefs.getStringList('recentItems') ?? [];
+      setState(() {
+        recentItems = savedItems;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading recent items: $e');
+      }
+    }
   }
 
   @override
@@ -85,6 +91,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
       endDrawer: RecentItemsDrawer(
         recentItems: recentItems,
         clearRecentItems: _clearRecentItems,
+        wim: wim,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -267,6 +274,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
 
         if (await canLaunch(url)) {
           _navigateToUrl(url);
+          _addRecentItem(url);
         } else {
           if (kDebugMode) {
             print('Could not launch URL: $url');
@@ -308,7 +316,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
     }
   }
 
-  void _addRecentItem(String item) {
+  void _addRecentItem(String item) async {
     final Uri uri = Uri.parse(item);
     final String profileNumber = uri.pathSegments.last;
 
@@ -321,12 +329,12 @@ class _NumberInputPageState extends State<NumberInputPage> {
       }
     });
 
-    _saveRecentItems();
+    await _saveRecentItems();
   }
 
-  void _saveRecentItems() async {
+  Future<void> _saveRecentItems() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setStringList('recentItems', recentItems);
+    await prefs.setStringList('recentItems', recentItems);
   }
 
   void _clearRecentItems() {
