@@ -80,6 +80,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
       endDrawer: RecentItemsDrawer(
         recentItems: recentItems,
         clearRecentItems: _clearRecentItems,
+        wim: wim,
       ),
       body: SingleChildScrollView(
         child: Column(
