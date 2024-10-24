@@ -286,11 +286,11 @@ class ApiService {
 
   // Method to add comment to a task
   static Future<void> addCommentToTask({
-    required int projectId,
     required int taskId,
     required Map<String, dynamic> commentData,
   }) async {
-    final url = '$activeCollabApiUrl/api/v1/comments/project/$projectId';
+    final url =
+        '$activeCollabApiUrl/api/v1/comments/task/$taskId'; // Correct endpoint
 
     final body = jsonEncode(commentData);
 
@@ -302,8 +302,16 @@ class ApiService {
       body: body,
     );
 
-    if (response.statusCode == 201) {
-      // Comment added successfully
+    if (kDebugMode) {
+      print('Add Comment to Task response status: ${response.statusCode}');
+      print('Add Comment to Task response body: ${response.body}');
+    }
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      // Optionally handle successful response
+      if (kDebugMode) {
+        print('Comment added successfully.');
+      }
     } else {
       throw Exception('Failed to add comment: ${response.body}');
     }
@@ -314,7 +322,7 @@ class ApiService {
     required int projectId,
     required Map<String, dynamic> commentData,
   }) async {
-    final url = '$activeCollabApiUrl/projects/$projectId/comments';
+    final url = '$activeCollabApiUrl/api/v1/comments/projects/$projectId';
 
     final body = jsonEncode(commentData);
 

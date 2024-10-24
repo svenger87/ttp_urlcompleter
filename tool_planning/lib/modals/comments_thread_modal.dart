@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/foundation.dart'; // Ensure this import is present
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
@@ -65,7 +63,6 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
       // Add comment via API
       if (widget.taskId != null) {
         await ApiService.addCommentToTask(
-          projectId: widget.projectId,
           taskId: widget.taskId!,
           commentData: commentData,
         );
