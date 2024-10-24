@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   hangerstations_dashboard_module:
     path: ./hangerstations_dashboard_module
+  tool_planning:
+    path: ./tool_planning
   url_launcher: ^6.1.12
   flutter_launcher_icons: ^0.14.1
   qr_code_scanner: ^1.0.1

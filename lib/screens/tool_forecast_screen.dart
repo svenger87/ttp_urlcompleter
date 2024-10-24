@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:ttp_app/models/tool.dart';
@@ -18,12 +17,12 @@ class ToolForecastScreen extends StatefulWidget {
   });
 
   @override
+  // ignore: library_private_types_in_public_api
   _ToolForecastScreenState createState() => _ToolForecastScreenState();
 }
 
 class _ToolForecastScreenState extends State<ToolForecastScreen> {
   final ToolService _toolService = ToolService();
-  final ScrollController _horizontalController = ScrollController();
   final ScrollController _verticalController = ScrollController();
 
   bool _isProvidedCollapsed = true;
