@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../screens/loading_indicator.dart';
 import '../modules/webview_module.dart';
+import '../screens/login_screen.dart';
+import '../modals/comments_thread_modal.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final int projectId;
@@ -10,7 +12,6 @@ class ProjectDetailScreen extends StatefulWidget {
   const ProjectDetailScreen({super.key, required this.projectId});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ProjectDetailScreenState createState() => _ProjectDetailScreenState();
 }
 
@@ -36,6 +37,10 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         projectDetails = details;
         isLoading = false;
       });
+
+      if (kDebugMode) {
+        print('Fetched Project Details: $projectDetails');
+      }
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -43,6 +48,95 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       if (kDebugMode) {
         print('Error fetching project details: $e');
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Laden der Projektdetails: $e')),
+      );
+    }
+  }
+
+  Future<void> _openCommentsThread() async {
+    try {
+      // Check if the user is authenticated
+      String? sessionToken = await ApiService.getSessionToken();
+
+      if (kDebugMode) {
+        print('Session token: \$sessionToken');
+      }
+
+      if (sessionToken == null) {
+        // If not authenticated, navigate to LoginScreen
+        bool? loginSuccess = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const LoginScreen(),
+          ),
+        );
+
+        if (kDebugMode) {
+          print('Login success: \$loginSuccess');
+        }
+
+        if (loginSuccess != true) {
+          // If login failed or was cancelled, do nothing
+          return;
+        }
+      }
+
+      // User is authenticated, fetch and display comments
+      await _fetchAndShowComments();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error in _openCommentsThread: \$e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Fehler beim Öffnen der Kommentaransicht')),
+      );
+    }
+  }
+
+  Future<void> _fetchAndShowComments() async {
+    final projectId = projectDetails?['salamanderacprojectnumber'] as String?;
+    final taskIdString = projectDetails?['salamanderactaskid'] as String?;
+    final taskId = taskIdString != null ? int.tryParse(taskIdString) : null;
+
+    if (kDebugMode) {
+      print('Project ID: \$projectId, Task ID: \$taskId');
+    }
+
+    if (taskId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task-ID fehlt')),
+      );
+      return;
+    }
+
+    try {
+      List<Map<String, dynamic>> comments =
+          await ApiService.fetchCommentsForTask(taskId: taskId);
+
+      if (kDebugMode) {
+        print('Fetched comments: \$comments');
+      }
+
+      // Open the comments thread modal
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return CommentsThreadModal(
+            comments: comments,
+            projectId: int.parse(projectId!),
+            taskId: taskId,
+          );
+        },
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching comments: \$e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fehler beim Laden der Kommentare')),
+      );
     }
   }
 
@@ -89,7 +183,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No project details available for link generation'),
+          content: Text('Keine Projektdetails verfügbar für Link-Generierung'),
         ),
       );
     }
@@ -99,49 +193,54 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(projectDetails?['name'] ?? 'Project Details'),
+        title: Text(projectDetails?['name'] ?? 'Projektdetails'),
       ),
       body: isLoading
           ? const LoadingIndicator()
           : projectDetails == null
-              ? const Center(child: Text('No details available'))
+              ? const Center(child: Text('Keine Details verfügbar'))
               : Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Name: ${projectDetails?['name'] ?? 'N/A'}',
-                          style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 10),
-                      Text('Number: ${projectDetails?['number'] ?? 'N/A'}'),
-                      const SizedBox(height: 10),
-                      Text(
-                          'Priority: ${projectDetails?['priority_order'] ?? 'Not Set'}'),
-                      const SizedBox(height: 10),
-                      Text(
-                          'Status: ${projectDetails?['internalstatus'] ?? 'N/A'}'),
-                      const SizedBox(height: 10),
-                      Text(
-                          'Description: ${projectDetails?['description'] ?? 'N/A'}'),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _openWebView,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/ac.png', // Path to your asset image
-                              height:
-                                  20, // Adjust the height according to your needs
-                            ),
-                            const SizedBox(
-                                width:
-                                    8), // Add some space between the icon and text
-                            const Text('AC Projekt öffnen'),
-                          ],
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Name: ${projectDetails?['name'] ?? 'N/A'}',
+                            style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 10),
+                        Text('Nummer: ${projectDetails?['number'] ?? 'N/A'}'),
+                        const SizedBox(height: 10),
+                        Text(
+                            'Priorität: ${projectDetails?['priority_order'] ?? 'Nicht gesetzt'}'),
+                        const SizedBox(height: 10),
+                        Text(
+                            'Status: ${projectDetails?['internalstatus'] ?? 'N/A'}'),
+                        const SizedBox(height: 10),
+                        Text(
+                            'Beschreibung: ${projectDetails?['description'] ?? 'N/A'}'),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: _openWebView,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'assets/images/ac.png', // Path to your asset image
+                                height: 20, // Adjust the height as needed
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('AC Projekt öffnen'),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: _openCommentsThread,
+                          icon: const Icon(Icons.forum),
+                          label: const Text('Kommentare anzeigen'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
     );

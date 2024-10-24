@@ -33,6 +33,10 @@ dependencies:
   url_launcher: ^6.3.1
   drag_and_drop_lists: ^0.4.1
   appflowy_board: ^0.1.2
+  flutter_secure_storage: ^9.2.2
+  file_picker: ^8.1.3
+  mime: ^2.0.0
+  http_parser: ^4.0.2
 
 dev_dependencies:
   flutter_test:

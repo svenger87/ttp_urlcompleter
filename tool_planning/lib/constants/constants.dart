@@ -1,3 +1,4 @@
+// constants.dart
 import 'dart:ui';
 
 const String primaryApiUrl = 'http://wim-solution.sip.local:3004/projects';
@@ -7,3 +8,7 @@ const Duration refreshInterval =
     Duration(minutes: 5); // Regular refresh interval
 const String updatePriorityUrl =
     'http://wim-solution.sip.local:3004/update-priority';
+
+// ActiveCollab API constants
+const String activeCollabApiUrl = 'https://olymp.sip.de/';
+const String activeCollabApiToken = 'your_service_account_api_token';

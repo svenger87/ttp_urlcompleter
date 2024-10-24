@@ -99,7 +99,15 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
       });
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching projects: $e');
+        if (kDebugMode) {
+          if (kDebugMode) {
+            if (kDebugMode) {
+              if (kDebugMode) {
+                print('Error fetching projects: $e');
+              }
+            }
+          }
+        }
       }
       setState(() {
         isLoading = false;
