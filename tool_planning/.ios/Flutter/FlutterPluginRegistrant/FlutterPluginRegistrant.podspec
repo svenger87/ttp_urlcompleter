@@ -21,7 +21,9 @@ Depends on all your plugins, and provides a function to register them.
   s.dependency 'Flutter'
   s.dependency 'file_picker'
   s.dependency 'flutter_inappwebview_ios'
+  s.dependency 'flutter_pdfview'
   s.dependency 'flutter_secure_storage'
+  s.dependency 'image_picker_ios'
   s.dependency 'path_provider_foundation'
   s.dependency 'url_launcher_ios'
 end

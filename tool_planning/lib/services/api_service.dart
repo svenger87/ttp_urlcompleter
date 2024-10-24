@@ -1,5 +1,7 @@
 // lib/services/api_service.dart
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -170,7 +172,7 @@ class ApiService {
     return await _storage.read(key: 'activeCollabSessionToken');
   }
 
-// Update headers to use session token
+  // Update headers to use session token
   static Future<Map<String, String>> _getHeaders() async {
     String? sessionToken = await getSessionToken();
 
@@ -240,47 +242,58 @@ class ApiService {
     }
   }
 
-  // Upload attachment and get attachment ID
-  static Future<int> uploadAttachment(String filePath) async {
-    final url =
-        '$activeCollabApiUrl/attachments/upload'; // Ensure correct endpoint
+  // Upload attachment and get attachment code
+  static Future<String?> uploadAttachment(String filePath) async {
+    final url = '$activeCollabApiUrl/api/v1/upload-files';
 
     String? sessionToken = await getSessionToken();
-
     if (sessionToken == null) {
       throw Exception('User not authenticated');
     }
 
-    final mimeTypeData =
-        lookupMimeType(filePath)?.split('/') ?? ['application', 'octet-stream'];
+    final mimeType = lookupMimeType(filePath);
+    if (mimeType == null) {
+      throw Exception('Could not determine MIME type of file: $filePath');
+    }
+    final mimeTypeData = mimeType.split('/');
 
     final request = http.MultipartRequest('POST', Uri.parse(url));
     request.headers.addAll({
       'X-Angie-AuthApiToken': sessionToken,
+      'Content-Type': 'multipart/form-data',
     });
 
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'attachment',
-        filePath,
-        contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
-      ),
-    );
+    try {
+      final file = File(filePath);
+      request.files.add(
+        http.MultipartFile(
+          'file', // Match the field name with the server expectations
+          file.readAsBytes().asStream(),
+          file.lengthSync(),
+          filename: filePath.split("/").last,
+          contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+        ),
+      );
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-    if (kDebugMode) {
-      print('Upload attachment response status: ${response.statusCode}');
-      print('Upload attachment response body: ${response.body}');
-    }
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final attachmentId = data['id'];
-      return attachmentId;
-    } else {
-      throw Exception('Failed to upload attachment: ${response.body}');
+        // If response body contains the code
+        if (data is List && data.isNotEmpty) {
+          final attachmentCode = data[0]['code'];
+          return attachmentCode;
+        } else {
+          throw Exception('No files were uploaded. The response was empty.');
+        }
+      } else {
+        throw Exception(
+            'Failed to upload attachment: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error during attachment upload: $e');
     }
   }
 
