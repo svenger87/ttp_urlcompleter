@@ -22,7 +22,6 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
     'Einfahren': []
   };
 
-  // Translation maps
   Map<String, String> categoryTranslationMap = {
     'New Tool': 'Neuwerkzeuge',
     'Tool Optimization': 'Optimierungen',
@@ -110,29 +109,37 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
     }
   }
 
-  // Start automatic scrolling if drag is near screen edges
+  // Enhanced scroll function to auto-scroll based on drag position
   void _onDragUpdate(DragUpdateDetails details) {
-    const edgePadding = 50.0;
-    const maxScrollSpeed = 10.0;
+    const edgePadding = 60.0;
+    const maxScrollSpeed = 20.0;
 
-    if (_autoScrollTimer == null || !_autoScrollTimer!.isActive) {
-      _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
-        if (details.globalPosition.dx < edgePadding) {
-          _scrollController.jumpTo(
-            _scrollController.offset - maxScrollSpeed,
-          );
-        } else if (details.globalPosition.dx >
-            MediaQuery.of(context).size.width - edgePadding) {
-          _scrollController.jumpTo(
-            _scrollController.offset + maxScrollSpeed,
-          );
-        }
+    // Calculate scroll speed based on how close to the edge we are
+    double scrollSpeed = 0;
+    if (details.globalPosition.dx < edgePadding) {
+      scrollSpeed =
+          -maxScrollSpeed * (1 - (details.globalPosition.dx / edgePadding));
+    } else if (details.globalPosition.dx >
+        MediaQuery.of(context).size.width - edgePadding) {
+      scrollSpeed = maxScrollSpeed *
+          (1 -
+              ((MediaQuery.of(context).size.width - details.globalPosition.dx) /
+                  edgePadding));
+    }
+
+    if (scrollSpeed != 0) {
+      _autoScrollTimer ??=
+          Timer.periodic(const Duration(milliseconds: 20), (_) {
+        _scrollController.jumpTo(
+          _scrollController.offset + scrollSpeed,
+        );
       });
     }
   }
 
   void _onDragEnd(DraggableDetails details) {
     _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
   }
 
   @override
