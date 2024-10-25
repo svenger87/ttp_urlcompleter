@@ -1,6 +1,7 @@
 const String ikOfficeLineConfig =
     'http://ikoffice.sip.local:8080/ikoffice/root/projektverwaltung/linienkonfiguration';
-const String ikOfficePZE = 'http://ikoffice.sip.local:8080/ikoffice/root/';
+const String ikOfficePZE =
+    'http://ikoffice.sip.local:8080/ikoffice/root/login/bde';
 const String prodPlan1w =
     'http://ttp-connect.sip.local/schedule/ZPPLAN.pdf#view=FitH';
 const String prodPlan3w =

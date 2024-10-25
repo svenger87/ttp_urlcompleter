@@ -195,7 +195,7 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
                       bool isActive = candidateData.isNotEmpty;
 
                       return AnimatedContainer(
-                        duration: Duration(milliseconds: 200),
+                        duration: const Duration(milliseconds: 200),
                         color: isActive
                             ? Colors.blue.withOpacity(0.5)
                             : Colors.transparent,
@@ -231,13 +231,13 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
                           builder: (context, candidateData, rejectedData) {
                             bool isActive = candidateData.isNotEmpty;
                             return AnimatedContainer(
-                              duration: Duration(milliseconds: 200),
+                              duration: const Duration(milliseconds: 200),
                               height: isActive ? 60 : 20,
                               color: isActive
                                   ? Colors.blue.withOpacity(0.5)
                                   : Colors.transparent,
                               child: isActive
-                                  ? Center(
+                                  ? const Center(
                                       child: Text('Hier ablegen',
                                           style:
                                               TextStyle(color: Colors.white)),
@@ -263,13 +263,13 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
                             bool isActive = candidateData.isNotEmpty;
 
                             return AnimatedContainer(
-                              duration: Duration(milliseconds: 200),
+                              duration: const Duration(milliseconds: 200),
                               height: isActive ? 60 : 20,
                               color: isActive
                                   ? Colors.blue.withOpacity(0.5)
                                   : Colors.transparent,
                               child: isActive
-                                  ? Center(
+                                  ? const Center(
                                       child: Text('Hier ablegen',
                                           style:
                                               TextStyle(color: Colors.white)),
@@ -300,13 +300,13 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
                               builder: (context, candidateData, rejectedData) {
                                 bool isActive = candidateData.isNotEmpty;
                                 return AnimatedContainer(
-                                  duration: Duration(milliseconds: 200),
+                                  duration: const Duration(milliseconds: 200),
                                   height: isActive ? 60 : 20,
                                   color: isActive
                                       ? Colors.blue.withOpacity(0.5)
                                       : Colors.transparent,
                                   child: isActive
-                                      ? Center(
+                                      ? const Center(
                                           child: Text('Hier ablegen',
                                               style: TextStyle(
                                                   color: Colors.white)),

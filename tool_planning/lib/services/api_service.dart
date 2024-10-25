@@ -1,7 +1,6 @@
 // lib/services/api_service.dart
 
 import 'dart:io';
-
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -9,9 +8,10 @@ import '../constants/constants.dart'; // Ensure this contains activeCollabApiUrl
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:path_provider/path_provider.dart';
 
 class ApiService {
-  static final _storage = FlutterSecureStorage();
+  static const _storage = FlutterSecureStorage();
 
   // Fetch primary projects with initial data
   static Future<List<Map<String, dynamic>>> fetchPrimaryProjects() async {
@@ -126,44 +126,51 @@ class ApiService {
     required String username,
     required String password,
   }) async {
-    final url =
-        '$activeCollabApiUrl/issue-token'; // Ensure this is the correct endpoint
-
+    const url = '$activeCollabApiUrl/api/v1/issue-token';
     final body = jsonEncode({
-      'email': username, // Adjust based on Active Collab's requirements
+      'username': username,
       'password': password,
-      'client_name': 'ttpApp', // Replace with your app's name
-      'client_vendor': 'ttp Papenburg Gmbh', // Replace with your company's name
+      'client_name': 'ttpApp',
+      'client_vendor': 'ttp Papenburg Gmbh',
     });
 
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
+    try {
+      if (kDebugMode) {
+        print('Attempting login to Active Collab with URL: $url');
+        print('Request body: $body');
+      }
 
-    if (kDebugMode) {
-      print('Authentication response status: ${response.statusCode}');
-      print('Authentication response body: ${response.body}');
-    }
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final sessionToken = data['token'];
+      if (kDebugMode) {
+        print('Response Status Code: ${response.statusCode}');
+        print('Response Headers: ${response.headers}');
+        print('Response Body: ${response.body}');
+      }
 
-      if (sessionToken != null) {
-        // Store the session token securely
-        await _storage.write(
-            key: 'activeCollabSessionToken', value: sessionToken);
-        if (kDebugMode) {
-          print('Session Token: $sessionToken');
+      if (response.headers['content-type']?.contains('application/json') ==
+          true) {
+        final data = jsonDecode(response.body);
+        if (data['is_ok'] == true && data['token'] != null) {
+          final sessionToken = data['token'];
+          await _storage.write(
+              key: 'activeCollabSessionToken', value: sessionToken);
+          if (kDebugMode) print('Session Token saved: $sessionToken');
+        } else {
+          throw Exception(
+              'Login failed: ${data['message'] ?? 'Unknown error'}');
         }
       } else {
-        throw Exception('Session token not found in response');
+        throw Exception(
+            'Expected JSON but got different content. Response body: ${response.body}');
       }
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Failed to authenticate');
+    } catch (e) {
+      if (kDebugMode) print('Login error: $e');
+      throw Exception('Failed to authenticate: $e');
     }
   }
 
@@ -244,7 +251,7 @@ class ApiService {
 
   // Upload attachment and get attachment code
   static Future<String?> uploadAttachment(String filePath) async {
-    final url = '$activeCollabApiUrl/api/v1/upload-files';
+    const url = '$activeCollabApiUrl/api/v1/upload-files';
 
     String? sessionToken = await getSessionToken();
     if (sessionToken == null) {
@@ -260,7 +267,7 @@ class ApiService {
     final request = http.MultipartRequest('POST', Uri.parse(url));
     request.headers.addAll({
       'X-Angie-AuthApiToken': sessionToken,
-      'Content-Type': 'multipart/form-data',
+      // 'Content-Type': 'multipart/form-data', // Not needed; MultipartRequest sets it automatically
     });
 
     try {
@@ -349,8 +356,86 @@ class ApiService {
 
     if (response.statusCode == 201) {
       // Comment added successfully
+      if (kDebugMode) {
+        print('Comment added successfully to project.');
+      }
     } else {
       throw Exception('Failed to add comment: ${response.body}');
+    }
+  }
+
+  /// General function to download any file
+  static Future<File> downloadFile(String downloadUrl, String fileName) async {
+    try {
+      if (kDebugMode) {
+        print('Starting download from URL: $downloadUrl');
+      }
+
+      final headers = await _getDownloadHeaders();
+
+      final response = await http.get(Uri.parse(downloadUrl), headers: headers);
+
+      if (response.statusCode == 200) {
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/$fileName');
+
+        await file.writeAsBytes(response.bodyBytes, flush: true);
+        if (kDebugMode) {
+          print('File downloaded and saved to: ${file.path}');
+        }
+
+        return file;
+      } else {
+        if (kDebugMode) {
+          print('Failed to download file. Status: ${response.statusCode}');
+          print('Response body: ${response.body}');
+        }
+        throw Exception(
+            'Failed to download file. Status code: ${response.statusCode}. Body: ${response.body}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error downloading file: $e');
+      }
+      throw Exception('Error downloading file: $e');
+    }
+  }
+
+  /// Function to get headers for download if authentication is required
+  static Future<Map<String, String>> _getDownloadHeaders() async {
+    String? sessionToken = await getSessionToken();
+
+    if (sessionToken == null) {
+      throw Exception('User not authenticated');
+    }
+
+    return {
+      'X-Angie-AuthApiToken': sessionToken,
+      // Add other headers if required by your API
+    };
+  }
+
+// Fetch all files for a specific project, gathering download URLs
+  static Future<List<Map<String, dynamic>>> fetchProjectFiles(
+      int projectId) async {
+    final url = '$activeCollabApiUrl/api/v1/projects/$projectId/files';
+    final headers = await _getHeaders();
+
+    final response = await http.get(Uri.parse(url), headers: headers);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      List<Map<String, dynamic>> files =
+          List<Map<String, dynamic>>.from(data['files']);
+      return files.map((file) {
+        return {
+          'id': file['id'],
+          'name': file['name'],
+          'download_url': file['download_url'],
+        };
+      }).toList();
+    } else {
+      throw Exception('Failed to retrieve project files');
     }
   }
 }

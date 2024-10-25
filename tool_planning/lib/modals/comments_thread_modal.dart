@@ -1,3 +1,7 @@
+// lib/modals/comments_thread_modal.dart
+
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/foundation.dart'; // Ensure this import is present
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,9 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'package:http/http.dart' as http;
+import 'dart:io'; // Kept because it's used for File operations
 
 class CommentsThreadModal extends StatefulWidget {
   final List<Map<String, dynamic>> comments;
@@ -59,7 +61,9 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
       // Upload attachments if any
       for (var file in selectedFiles) {
         if (file.path != null) {
-          // Upload each file and get the file code (make it nullable String?)
+          if (kDebugMode) {
+            print('Uploading file: ${file.name}');
+          }
           String? uploadedFileCode =
               await ApiService.uploadAttachment(file.path!);
 
@@ -74,16 +78,19 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
         }
       }
 
-      print('Uploaded File Codes: $uploadedFileCodes');
+      if (kDebugMode) {
+        print('Uploaded File Codes: $uploadedFileCodes');
+      }
 
       // Prepare the comment data with the uploaded file codes
       Map<String, dynamic> commentData = {
         'body': commentText,
-        'attach_uploaded_files':
-            uploadedFileCodes, // List of uploaded file codes
+        'attach_uploaded_files': uploadedFileCodes,
       };
 
-      print('Comment Data: $commentData');
+      if (kDebugMode) {
+        print('Comment Data: $commentData');
+      }
 
       // Add comment via API
       if (widget.taskId != null) {
@@ -108,7 +115,9 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
             projectId: widget.projectId);
       }
 
-      print('Fetched Updated Comments: $updatedComments');
+      if (kDebugMode) {
+        print('Fetched Updated Comments: $updatedComments');
+      }
 
       setState(() {
         comments = updatedComments;
@@ -134,6 +143,9 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
   }
 
   Future<void> _pickFiles() async {
+    if (kDebugMode) {
+      print('Picking files...');
+    }
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
     );
@@ -142,25 +154,42 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
       setState(() {
         selectedFiles = result.files;
       });
+      if (kDebugMode) {
+        print('Selected files: ${selectedFiles.map((f) => f.name).toList()}');
+      }
     }
   }
 
   Future<void> _pickImageFromCamera() async {
-    final XFile? photo = await picker.pickImage(source: ImageSource.camera);
-
-    if (photo != null) {
-      setState(() {
-        selectedFiles.add(PlatformFile(
-          name: photo.name,
-          path: photo.path,
-          size: File(photo.path).lengthSync(),
-        ));
-      });
+    if (kDebugMode) {
+      print('Opening camera...');
+    }
+    if (Platform.isAndroid || Platform.isIOS) {
+      final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+      if (photo != null) {
+        setState(() {
+          selectedFiles.add(PlatformFile(
+            name: photo.name,
+            path: photo.path,
+            size: File(photo.path).lengthSync(),
+          ));
+        });
+        if (kDebugMode) {
+          print('Selected photo: ${photo.name}');
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Camera not supported on this platform')),
+      );
     }
   }
 
   // Helper function to open images
   void _openImage(String imageUrl) {
+    if (kDebugMode) {
+      print('Opening image at URL: $imageUrl');
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -170,8 +199,12 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
   }
 
   // Helper function to open PDFs
-  void _openPDF(String pdfUrl, String fileName) async {
-    // Show a loading indicator
+  Future<void> _openPDF(String downloadUrl, String fileName) async {
+    if (kDebugMode) {
+      print('Attempting to download PDF from URL: $downloadUrl');
+    }
+
+    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -179,11 +212,9 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
     );
 
     try {
-      // Download PDF
-      var response = await http.get(Uri.parse(pdfUrl));
-      var dir = await getApplicationDocumentsDirectory();
-      File file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(response.bodyBytes);
+      // Use ApiService to download the file directly
+      File downloadedFile =
+          await ApiService.downloadFile(downloadUrl, fileName);
 
       // Dismiss loading indicator
       Navigator.pop(context);
@@ -192,13 +223,16 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PDFViewerScreen(filePath: file.path),
+          builder: (context) => PDFViewerScreen(filePath: downloadedFile.path),
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        print('Error downloading PDF: $e');
+      }
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Öffnen der PDF: $e')),
+        SnackBar(content: Text('Failed to open PDF: $e')),
       );
     }
   }
@@ -206,9 +240,15 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
   // Helper function to open other files externally
   void _openFileExternally(String url) async {
     Uri fileUri = Uri.parse(url);
+    if (kDebugMode) {
+      print('Attempting to open file externally at URL: $url');
+    }
     if (await canLaunchUrl(fileUri)) {
       await launchUrl(fileUri, mode: LaunchMode.externalApplication);
     } else {
+      if (kDebugMode) {
+        print('Failed to open file externally at URL: $url');
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Konnte die Datei nicht öffnen')),
       );
@@ -231,11 +271,13 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
     }
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (mimeType.startsWith('image/')) {
           _openImage(downloadUrl);
         } else if (mimeType == 'application/pdf') {
-          _openPDF(downloadUrl, name);
+          // Ensure the file name has a .pdf extension
+          String fileName = name.endsWith('.pdf') ? name : '$name.pdf';
+          await _openPDF(downloadUrl, fileName);
         } else {
           _openFileExternally(downloadUrl);
         }
@@ -247,10 +289,37 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
     );
   }
 
+  Future<void> _logout() async {
+    try {
+      await ApiService.logout();
+      Navigator.of(context).pop(); // Close the current modal
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erfolgreich abgemeldet')),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error during logout: $e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fehler beim Abmelden')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Kommentare'),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Kommentare'),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Abmelden',
+          ),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
         height: MediaQuery.of(context).size.height *
@@ -333,11 +402,12 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
                   icon: const Icon(Icons.attach_file),
                   label: const Text('Anhang hinzufügen'),
                 ),
-                TextButton.icon(
-                  onPressed: _pickImageFromCamera,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Foto aufnehmen'),
-                ),
+                if (Platform.isAndroid || Platform.isIOS)
+                  TextButton.icon(
+                    onPressed: _pickImageFromCamera,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Foto aufnehmen'),
+                  ),
                 const Spacer(),
                 isLoading
                     ? const CircularProgressIndicator()
@@ -346,7 +416,7 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
                         child: const Text('Absenden'),
                       ),
               ],
-            ),
+            )
           ],
         ),
       ),
@@ -364,7 +434,7 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
 class ImageViewerScreen extends StatelessWidget {
   final String imageUrl;
 
-  const ImageViewerScreen({Key? key, required this.imageUrl}) : super(key: key);
+  const ImageViewerScreen({super.key, required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -383,7 +453,7 @@ class ImageViewerScreen extends StatelessWidget {
 class PDFViewerScreen extends StatelessWidget {
   final String filePath;
 
-  const PDFViewerScreen({Key? key, required this.filePath}) : super(key: key);
+  const PDFViewerScreen({super.key, required this.filePath});
 
   @override
   Widget build(BuildContext context) {
