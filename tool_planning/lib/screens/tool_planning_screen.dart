@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api, deprecated_member_use
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
@@ -38,6 +39,8 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
 
   bool isLoading = true;
   Map<String, dynamic>? draggedItem;
+  final ScrollController _scrollController = ScrollController();
+  Timer? _autoScrollTimer;
 
   @override
   void initState() {
@@ -99,20 +102,37 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
       });
     } catch (e) {
       if (kDebugMode) {
-        if (kDebugMode) {
-          if (kDebugMode) {
-            if (kDebugMode) {
-              if (kDebugMode) {
-                print('Error fetching projects: $e');
-              }
-            }
-          }
-        }
+        print('Error fetching projects: $e');
       }
       setState(() {
         isLoading = false;
       });
     }
+  }
+
+  // Start automatic scrolling if drag is near screen edges
+  void _onDragUpdate(DragUpdateDetails details) {
+    const edgePadding = 50.0;
+    const maxScrollSpeed = 10.0;
+
+    if (_autoScrollTimer == null || !_autoScrollTimer!.isActive) {
+      _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 20), (_) {
+        if (details.globalPosition.dx < edgePadding) {
+          _scrollController.jumpTo(
+            _scrollController.offset - maxScrollSpeed,
+          );
+        } else if (details.globalPosition.dx >
+            MediaQuery.of(context).size.width - edgePadding) {
+          _scrollController.jumpTo(
+            _scrollController.offset + maxScrollSpeed,
+          );
+        }
+      });
+    }
+  }
+
+  void _onDragEnd(DraggableDetails details) {
+    _autoScrollTimer?.cancel();
   }
 
   @override
@@ -130,6 +150,7 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
       body: isLoading
           ? const LoadingIndicator()
           : SingleChildScrollView(
+              controller: _scrollController,
               scrollDirection: Axis.horizontal,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,6 +344,8 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
                                     isDragging: true),
                               ),
                               childWhenDragging: Container(),
+                              onDragUpdate: _onDragUpdate,
+                              onDragEnd: _onDragEnd,
                               child: _buildProjectCard(project),
                             ),
                           ],
@@ -477,7 +500,7 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
       return entry.value.asMap().entries.map((e) => {
             'project_id': e.value['id'] ?? e.value['project_id'],
             'priority_order': e.key + 1,
-            'category': englishCategory, // Send English category to backend
+            'category': englishCategory,
           });
     }).toList();
 
