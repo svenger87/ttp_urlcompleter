@@ -185,23 +185,46 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
     }
   }
 
-  // Helper function to open images
-  void _openImage(String imageUrl) {
-    if (kDebugMode) {
-      print('Opening image at URL: $imageUrl');
+  // Helper function to open images with a download token
+  Future<void> _openImage(String imageUrl) async {
+    try {
+      if (kDebugMode) {
+        print('Getting download token for image...');
+      }
+
+      String? downloadToken = await ApiService.getDownloadToken();
+      if (downloadToken == null) {
+        throw Exception('Failed to retrieve download token');
+      }
+
+      // Replace the placeholder token in the URL
+      String updatedUrl =
+          imageUrl.replaceFirst('--DOWNLOAD-TOKEN--', downloadToken);
+
+      if (kDebugMode) {
+        print('Opening image at URL: $updatedUrl');
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ImageViewerScreen(imageUrl: updatedUrl),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error opening image: $e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to open image: $e')),
+      );
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ImageViewerScreen(imageUrl: imageUrl),
-      ),
-    );
   }
 
-  // Helper function to open PDFs
+  // Helper function to open PDFs with a download token
   Future<void> _openPDF(String downloadUrl, String fileName) async {
     if (kDebugMode) {
-      print('Attempting to download PDF from URL: $downloadUrl');
+      print('Attempting to get download token for PDF...');
     }
 
     // Show loading indicator
@@ -212,9 +235,22 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
     );
 
     try {
+      // Get the download token
+      String? downloadToken = await ApiService.getDownloadToken();
+      if (downloadToken == null) {
+        throw Exception('Failed to retrieve download token');
+      }
+
+      // Replace the placeholder token in the URL
+      String updatedUrl =
+          downloadUrl.replaceFirst('--DOWNLOAD-TOKEN--', downloadToken);
+
+      if (kDebugMode) {
+        print('Starting download from URL: $updatedUrl');
+      }
+
       // Use ApiService to download the file directly
-      File downloadedFile =
-          await ApiService.downloadFile(downloadUrl, fileName);
+      File downloadedFile = await ApiService.downloadFile(updatedUrl, fileName);
 
       // Dismiss loading indicator
       Navigator.pop(context);
@@ -237,20 +273,43 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
     }
   }
 
-  // Helper function to open other files externally
-  void _openFileExternally(String url) async {
-    Uri fileUri = Uri.parse(url);
-    if (kDebugMode) {
-      print('Attempting to open file externally at URL: $url');
-    }
-    if (await canLaunchUrl(fileUri)) {
-      await launchUrl(fileUri, mode: LaunchMode.externalApplication);
-    } else {
+  // Helper function to open other files externally with a download token
+  Future<void> _openFileExternally(String url) async {
+    try {
       if (kDebugMode) {
-        print('Failed to open file externally at URL: $url');
+        print('Attempting to get download token for file...');
+      }
+
+      // Get the download token
+      String? downloadToken = await ApiService.getDownloadToken();
+      if (downloadToken == null) {
+        throw Exception('Failed to retrieve download token');
+      }
+
+      // Replace the placeholder token in the URL
+      String updatedUrl = url.replaceFirst('--DOWNLOAD-TOKEN--', downloadToken);
+
+      Uri fileUri = Uri.parse(updatedUrl);
+      if (kDebugMode) {
+        print('Attempting to open file externally at URL: $updatedUrl');
+      }
+
+      if (await canLaunchUrl(fileUri)) {
+        await launchUrl(fileUri, mode: LaunchMode.externalApplication);
+      } else {
+        if (kDebugMode) {
+          print('Failed to open file externally at URL: $updatedUrl');
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Konnte die Datei nicht öffnen')),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error opening file externally: $e');
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Konnte die Datei nicht öffnen')),
+        SnackBar(content: Text('Failed to open file: $e')),
       );
     }
   }
@@ -273,13 +332,13 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
     return GestureDetector(
       onTap: () async {
         if (mimeType.startsWith('image/')) {
-          _openImage(downloadUrl);
+          await _openImage(downloadUrl);
         } else if (mimeType == 'application/pdf') {
           // Ensure the file name has a .pdf extension
           String fileName = name.endsWith('.pdf') ? name : '$name.pdf';
           await _openPDF(downloadUrl, fileName);
         } else {
-          _openFileExternally(downloadUrl);
+          await _openFileExternally(downloadUrl);
         }
       },
       child: Chip(

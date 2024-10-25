@@ -1,5 +1,3 @@
-// lib/services/api_service.dart
-
 import 'dart:io';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:http/http.dart' as http;
@@ -267,14 +265,13 @@ class ApiService {
     final request = http.MultipartRequest('POST', Uri.parse(url));
     request.headers.addAll({
       'X-Angie-AuthApiToken': sessionToken,
-      // 'Content-Type': 'multipart/form-data', // Not needed; MultipartRequest sets it automatically
     });
 
     try {
       final file = File(filePath);
       request.files.add(
         http.MultipartFile(
-          'file', // Match the field name with the server expectations
+          'file',
           file.readAsBytes().asStream(),
           file.lengthSync(),
           filename: filePath.split("/").last,
@@ -288,7 +285,6 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // If response body contains the code
         if (data is List && data.isNotEmpty) {
           final attachmentCode = data[0]['code'];
           return attachmentCode;
@@ -328,7 +324,6 @@ class ApiService {
     }
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      // Optionally handle successful response
       if (kDebugMode) {
         print('Comment added successfully.');
       }
@@ -355,7 +350,6 @@ class ApiService {
     );
 
     if (response.statusCode == 201) {
-      // Comment added successfully
       if (kDebugMode) {
         print('Comment added successfully to project.');
       }
@@ -364,15 +358,22 @@ class ApiService {
     }
   }
 
-  /// General function to download any file
+  // General function to download any file
   static Future<File> downloadFile(String downloadUrl, String fileName) async {
     try {
       if (kDebugMode) {
         print('Starting download from URL: $downloadUrl');
       }
 
-      final headers = await _getDownloadHeaders();
+      String? downloadToken = await getDownloadToken();
+      if (downloadToken == null) {
+        throw Exception('Failed to retrieve download token');
+      }
 
+      downloadUrl =
+          downloadUrl.replaceFirst('--DOWNLOAD-TOKEN--', downloadToken);
+
+      final headers = await _getDownloadHeaders();
       final response = await http.get(Uri.parse(downloadUrl), headers: headers);
 
       if (response.statusCode == 200) {
@@ -401,7 +402,7 @@ class ApiService {
     }
   }
 
-  /// Function to get headers for download if authentication is required
+  // Function to get headers for download if authentication is required
   static Future<Map<String, String>> _getDownloadHeaders() async {
     String? sessionToken = await getSessionToken();
 
@@ -411,11 +412,10 @@ class ApiService {
 
     return {
       'X-Angie-AuthApiToken': sessionToken,
-      // Add other headers if required by your API
     };
   }
 
-// Fetch all files for a specific project, gathering download URLs
+  // Fetch all files for a specific project, gathering download URLs
   static Future<List<Map<String, dynamic>>> fetchProjectFiles(
       int projectId) async {
     final url = '$activeCollabApiUrl/api/v1/projects/$projectId/files';
@@ -436,6 +436,23 @@ class ApiService {
       }).toList();
     } else {
       throw Exception('Failed to retrieve project files');
+    }
+  }
+
+  static Future<String?> getDownloadToken() async {
+    const url = '$activeCollabApiUrl/api/v1/download-token';
+    final headers = await _getHeaders();
+    final response = await http.get(Uri.parse(url), headers: headers);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data != null && data['token'] != null) {
+        return data['token'];
+      } else {
+        throw Exception('Failed to retrieve download token.');
+      }
+    } else {
+      throw Exception('Failed to retrieve download token: ${response.body}');
     }
   }
 }
