@@ -109,36 +109,44 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
     }
   }
 
-  // Enhanced auto-scroll with faster speed and acceleration based on proximity
+  // Enhanced auto-scroll with proximity-based control
   void _onDragUpdate(DragUpdateDetails details) {
-    const edgePadding = 100.0;
-    const maxScrollSpeed = 40.0;
+    const edgePadding = 75.0;
+    const maxScrollSpeed = 100.0;
 
-    double scrollSpeed = 0;
+    // Determine if we are within the scroll trigger area
     if (details.globalPosition.dx < edgePadding) {
-      scrollSpeed =
-          -maxScrollSpeed * (1 - (details.globalPosition.dx / edgePadding));
+      _startScrolling(
+          -maxScrollSpeed * (1 - (details.globalPosition.dx / edgePadding)));
     } else if (details.globalPosition.dx >
         MediaQuery.of(context).size.width - edgePadding) {
-      scrollSpeed = maxScrollSpeed *
+      _startScrolling(maxScrollSpeed *
           (1 -
               ((MediaQuery.of(context).size.width - details.globalPosition.dx) /
-                  edgePadding));
-    }
-
-    if (scrollSpeed != 0) {
-      _autoScrollTimer ??=
-          Timer.periodic(const Duration(milliseconds: 10), (_) {
-        _scrollController.jumpTo(
-          _scrollController.offset + scrollSpeed,
-        );
-      });
+                  edgePadding)));
+    } else {
+      _stopScrolling();
     }
   }
 
-  void _onDragEnd(DraggableDetails details) {
+  // Start scrolling with a given speed
+  void _startScrolling(double scrollSpeed) {
+    _autoScrollTimer?.cancel(); // Cancel any existing timer to avoid duplicates
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 10), (_) {
+      _scrollController.jumpTo(
+        _scrollController.offset + scrollSpeed,
+      );
+    });
+  }
+
+  // Stop scrolling if outside of scroll trigger area
+  void _stopScrolling() {
     _autoScrollTimer?.cancel();
     _autoScrollTimer = null;
+  }
+
+  void _onDragEnd(DraggableDetails details) {
+    _stopScrolling(); // Ensure scrolling stops when drag ends
   }
 
   @override
