@@ -109,12 +109,11 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
     }
   }
 
-  // Enhanced scroll function to auto-scroll based on drag position
+  // Enhanced auto-scroll with faster speed and acceleration based on proximity
   void _onDragUpdate(DragUpdateDetails details) {
-    const edgePadding = 60.0;
-    const maxScrollSpeed = 20.0;
+    const edgePadding = 100.0;
+    const maxScrollSpeed = 40.0;
 
-    // Calculate scroll speed based on how close to the edge we are
     double scrollSpeed = 0;
     if (details.globalPosition.dx < edgePadding) {
       scrollSpeed =
@@ -129,7 +128,7 @@ class _ToolPlanningScreenState extends State<ToolPlanningScreen> {
 
     if (scrollSpeed != 0) {
       _autoScrollTimer ??=
-          Timer.periodic(const Duration(milliseconds: 20), (_) {
+          Timer.periodic(const Duration(milliseconds: 10), (_) {
         _scrollController.jumpTo(
           _scrollController.offset + scrollSpeed,
         );
