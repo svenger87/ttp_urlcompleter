@@ -157,17 +157,18 @@ class ToolService {
         final fertigungssteuererIsOne = (item['Fertigungssteuerer'] == '1') ||
             (workingPlan['Fertigungssteuerer'] == '1');
 
-        // Extract Prioritaet from item or workingPlan, and set a default of "3" if empty
+        // Extract Prioritaet and parse it, allowing empty values by default
         final prioritaetStr =
-            (item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? '3')
+            (item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? '')
                 .toString()
                 .trim();
         final int? prioritaet = int.tryParse(prioritaetStr);
-        final bool prioritaetValid = prioritaet != null && prioritaet <= 2;
 
-        // Include tools where Fertigungssteuerer is "1" and Prioritaet <= 2 or is defaulted
-        return fertigungssteuererIsOne &&
-            (prioritaetValid || prioritaetStr == '3');
+        // Only exclude items if Prioritaet is defined and greater than 2
+        final bool shouldInclude = prioritaet == null || prioritaet <= 2;
+
+        // Include tools where Fertigungssteuerer is "1" and priority <= 2 or is empty
+        return fertigungssteuererIsOne && shouldInclude;
       }).map((item) {
         final workingPlan = item['workingPlan'] ?? {};
 
