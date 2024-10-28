@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:ttp_app/models/tool.dart';
@@ -56,6 +57,13 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
   Widget _buildProvidedSection() {
     final providedData =
         widget.forecastData.where((tool) => tool['provided'] == true).toList();
+
+    // Debug log to see if WKZNP0190W02 is in the provided list
+    if (kDebugMode) {
+      print(
+          "Provided Data includes: ${providedData.map((tool) => tool['Equipment']).toList()}");
+    }
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: ExpansionPanelList(
@@ -97,6 +105,13 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
   Widget _buildForecastSection() {
     final forecastData =
         widget.forecastData.where((tool) => tool['provided'] != true).toList();
+
+    // Debug log to see if WKZNP0190W02 is in the forecast list
+    if (kDebugMode) {
+      print(
+          "Forecast Data includes: ${forecastData.map((tool) => tool['Equipment']).toList()}");
+    }
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: ExpansionPanelList(

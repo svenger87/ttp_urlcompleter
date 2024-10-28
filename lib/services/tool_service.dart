@@ -167,9 +167,18 @@ class ToolService {
         // Only exclude items if Prioritaet is defined and greater than 2
         final bool shouldInclude = prioritaet == null || prioritaet <= 2;
 
+        // Log filtering criteria
+        if (kDebugMode) {
+          print(
+              "Processing ${item['Equipment']}: Fertigungssteuerer=$fertigungssteuererIsOne, Prioritaet=$prioritaet, Should Include=$shouldInclude");
+        }
+
         // Include tools where Fertigungssteuerer is "1" and priority <= 2 or is empty
         return fertigungssteuererIsOne && shouldInclude;
       }).map((item) {
+        if (kDebugMode) {
+          print("Including in forecast: ${item['Equipment']}");
+        }
         final workingPlan = item['workingPlan'] ?? {};
 
         // Extract projectData fields

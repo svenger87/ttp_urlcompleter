@@ -212,18 +212,18 @@ class MainDrawer extends StatelessWidget {
                   );
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.view_kanban),
-                title: const Text('Planungstool WZB'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ToolPlanningScreen(),
-                    ),
-                  );
-                },
-              ),
+              //ListTile(
+              //leading: const Icon(Icons.view_kanban),
+              //title: const Text('Planungstool WZB'),
+              //onTap: () {
+              //Navigator.push(
+              //context,
+              //MaterialPageRoute(
+              //builder: (context) => const ToolPlanningScreen(),
+              //),
+              //);
+              //},
+              //),
             ],
           ),
         ],
