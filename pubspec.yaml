@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  packaging_module:
+    path: ./packaging_module
   tool_planning:
     path: ./tool_planning
   hangerstations_dashboard_module:

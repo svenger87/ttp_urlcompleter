@@ -7,10 +7,10 @@ import '../screens/tool_ui.dart';
 import '../screens/pickists_screen.dart';
 import '../modules/torsteuerung_module.dart';
 import '../modules/converter_module.dart';
-//import '../screens/stations_screen.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:hangerstations_dashboard_module/screens/hangerstations_dashboard_module.dart';
 import 'package:tool_planning/screens/tool_planning_screen.dart';
+import 'package:packaging_module/screens/production_orders_screen.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -224,6 +224,18 @@ class MainDrawer extends StatelessWidget {
               //);
               //},
               //),
+              ListTile(
+                leading: const Icon(Icons.view_kanban),
+                title: const Text('Kartonagen Fertigung'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductionOrdersScreen(),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ],
