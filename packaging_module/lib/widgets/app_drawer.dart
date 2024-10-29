@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 
 class AppDrawer extends StatelessWidget {
+  const AppDrawer({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -10,7 +12,7 @@ class AppDrawer extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: <Widget>[
           // Drawer Header
-          DrawerHeader(
+          const DrawerHeader(
             decoration: BoxDecoration(
               color: Color(0xFF104382),
             ),
@@ -24,8 +26,8 @@ class AppDrawer extends StatelessWidget {
           ),
           // Home Navigation
           ListTile(
-            leading: Icon(Icons.home),
-            title: Text('Home'),
+            leading: const Icon(Icons.home),
+            title: const Text('Home'),
             onTap: () {
               Navigator.pop(context); // Close the drawer
               Navigator.pushReplacementNamed(context, '/');
@@ -33,8 +35,8 @@ class AppDrawer extends StatelessWidget {
           ),
           // Production Orders Navigation
           ListTile(
-            leading: Icon(Icons.production_quantity_limits),
-            title: Text('Production Orders'),
+            leading: const Icon(Icons.production_quantity_limits),
+            title: const Text('Production Orders'),
             onTap: () {
               Navigator.pop(context); // Close the drawer
               Navigator.pushNamed(context, '/production-orders');

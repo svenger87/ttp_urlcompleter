@@ -1,10 +1,14 @@
 // restore_completed_orders_screen.dart
 
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class RestoreCompletedOrdersScreen extends StatefulWidget {
+  const RestoreCompletedOrdersScreen({super.key});
+
   @override
   _RestoreCompletedOrdersScreenState createState() =>
       _RestoreCompletedOrdersScreenState();
@@ -72,16 +76,17 @@ class _RestoreCompletedOrdersScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Fertiggestellte Aufträge wiederherstellen'),
+        title: const Text('Fertiggestellte Aufträge wiederherstellen'),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context, restorationOccurred),
         ),
       ),
       body: errorMessage != null
           ? Center(child: Text(errorMessage!))
           : completedOrders.isEmpty
-              ? Center(child: Text('Keine fertiggestellten Aufträge vorhanden'))
+              ? const Center(
+                  child: Text('Keine fertiggestellten Aufträge vorhanden'))
               : ListView.builder(
                   itemCount: completedOrders.length,
                   itemBuilder: (context, index) {
@@ -92,7 +97,7 @@ class _RestoreCompletedOrdersScreenState
                       title: Text('Sequenznummer: $sequenznummer'),
                       trailing: ElevatedButton(
                         onPressed: () => restoreCompletedOrder(sequenznummer),
-                        child: Text('Wiederherstellen'),
+                        child: const Text('Wiederherstellen'),
                       ),
                     );
                   },

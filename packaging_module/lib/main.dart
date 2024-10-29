@@ -11,7 +11,7 @@ void main() {
 class MyApp extends StatelessWidget {
   final appLightTheme = ThemeData(
     brightness: Brightness.light,
-    primaryColor: Color(0xFF104382),
+    primaryColor: const Color(0xFF104382),
     primarySwatch: Colors.blue,
     scaffoldBackgroundColor: const Color(0xFFF0F0F0),
     appBarTheme: const AppBarTheme(
@@ -27,18 +27,18 @@ class MyApp extends StatelessWidget {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: Color(0xFF104382),
+        foregroundColor: const Color(0xFF104382),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         foregroundColor: Colors.white,
-        backgroundColor: Color(0xFF104382),
+        backgroundColor: const Color(0xFF104382),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: Color(0xFF104382),
+        foregroundColor: const Color(0xFF104382),
         side: const BorderSide(color: Color(0xFF104382)),
       ),
     ),
@@ -50,15 +50,17 @@ class MyApp extends StatelessWidget {
     ),
   );
 
+  MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Your App Name',
       theme: appLightTheme,
-      home: HomeScreen(),
+      home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
       routes: {
-        '/production-orders': (context) => ProductionOrdersScreen(),
+        '/production-orders': (context) => const ProductionOrdersScreen(),
         // Add other routes if necessary
       },
     );
@@ -67,14 +69,16 @@ class MyApp extends StatelessWidget {
 
 // Your existing HomeScreen
 class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: AppDrawer(), // Reference to your drawer widget
+      drawer: const AppDrawer(), // Reference to your drawer widget
       appBar: AppBar(
-        title: Text('Home'),
+        title: const Text('Home'),
       ),
-      body: Center(
+      body: const Center(
         child: Text('Home Screen'),
       ),
     );

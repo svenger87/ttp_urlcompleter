@@ -1,11 +1,16 @@
 // production_orders_screen.dart
 
+// ignore_for_file: library_private_types_in_public_api
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'restore_completed_orders_screen.dart';
 
 class ProductionOrdersScreen extends StatefulWidget {
+  const ProductionOrdersScreen({super.key});
+
   @override
   _ProductionOrdersScreenState createState() => _ProductionOrdersScreenState();
 }
@@ -76,8 +81,10 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
       );
 
       if (response.statusCode == 200) {
-        print(
-            'Order saved successfully: ${order['productionOrder']['Sequenznummer']}');
+        if (kDebugMode) {
+          print(
+              'Order saved successfully: ${order['productionOrder']['Sequenznummer']}');
+        }
       } else {
         throw Exception('Failed to save completed order');
       }
@@ -92,7 +99,7 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
     final restorationOccurred = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RestoreCompletedOrdersScreen(),
+        builder: (context) => const RestoreCompletedOrdersScreen(),
       ),
     );
 
@@ -115,14 +122,14 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Kartonfertigungsaufträge Übersicht'),
+        title: const Text('Kartonfertigungsaufträge Übersicht'),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: fetchProductionOrders,
           ),
           IconButton(
-            icon: Icon(Icons.restore),
+            icon: const Icon(Icons.restore),
             onPressed: navigateToRestoreScreen,
           ),
         ],
@@ -130,15 +137,15 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
       body: errorMessage != null
           ? Center(child: Text(errorMessage!))
           : productionOrders.isEmpty
-              ? Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
               : GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
                     crossAxisSpacing: 8.0,
                     mainAxisSpacing: 8.0,
                     childAspectRatio: 3 / 2,
                   ),
-                  padding: EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16.0),
                   itemCount: productionOrders.length,
                   itemBuilder: (context, index) {
                     final order = productionOrders[index];
@@ -159,24 +166,25 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                         : 'N/A';
 
                     return Card(
-                      margin: EdgeInsets.all(8.0),
+                      margin: const EdgeInsets.all(8.0),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Arbeitsplatz: $arbeitsplatz',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
                             Text('Hauptartikel: ${order['Hauptartikel']}'),
                             Text('Eckstart: $eckstarttermin'),
                             Text('Karton: $karton'),
                             Text('Kartonlänge: $kartonlaenge'),
                             Text('Menge: $kollomenge'),
                             Text('Sequenznummer: $sequenznummer'),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: () => markAsDone(index),
-                              child: Text('Als erledigt markieren'),
+                              child: const Text('Als erledigt markieren'),
                             ),
                           ],
                         ),
