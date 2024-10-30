@@ -222,21 +222,31 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                             // Find the index of the order in the original list
                             int index = productionOrders.indexOf(order);
 
-                            return ListTile(
-                              title: Text('Sequenznummer: $sequenznummer'),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Arbeitsplatz: $arbeitsplatz'),
-                                  Text('Eckstart: $eckstarttermin'),
-                                  Text('Karton: $karton'),
-                                  Text('Kartonlänge: $kartonlaenge'),
-                                  Text('Menge: $kollomenge'),
-                                ],
+                            return Card(
+                              margin: const EdgeInsets.all(8.0),
+                              elevation: 4.0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
                               ),
-                              trailing: ElevatedButton(
-                                onPressed: () => markAsDone(index),
-                                child: const Text('Als erledigt markieren'),
+                              child: ListTile(
+                                title: Text('Sequenznummer: $sequenznummer'),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Arbeitsplatz: $arbeitsplatz'),
+                                    Text('Eckstart: $eckstarttermin'),
+                                    Text('Karton: $karton'),
+                                    Text('Kartonlänge: $kartonlaenge'),
+                                    Text('Menge: $kollomenge'),
+                                  ],
+                                ),
+                                trailing: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(200, 80),
+                                  ),
+                                  onPressed: () => markAsDone(index),
+                                  child: const Text('Als erledigt markieren'),
+                                ),
                               ),
                             );
                           }).toList(),
