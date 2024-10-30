@@ -1,7 +1,5 @@
 // restore_completed_orders_screen.dart
 
-// ignore_for_file: library_private_types_in_public_api
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -10,6 +8,7 @@ class RestoreCompletedOrdersScreen extends StatefulWidget {
   const RestoreCompletedOrdersScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _RestoreCompletedOrdersScreenState createState() =>
       _RestoreCompletedOrdersScreenState();
 }
@@ -72,6 +71,16 @@ class _RestoreCompletedOrdersScreenState
     }
   }
 
+  String formatDate(String? dateTime) {
+    if (dateTime == null) return 'N/A';
+    try {
+      final date = DateTime.parse(dateTime);
+      return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,14 +99,44 @@ class _RestoreCompletedOrdersScreenState
               : ListView.builder(
                   itemCount: completedOrders.length,
                   itemBuilder: (context, index) {
-                    final order = completedOrders[index];
-                    final sequenznummer = order['sequenznummer'] ?? 'N/A';
+                    final orderEntry = completedOrders[index];
+                    final orderData = orderEntry['order_data'];
+                    final sequenznummer =
+                        orderData['productionOrder']?['Sequenznummer'] ?? 'N/A';
+                    final hauptartikel = orderData['Hauptartikel'] ?? 'Unknown';
+                    final eckstarttermin = orderData['productionOrder'] != null
+                        ? formatDate(
+                            orderData['productionOrder']['Eckstarttermin'])
+                        : 'N/A';
+                    final arbeitsplatz = orderData['productionOrder'] != null
+                        ? orderData['productionOrder']['Arbeitsplatz'] ?? 'N/A'
+                        : 'N/A';
+                    final karton =
+                        orderData['materialDetails']?['Karton'] ?? 'N/A';
+                    final kartonlaenge =
+                        orderData['materialDetails']?['Kartonlaenge'] ?? 'N/A';
+                    final kollomenge =
+                        orderData['materialDetails']?['Kollomenge'] ?? 'N/A';
 
-                    return ListTile(
-                      title: Text('Sequenznummer: $sequenznummer'),
-                      trailing: ElevatedButton(
-                        onPressed: () => restoreCompletedOrder(sequenznummer),
-                        child: const Text('Wiederherstellen'),
+                    return Card(
+                      margin: const EdgeInsets.all(8.0),
+                      child: ListTile(
+                        title: Text('Sequenznummer: $sequenznummer'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Geometrie: $hauptartikel'),
+                            Text('Arbeitsplatz: $arbeitsplatz'),
+                            Text('Eckstart: $eckstarttermin'),
+                            Text('Karton: $karton'),
+                            Text('Kartonlänge: $kartonlaenge'),
+                            Text('Menge: $kollomenge'),
+                          ],
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () => restoreCompletedOrder(sequenznummer),
+                          child: const Text('Wiederherstellen'),
+                        ),
                       ),
                     );
                   },

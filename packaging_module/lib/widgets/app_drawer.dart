@@ -36,7 +36,7 @@ class AppDrawer extends StatelessWidget {
           // Production Orders Navigation
           ListTile(
             leading: const Icon(Icons.production_quantity_limits),
-            title: const Text('Production Orders'),
+            title: const Text('Kartonfertigungsaufträge'),
             onTap: () {
               Navigator.pop(context); // Close the drawer
               Navigator.pushNamed(context, '/production-orders');

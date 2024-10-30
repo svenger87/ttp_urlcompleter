@@ -33,17 +33,6 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
       if (response.statusCode == 200) {
         List<dynamic> orders = json.decode(response.body);
 
-        // Sort by 'Arbeitsplatz'
-        orders.sort((a, b) {
-          final aArbeitsplatz = (a['productionOrder'] != null)
-              ? a['productionOrder']['Arbeitsplatz'] ?? ''
-              : '';
-          final bArbeitsplatz = (b['productionOrder'] != null)
-              ? b['productionOrder']['Arbeitsplatz'] ?? ''
-              : '';
-          return aArbeitsplatz.compareTo(bArbeitsplatz);
-        });
-
         setState(() {
           productionOrders = orders;
           errorMessage = null;
@@ -72,13 +61,14 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
   Future<void> saveCompletedOrder(dynamic order) async {
     try {
       final response = await http.post(
-        Uri.parse('http://wim-solution.sip.local:3005/save-completed'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8'
-        },
-        body: jsonEncode(
-            {'sequenznummer': order['productionOrder']['Sequenznummer']}),
-      );
+          Uri.parse('http://wim-solution.sip.local:3005/save-completed'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8'
+          },
+          body: jsonEncode({
+            'sequenznummer': order['productionOrder']['Sequenznummer'],
+            'orderData': order,
+          }));
 
       if (response.statusCode == 200) {
         if (kDebugMode) {
@@ -120,6 +110,32 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Group productionOrders by 'Eckstarttermin' as DateTime objects
+    Map<DateTime, List<dynamic>> groupedByEckstarttermin = {};
+    for (var order in productionOrders) {
+      DateTime eckstartDate;
+      final productionOrder = order['productionOrder'];
+      final eckstartterminStr =
+          productionOrder != null ? productionOrder['Eckstarttermin'] : null;
+      if (eckstartterminStr != null) {
+        try {
+          eckstartDate = DateTime.parse(eckstartterminStr);
+        } catch (e) {
+          eckstartDate = DateTime.fromMillisecondsSinceEpoch(0); // Default date
+        }
+      } else {
+        eckstartDate = DateTime.fromMillisecondsSinceEpoch(0); // Default date
+      }
+      if (!groupedByEckstarttermin.containsKey(eckstartDate)) {
+        groupedByEckstarttermin[eckstartDate] = [];
+      }
+      groupedByEckstarttermin[eckstartDate]!.add(order);
+    }
+
+    // Convert Map to List and sort by DateTime keys ascending
+    var sortedGroupedEntries = groupedByEckstarttermin.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kartonfertigungsaufträge Übersicht'),
@@ -138,59 +154,96 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
           ? Center(child: Text(errorMessage!))
           : productionOrders.isEmpty
               ? const Center(child: CircularProgressIndicator())
-              : GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 8.0,
-                    mainAxisSpacing: 8.0,
-                    childAspectRatio: 3 / 2,
-                  ),
+              : ListView(
                   padding: const EdgeInsets.all(16.0),
-                  itemCount: productionOrders.length,
-                  itemBuilder: (context, index) {
-                    final order = productionOrders[index];
-                    final productionOrder = order['productionOrder'];
-                    final eckstarttermin = productionOrder != null
-                        ? formatDate(productionOrder['Eckstarttermin'])
-                        : 'N/A';
-                    final arbeitsplatz = productionOrder != null
-                        ? productionOrder['Arbeitsplatz'] ?? 'N/A'
-                        : 'N/A';
-                    final karton = order['materialDetails']?['Karton'] ?? 'N/A';
-                    final kartonlaenge =
-                        order['materialDetails']?['Kartonlaenge'] ?? 'N/A';
-                    final kollomenge =
-                        order['materialDetails']?['Kollomenge'] ?? 'N/A';
-                    final sequenznummer = productionOrder != null
-                        ? productionOrder['Sequenznummer'] ?? 'N/A'
-                        : 'N/A';
+                  children: sortedGroupedEntries.map((eckEntry) {
+                    DateTime eckstartDate = eckEntry.key;
+                    String eckstarttermin =
+                        formatDate(eckstartDate.toIso8601String());
+                    List<dynamic> ordersByEckstart = eckEntry.value;
 
-                    return Card(
-                      margin: const EdgeInsets.all(8.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Arbeitsplatz: $arbeitsplatz',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            Text('Hauptartikel: ${order['Hauptartikel']}'),
-                            Text('Eckstart: $eckstarttermin'),
-                            Text('Karton: $karton'),
-                            Text('Kartonlänge: $kartonlaenge'),
-                            Text('Menge: $kollomenge'),
-                            Text('Sequenznummer: $sequenznummer'),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () => markAsDone(index),
-                              child: const Text('Als erledigt markieren'),
-                            ),
-                          ],
-                        ),
+                    // Within each 'Eckstarttermin', group by 'Hauptartikel'
+                    Map<String, List<dynamic>> groupedByHauptartikel = {};
+                    for (var order in ordersByEckstart) {
+                      String hauptartikel = order['Hauptartikel'] ?? 'Unknown';
+                      if (!groupedByHauptartikel.containsKey(hauptartikel)) {
+                        groupedByHauptartikel[hauptartikel] = [];
+                      }
+                      groupedByHauptartikel[hauptartikel]!.add(order);
+                    }
+
+                    return ExpansionTile(
+                      title: Text(
+                        'Eckstarttermin: $eckstarttermin',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
+                      children: groupedByHauptartikel.entries.map((hauptEntry) {
+                        String hauptartikel = hauptEntry.key;
+                        List<dynamic> orders = hauptEntry.value;
+
+                        // Sort the orders by 'Sequenznummer' descending
+                        orders.sort((a, b) {
+                          final aSeq = int.tryParse(a['productionOrder']
+                                      ?['Sequenznummer'] ??
+                                  '0') ??
+                              0;
+                          final bSeq = int.tryParse(b['productionOrder']
+                                      ?['Sequenznummer'] ??
+                                  '0') ??
+                              0;
+                          return bSeq.compareTo(aSeq); // Descending order
+                        });
+
+                        return ExpansionTile(
+                          title: Text(
+                            'Geometrie: $hauptartikel',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          children: orders.map<Widget>((order) {
+                            final productionOrder = order['productionOrder'];
+                            final eckstarttermin = productionOrder != null
+                                ? formatDate(productionOrder['Eckstarttermin'])
+                                : 'N/A';
+                            final arbeitsplatz = productionOrder != null
+                                ? productionOrder['Arbeitsplatz'] ?? 'N/A'
+                                : 'N/A';
+                            final karton =
+                                order['materialDetails']?['Karton'] ?? 'N/A';
+                            final kartonlaenge = order['materialDetails']
+                                    ?['Kartonlaenge'] ??
+                                'N/A';
+                            final kollomenge = order['materialDetails']
+                                    ?['Kollomenge'] ??
+                                'N/A';
+                            final sequenznummer = productionOrder != null
+                                ? productionOrder['Sequenznummer'] ?? 'N/A'
+                                : 'N/A';
+
+                            // Find the index of the order in the original list
+                            int index = productionOrders.indexOf(order);
+
+                            return ListTile(
+                              title: Text('Sequenznummer: $sequenznummer'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Arbeitsplatz: $arbeitsplatz'),
+                                  Text('Eckstart: $eckstarttermin'),
+                                  Text('Karton: $karton'),
+                                  Text('Kartonlänge: $kartonlaenge'),
+                                  Text('Menge: $kollomenge'),
+                                ],
+                              ),
+                              trailing: ElevatedButton(
+                                onPressed: () => markAsDone(index),
+                                child: const Text('Als erledigt markieren'),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      }).toList(),
                     );
-                  },
+                  }).toList(),
                 ),
     );
   }

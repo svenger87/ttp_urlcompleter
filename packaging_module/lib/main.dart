@@ -57,30 +57,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Your App Name',
       theme: appLightTheme,
-      home: const HomeScreen(),
+      home: const ProductionOrdersScreen(),
       debugShowCheckedModeBanner: false,
       routes: {
         '/production-orders': (context) => const ProductionOrdersScreen(),
         // Add other routes if necessary
       },
-    );
-  }
-}
-
-// Your existing HomeScreen
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: const AppDrawer(), // Reference to your drawer widget
-      appBar: AppBar(
-        title: const Text('Home'),
-      ),
-      body: const Center(
-        child: Text('Home Screen'),
-      ),
     );
   }
 }

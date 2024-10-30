@@ -9,6 +9,7 @@ import '../modules/torsteuerung_module.dart';
 import '../modules/converter_module.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:hangerstations_dashboard_module/screens/hangerstations_dashboard_module.dart';
+// ignore: unused_import
 import 'package:tool_planning/screens/tool_planning_screen.dart';
 import 'package:packaging_module/screens/production_orders_screen.dart';
 
@@ -75,13 +76,11 @@ class MainDrawer extends StatelessWidget {
             ),
           ),
           ExpansionTile(
-            leading:
-                Image.asset('assets/productionplan.png', width: 36, height: 36),
-            title: const Text('Produktionspläne'),
+            leading: Icon(MdiIcons.notebookCheck),
+            title: const Text('Produktions und Materialpläne'),
             children: [
               ListTile(
-                leading: Image.asset('assets/productionplan.png',
-                    width: 36, height: 36),
+                leading: Icon(MdiIcons.numeric1BoxMultipleOutline),
                 title: const Text('Produktionsplan 1W'),
                 onTap: () {
                   Navigator.push(
@@ -94,8 +93,7 @@ class MainDrawer extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: Image.asset('assets/productionplan.png',
-                    width: 36, height: 36),
+                leading: Icon(MdiIcons.numeric3BoxMultipleOutline),
                 title: const Text('Produktionsplan 3W'),
                 onTap: () {
                   Navigator.push(
@@ -107,12 +105,6 @@ class MainDrawer extends StatelessWidget {
                   );
                 },
               ),
-            ],
-          ),
-          ExpansionTile(
-            leading: const Icon(Icons.grain_rounded),
-            title: const Text('Materialplanung'),
-            children: [
               ListTile(
                 leading: const Icon(Icons.grain_rounded),
                 title: const Text('Materialplan'),
@@ -127,66 +119,54 @@ class MainDrawer extends StatelessWidget {
               ),
             ],
           ),
-          ListTile(
-            leading: Image.asset('assets/leuchtturm_blue.png',
-                width: 36, height: 36),
-            title: const Text('Intranet'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WebViewModule(url: intranet),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Image.asset('assets/ac.png', width: 36, height: 36),
-            title: const Text('ActiveCollab'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WebViewModule(url: ac),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Image.asset('assets/bookstack.png', width: 36, height: 36),
-            title: const Text('ttpedia'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WebViewModule(url: bookstack),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.checklist_rounded),
-            title: const Text('Picklisten'),
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const PdfReaderPage(),
-              ));
-            },
-          ),
-          ListTile(
-            leading: Icon(MdiIcons.gantryCrane),
-            title: const Text('Aufhängestationen'),
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const Dashboard(),
-              ));
-            },
+          ExpansionTile(
+            leading: const Icon(Icons.info_sharp),
+            title: const Text('Informationen (Active Collab, Intranet etc.)'),
+            children: [
+              ListTile(
+                leading: Image.asset('assets/leuchtturm_blue.png',
+                    width: 36, height: 36),
+                title: const Text('Intranet'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(url: intranet),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Image.asset('assets/ac.png', width: 36, height: 36),
+                title: const Text('ActiveCollab'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(url: ac),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading:
+                    Image.asset('assets/bookstack.png', width: 36, height: 36),
+                title: const Text('ttpedia'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WebViewModule(url: bookstack),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           ExpansionTile(
-            leading: const Icon(Icons.handyman),
-            title: const Text('Tools'),
+            leading: const Icon(Icons.house),
+            title: const Text('Gebäudemanagement'),
             children: [
-              const ConverterModule(),
               ListTile(
                 leading: const Icon(Icons.door_sliding),
                 title: const Text('Torsteuerung'),
@@ -200,18 +180,61 @@ class MainDrawer extends StatelessWidget {
                   );
                 },
               ),
+            ],
+          ),
+          ExpansionTile(
+            leading: Icon(MdiIcons.robotIndustrial),
+            title: const Text('Produktionstools'),
+            children: [
               ListTile(
-                leading: const Icon(Icons.storage),
-                title: const Text('Werkzeuglagerverwaltung'),
+                leading: Icon(MdiIcons.gantryCrane),
+                title: const Text('Aufhängestationen'),
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const Dashboard(),
+                  ));
+                },
+              ),
+              ListTile(
+                leading: Icon(MdiIcons.packageVariant),
+                title: const Text('Kartonagen Fertigung'),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ToolInventoryScreen(),
+                      builder: (context) => ProductionOrdersScreen(),
                     ),
                   );
                 },
               ),
+              const ConverterModule(),
+            ],
+          ),
+          ListTile(
+            leading: const Icon(Icons.checklist_rounded),
+            title: const Text('Picklisten'),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const PdfReaderPage(),
+              ));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.storage),
+            title: const Text('Werkzeuglagerverwaltung'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ToolInventoryScreen(),
+                ),
+              );
+            },
+          ),
+          ExpansionTile(
+            leading: const Icon(Icons.handyman),
+            title: const Text('Tools'),
+            children: [
               //ListTile(
               //leading: const Icon(Icons.view_kanban),
               //title: const Text('Planungstool WZB'),
@@ -224,18 +247,6 @@ class MainDrawer extends StatelessWidget {
               //);
               //},
               //),
-              ListTile(
-                leading: const Icon(Icons.view_kanban),
-                title: const Text('Kartonagen Fertigung'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductionOrdersScreen(),
-                    ),
-                  );
-                },
-              ),
             ],
           ),
         ],
