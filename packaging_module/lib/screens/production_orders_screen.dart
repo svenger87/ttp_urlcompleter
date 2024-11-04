@@ -1,7 +1,3 @@
-// production_orders_screen.dart
-
-// ignore_for_file: library_private_types_in_public_api
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -48,6 +44,24 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
         errorMessage = 'Failed to load production orders. Error: $e';
       });
     }
+  }
+
+  int calculateMenge(dynamic order) {
+    final productionOrder = order['productionOrder'];
+    final materialDetails = order['materialDetails'];
+    if (productionOrder != null && materialDetails != null) {
+      // Parse Restmenge and Menge_Kollo as doubles
+      final restmenge =
+          double.tryParse(productionOrder['Restmenge'] ?? '0') ?? 0;
+      final mengeKollo =
+          double.tryParse(materialDetails['Menge_Kollo'] ?? '1') ?? 1;
+
+      // Check to prevent division by zero and round up the result
+      if (mengeKollo != 0) {
+        return (restmenge / mengeKollo).ceil();
+      }
+    }
+    return 0; // Return 0 if any required field is missing or Menge_Kollo is 0
   }
 
   void markAsDone(int index) {
@@ -110,7 +124,6 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Group productionOrders by 'Eckstarttermin' as DateTime objects
     Map<DateTime, List<dynamic>> groupedByEckstarttermin = {};
     for (var order in productionOrders) {
       DateTime eckstartDate;
@@ -121,10 +134,10 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
         try {
           eckstartDate = DateTime.parse(eckstartterminStr);
         } catch (e) {
-          eckstartDate = DateTime.fromMillisecondsSinceEpoch(0); // Default date
+          eckstartDate = DateTime.fromMillisecondsSinceEpoch(0);
         }
       } else {
-        eckstartDate = DateTime.fromMillisecondsSinceEpoch(0); // Default date
+        eckstartDate = DateTime.fromMillisecondsSinceEpoch(0);
       }
       if (!groupedByEckstarttermin.containsKey(eckstartDate)) {
         groupedByEckstarttermin[eckstartDate] = [];
@@ -132,7 +145,6 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
       groupedByEckstarttermin[eckstartDate]!.add(order);
     }
 
-    // Convert Map to List and sort by DateTime keys ascending
     var sortedGroupedEntries = groupedByEckstarttermin.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
@@ -162,7 +174,6 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                         formatDate(eckstartDate.toIso8601String());
                     List<dynamic> ordersByEckstart = eckEntry.value;
 
-                    // Within each 'Eckstarttermin', group by 'Hauptartikel'
                     Map<String, List<dynamic>> groupedByHauptartikel = {};
                     for (var order in ordersByEckstart) {
                       String hauptartikel = order['Hauptartikel'] ?? 'Unknown';
@@ -181,7 +192,6 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                         String hauptartikel = hauptEntry.key;
                         List<dynamic> orders = hauptEntry.value;
 
-                        // Sort the orders by 'Sequenznummer' descending
                         orders.sort((a, b) {
                           final aSeq = int.tryParse(a['productionOrder']
                                       ?['Sequenznummer'] ??
@@ -191,7 +201,7 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                                       ?['Sequenznummer'] ??
                                   '0') ??
                               0;
-                          return bSeq.compareTo(aSeq); // Descending order
+                          return bSeq.compareTo(aSeq);
                         });
 
                         return ExpansionTile(
@@ -218,8 +228,8 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                             final sequenznummer = productionOrder != null
                                 ? productionOrder['Sequenznummer'] ?? 'N/A'
                                 : 'N/A';
+                            final menge = calculateMenge(order);
 
-                            // Find the index of the order in the original list
                             int index = productionOrders.indexOf(order);
 
                             return Card(
@@ -237,7 +247,7 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                                     Text('Eckstart: $eckstarttermin'),
                                     Text('Karton: $karton'),
                                     Text('Kartonlänge: $kartonlaenge'),
-                                    Text('Menge: $kollomenge'),
+                                    Text('Menge: $menge'),
                                   ],
                                 ),
                                 trailing: ElevatedButton(

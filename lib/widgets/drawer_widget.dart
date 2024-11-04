@@ -235,18 +235,18 @@ class MainDrawer extends StatelessWidget {
             leading: const Icon(Icons.handyman),
             title: const Text('Tools'),
             children: [
-              //ListTile(
-              //leading: const Icon(Icons.view_kanban),
-              //title: const Text('Planungstool WZB'),
-              //onTap: () {
-              //Navigator.push(
-              //context,
-              //MaterialPageRoute(
-              //builder: (context) => const ToolPlanningScreen(),
-              //),
-              //);
-              //},
-              //),
+              ListTile(
+                leading: const Icon(Icons.view_kanban),
+                title: const Text('Planungstool WZB'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ToolPlanningScreen(),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ],
