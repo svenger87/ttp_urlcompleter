@@ -1,5 +1,4 @@
-// restore_completed_orders_screen.dart
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -26,29 +25,168 @@ class _RestoreCompletedOrdersScreenState
   }
 
   Future<void> fetchCompletedOrders() async {
+    if (kDebugMode) {
+      print('Fetching completed orders...');
+    }
     try {
       final response = await http.get(
           Uri.parse('http://wim-solution.sip.local:3005/completed-entries'));
 
+      if (kDebugMode) {
+        print('Received response with status code: ${response.statusCode}');
+      }
       if (response.statusCode == 200) {
         setState(() {
           completedOrders = json.decode(response.body);
           errorMessage = null;
         });
+        if (kDebugMode) {
+          print(
+              'Successfully loaded completed orders. Number of orders: ${completedOrders.length}');
+        }
       } else {
         setState(() {
           errorMessage =
               'Failed to load completed orders. Status code: ${response.statusCode}';
         });
+        if (kDebugMode) {
+          print(
+              'Error loading completed orders: Status code ${response.statusCode}');
+        }
       }
     } catch (e) {
       setState(() {
         errorMessage = 'Failed to load completed orders. Error: $e';
       });
+      if (kDebugMode) {
+        print('Exception while fetching completed orders: $e');
+      }
+    }
+  }
+
+  int calculateMenge(dynamic orderData) {
+    final productionOrder = orderData['productionOrder'];
+    final materialDetails = orderData['materialDetails'];
+    if (productionOrder != null && materialDetails != null) {
+      final restmenge =
+          double.tryParse(productionOrder['Restmenge'] ?? '0') ?? 0;
+      final mengeKollo =
+          double.tryParse(materialDetails['Menge_Kollo'] ?? '1') ?? 1;
+
+      if (mengeKollo != 0) {
+        return (restmenge / mengeKollo).ceil();
+      }
+    }
+    return 0;
+  }
+
+  Future<void> showMengeDialog(String sequenznummer, int initialMenge) async {
+    if (kDebugMode) {
+      print(
+          'Showing Menge dialog for Sequenznummer: $sequenznummer with initial Menge: $initialMenge');
+    }
+    final TextEditingController mengeController = TextEditingController();
+    mengeController.text = initialMenge.toString();
+
+    final modifiedMenge = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Menge"),
+          content: TextField(
+            controller: mengeController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Menge',
+              hintText: 'Menge eingeben',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (kDebugMode) {
+                  print(
+                      'Menge dialog canceled for Sequenznummer: $sequenznummer');
+                }
+                Navigator.of(context).pop(null);
+              },
+              child: const Text("Abbrechen"),
+            ),
+            TextButton(
+              onPressed: () {
+                int enteredMenge =
+                    int.tryParse(mengeController.text) ?? initialMenge;
+                if (kDebugMode) {
+                  print(
+                      'User entered Menge: $enteredMenge for Sequenznummer: $sequenznummer');
+                }
+                Navigator.of(context).pop(enteredMenge);
+              },
+              child: const Text("Bestätigen"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (modifiedMenge != null) {
+      if (kDebugMode) {
+        print(
+            'Menge modified to: $modifiedMenge for Sequenznummer: $sequenznummer');
+      }
+      // Pass the modifiedMenge to the print function
+      await printLabelFromRestore(sequenznummer, modifiedMenge);
+    } else {
+      if (kDebugMode) {
+        print(
+            'No Menge modification performed for Sequenznummer: $sequenznummer');
+      }
+    }
+  }
+
+  Future<void> printLabelFromRestore(String sequenznummer, int menge) async {
+    if (kDebugMode) {
+      print(
+          'Attempting to print label from restore. Sequenznummer: $sequenznummer, Menge: $menge');
+    }
+    try {
+      final response = await http.post(
+        Uri.parse(
+            'http://wim-solution.sip.local:3005/print-label-from-restore'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({
+          'sequenznummer': sequenznummer,
+          'menge': menge
+        }), // Use modified menge
+      );
+
+      if (kDebugMode) {
+        print('Print label response status code: ${response.statusCode}');
+      }
+      if (response.statusCode != 200) {
+        throw Exception('Failed to print label');
+      }
+      if (kDebugMode) {
+        print(
+            'Label printed successfully for Sequenznummer: $sequenznummer, Menge: $menge');
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to print label. Error: $e';
+      });
+      if (kDebugMode) {
+        print('Exception while printing label: $e');
+      }
     }
   }
 
   Future<void> restoreCompletedOrder(String sequenznummer) async {
+    if (kDebugMode) {
+      print(
+          'Attempting to restore completed order with Sequenznummer: $sequenznummer');
+    }
     try {
       final response = await http.post(
         Uri.parse('http://wim-solution.sip.local:3005/restore-completed'),
@@ -58,16 +196,27 @@ class _RestoreCompletedOrdersScreenState
         body: jsonEncode({'sequenznummer': sequenznummer}),
       );
 
+      if (kDebugMode) {
+        print(
+            'Restore completed order response status code: ${response.statusCode}');
+      }
       if (response.statusCode == 200) {
         restorationOccurred = true;
+        if (kDebugMode) {
+          print('Successfully restored completed order: $sequenznummer');
+        }
         fetchCompletedOrders();
       } else {
-        throw Exception('Failed to restore completed order');
+        throw Exception(
+            'Failed to restore completed order. Status code: ${response.statusCode}');
       }
     } catch (e) {
       setState(() {
         errorMessage = 'Failed to restore completed order. Error: $e';
       });
+      if (kDebugMode) {
+        print('Exception while restoring completed order: $e');
+      }
     }
   }
 
@@ -88,7 +237,13 @@ class _RestoreCompletedOrdersScreenState
         title: const Text('Fertiggestellte Aufträge wiederherstellen'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context, restorationOccurred),
+          onPressed: () {
+            if (kDebugMode) {
+              print(
+                  'Back button pressed. Restoration occurred: $restorationOccurred');
+            }
+            Navigator.pop(context, restorationOccurred);
+          },
         ),
       ),
       body: errorMessage != null
@@ -115,28 +270,62 @@ class _RestoreCompletedOrdersScreenState
                         orderData['materialDetails']?['Karton'] ?? 'N/A';
                     final kartonlaenge =
                         orderData['materialDetails']?['Kartonlaenge'] ?? 'N/A';
-                    final kollomenge =
-                        orderData['materialDetails']?['Kollomenge'] ?? 'N/A';
+                    final menge = calculateMenge(orderData);
 
                     return Card(
                       margin: const EdgeInsets.all(8.0),
-                      child: ListTile(
-                        title: Text('Sequenznummer: $sequenznummer'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Geometrie: $hauptartikel'),
-                            Text('Arbeitsplatz: $arbeitsplatz'),
-                            Text('Eckstart: $eckstarttermin'),
-                            Text('Karton: $karton'),
-                            Text('Kartonlänge: $kartonlaenge'),
-                            Text('Menge: $kollomenge'),
-                          ],
-                        ),
-                        trailing: ElevatedButton(
-                          onPressed: () => restoreCompletedOrder(sequenznummer),
-                          child: const Text('Wiederherstellen'),
-                        ),
+                      elevation: 4.0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            title: Text('Geometrie: $hauptartikel'),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Sequenznummer: $sequenznummer'),
+                                Text('Arbeitsplatz: $arbeitsplatz'),
+                                Text('Eckstart: $eckstarttermin'),
+                                Text('Karton: $karton'),
+                                Text('Kartonlänge: $kartonlaenge'),
+                                Text('Menge: $menge'),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Column(
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (kDebugMode) {
+                                      print(
+                                          'Wiederherstellen button pressed for Sequenznummer: $sequenznummer');
+                                    }
+                                    restoreCompletedOrder(sequenznummer);
+                                  },
+                                  child: const Text('Wiederherstellen'),
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (kDebugMode) {
+                                      print(
+                                          'Etikett für Teilmenge drucken button pressed for Sequenznummer: $sequenznummer');
+                                    }
+                                    showMengeDialog(sequenznummer, menge);
+                                  },
+                                  child: const Text(
+                                      'Etikett für Teilmenge drucken'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },

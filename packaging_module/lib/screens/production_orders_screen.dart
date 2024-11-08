@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:packaging_module/screens/printer_management_screen.dart';
 import 'restore_completed_orders_screen.dart';
 
 class ProductionOrdersScreen extends StatefulWidget {
   const ProductionOrdersScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _ProductionOrdersScreenState createState() => _ProductionOrdersScreenState();
 }
 
@@ -50,39 +52,40 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
     final productionOrder = order['productionOrder'];
     final materialDetails = order['materialDetails'];
     if (productionOrder != null && materialDetails != null) {
-      // Parse Restmenge and Menge_Kollo as doubles
       final restmenge =
           double.tryParse(productionOrder['Restmenge'] ?? '0') ?? 0;
       final mengeKollo =
           double.tryParse(materialDetails['Menge_Kollo'] ?? '1') ?? 1;
 
-      // Check to prevent division by zero and round up the result
       if (mengeKollo != 0) {
         return (restmenge / mengeKollo).ceil();
       }
     }
-    return 0; // Return 0 if any required field is missing or Menge_Kollo is 0
+    return 0;
   }
 
   void markAsDone(int index) {
+    final order = productionOrders[index];
+    final menge = calculateMenge(order); // Calculate menge from API
     setState(() {
-      final order = productionOrders[index];
       productionOrders.removeAt(index);
-      saveCompletedOrder(order);
+      saveCompletedOrder(order, menge); // Pass menge
     });
   }
 
-  Future<void> saveCompletedOrder(dynamic order) async {
+  Future<void> saveCompletedOrder(dynamic order, int menge) async {
     try {
       final response = await http.post(
-          Uri.parse('http://wim-solution.sip.local:3005/save-completed'),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8'
-          },
-          body: jsonEncode({
-            'sequenznummer': order['productionOrder']['Sequenznummer'],
-            'orderData': order,
-          }));
+        Uri.parse('http://wim-solution.sip.local:3005/save-completed'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        body: jsonEncode({
+          'sequenznummer': order['productionOrder']['Sequenznummer'],
+          'orderData': order,
+          'menge': menge, // Include menge in the request
+        }),
+      );
 
       if (response.statusCode == 200) {
         if (kDebugMode) {
@@ -95,6 +98,71 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
     } catch (e) {
       setState(() {
         errorMessage = 'Failed to save completed order. Error: $e';
+      });
+    }
+  }
+
+// Update showMengeDialog to allow printing with custom menge values
+  Future<void> showMengeDialog(dynamic order) async {
+    final TextEditingController mengeController = TextEditingController();
+    final initialMenge = calculateMenge(order);
+    mengeController.text = initialMenge.toString();
+
+    final modifiedMenge = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Produzierte Menge"),
+          content: TextField(
+            controller: mengeController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Menge',
+              hintText: 'Menge eingeben',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text("Abbrechen"),
+            ),
+            TextButton(
+              onPressed: () {
+                int enteredMenge =
+                    int.tryParse(mengeController.text) ?? initialMenge;
+                Navigator.of(context).pop(enteredMenge);
+              },
+              child: const Text("Bestätigen"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (modifiedMenge != null) {
+      await printLabel(order, modifiedMenge); // Use custom menge if provided
+    }
+  }
+
+  Future<void> printLabel(dynamic order, int menge) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://wim-solution.sip.local:3005/print-label'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        body: jsonEncode({
+          'entryData': order,
+          'menge': menge // Send calculated menge
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to print label');
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to print label. Error: $e';
       });
     }
   }
@@ -124,12 +192,14 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Map<DateTime, List<dynamic>> groupedByEckstarttermin = {};
+    Map<DateTime, Map<String, List<dynamic>>> groupedByDateAndArticle = {};
+
     for (var order in productionOrders) {
       DateTime eckstartDate;
       final productionOrder = order['productionOrder'];
       final eckstartterminStr =
           productionOrder != null ? productionOrder['Eckstarttermin'] : null;
+
       if (eckstartterminStr != null) {
         try {
           eckstartDate = DateTime.parse(eckstartterminStr);
@@ -139,13 +209,15 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
       } else {
         eckstartDate = DateTime.fromMillisecondsSinceEpoch(0);
       }
-      if (!groupedByEckstarttermin.containsKey(eckstartDate)) {
-        groupedByEckstarttermin[eckstartDate] = [];
-      }
-      groupedByEckstarttermin[eckstartDate]!.add(order);
+
+      final hauptartikel = productionOrder?['Hauptartikel'] ?? 'Unknown';
+      groupedByDateAndArticle.putIfAbsent(eckstartDate, () => {});
+      groupedByDateAndArticle[eckstartDate]!
+          .putIfAbsent(hauptartikel, () => [])
+          .add(order);
     }
 
-    var sortedGroupedEntries = groupedByEckstarttermin.entries.toList()
+    var sortedGroupedEntries = groupedByDateAndArticle.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
     return Scaffold(
@@ -160,6 +232,16 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
             icon: const Icon(Icons.restore),
             onPressed: navigateToRestoreScreen,
           ),
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const PrinterManagementScreen()),
+              );
+            },
+          ),
         ],
       ),
       body: errorMessage != null
@@ -168,40 +250,31 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
               ? const Center(child: CircularProgressIndicator())
               : ListView(
                   padding: const EdgeInsets.all(16.0),
-                  children: sortedGroupedEntries.map((eckEntry) {
-                    DateTime eckstartDate = eckEntry.key;
+                  children: sortedGroupedEntries.map((dateEntry) {
+                    DateTime eckstartDate = dateEntry.key;
                     String eckstarttermin =
                         formatDate(eckstartDate.toIso8601String());
-                    List<dynamic> ordersByEckstart = eckEntry.value;
-
-                    Map<String, List<dynamic>> groupedByHauptartikel = {};
-                    for (var order in ordersByEckstart) {
-                      String hauptartikel = order['Hauptartikel'] ?? 'Unknown';
-                      if (!groupedByHauptartikel.containsKey(hauptartikel)) {
-                        groupedByHauptartikel[hauptartikel] = [];
-                      }
-                      groupedByHauptartikel[hauptartikel]!.add(order);
-                    }
+                    var articlesByDate = dateEntry.value;
 
                     return ExpansionTile(
                       title: Text(
                         'Eckstarttermin: $eckstarttermin',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      children: groupedByHauptartikel.entries.map((hauptEntry) {
-                        String hauptartikel = hauptEntry.key;
-                        List<dynamic> orders = hauptEntry.value;
+                      children: articlesByDate.entries.map((articleEntry) {
+                        String hauptartikel = articleEntry.key;
+                        List<dynamic> orders = articleEntry.value;
 
                         orders.sort((a, b) {
-                          final aSeq = int.tryParse(a['productionOrder']
+                          int aSeq = int.tryParse(a['productionOrder']
                                       ?['Sequenznummer'] ??
                                   '0') ??
                               0;
-                          final bSeq = int.tryParse(b['productionOrder']
+                          int bSeq = int.tryParse(b['productionOrder']
                                       ?['Sequenznummer'] ??
                                   '0') ??
                               0;
-                          return bSeq.compareTo(aSeq);
+                          return bSeq.compareTo(aSeq); // Descending order
                         });
 
                         return ExpansionTile(
@@ -210,25 +283,18 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           children: orders.map<Widget>((order) {
-                            final productionOrder = order['productionOrder'];
-                            final eckstarttermin = productionOrder != null
-                                ? formatDate(productionOrder['Eckstarttermin'])
-                                : 'N/A';
-                            final arbeitsplatz = productionOrder != null
-                                ? productionOrder['Arbeitsplatz'] ?? 'N/A'
-                                : 'N/A';
+                            final sequenznummer = order['productionOrder']
+                                    ?['Sequenznummer'] ??
+                                'N/A';
+                            final menge = calculateMenge(order);
+                            final arbeitsplatz = order['productionOrder']
+                                    ?['Arbeitsplatz'] ??
+                                'N/A';
                             final karton =
                                 order['materialDetails']?['Karton'] ?? 'N/A';
                             final kartonlaenge = order['materialDetails']
                                     ?['Kartonlaenge'] ??
                                 'N/A';
-                            final kollomenge = order['materialDetails']
-                                    ?['Kollomenge'] ??
-                                'N/A';
-                            final sequenznummer = productionOrder != null
-                                ? productionOrder['Sequenznummer'] ?? 'N/A'
-                                : 'N/A';
-                            final menge = calculateMenge(order);
 
                             int index = productionOrders.indexOf(order);
 
@@ -238,25 +304,45 @@ class _ProductionOrdersScreenState extends State<ProductionOrdersScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8.0),
                               ),
-                              child: ListTile(
-                                title: Text('Sequenznummer: $sequenznummer'),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Arbeitsplatz: $arbeitsplatz'),
-                                    Text('Eckstart: $eckstarttermin'),
-                                    Text('Karton: $karton'),
-                                    Text('Kartonlänge: $kartonlaenge'),
-                                    Text('Menge: $menge'),
-                                  ],
-                                ),
-                                trailing: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size(200, 80),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    title:
+                                        Text('Sequenznummer: $sequenznummer'),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Arbeitsplatz: $arbeitsplatz'),
+                                        Text('Eckstart: $eckstarttermin'),
+                                        Text('Karton: $karton'),
+                                        Text('Kartonlänge: $kartonlaenge'),
+                                        Text('Menge: $menge'),
+                                      ],
+                                    ),
                                   ),
-                                  onPressed: () => markAsDone(index),
-                                  child: const Text('Als erledigt markieren'),
-                                ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0),
+                                    child: Column(
+                                      children: [
+                                        ElevatedButton(
+                                          onPressed: () => markAsDone(index),
+                                          child: const Text(
+                                              'Als erledigt markieren'),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              showMengeDialog(order),
+                                          child: const Text(
+                                              'Etikett für Teilmenge drucken'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           }).toList(),
