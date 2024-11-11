@@ -230,105 +230,169 @@ class _RestoreCompletedOrdersScreenState
     }
   }
 
+  Map<String, Map<String, Map<String, List<dynamic>>>> categorizeOrdersByDate(
+      List<dynamic> orders) {
+    final Map<String, Map<String, Map<String, List<dynamic>>>> groupedOrders =
+        {};
+
+    for (var order in orders) {
+      final eckstarttermin =
+          order['order_data']['productionOrder']?['Eckstarttermin'];
+      if (eckstarttermin != null) {
+        final date = DateTime.parse(eckstarttermin);
+        final year = date.year.toString();
+        final month = date.month.toString().padLeft(2, '0');
+        final day = date.day.toString().padLeft(2, '0');
+
+        groupedOrders.putIfAbsent(year, () => {});
+        groupedOrders[year]!.putIfAbsent(month, () => {});
+        groupedOrders[year]![month]!.putIfAbsent(day, () => []);
+        groupedOrders[year]![month]![day]!.add(order);
+      }
+    }
+
+    return groupedOrders;
+  }
+
+  String getMonthName(String monthNumber) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    final monthIndex = int.parse(monthNumber) - 1;
+    return monthNames[monthIndex];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final groupedOrders = categorizeOrdersByDate(completedOrders);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fertiggestellte Aufträge wiederherstellen'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (kDebugMode) {
-              print(
-                  'Back button pressed. Restoration occurred: $restorationOccurred');
-            }
             Navigator.pop(context, restorationOccurred);
           },
         ),
       ),
       body: errorMessage != null
           ? Center(child: Text(errorMessage!))
-          : completedOrders.isEmpty
+          : groupedOrders.isEmpty
               ? const Center(
                   child: Text('Keine fertiggestellten Aufträge vorhanden'))
-              : ListView.builder(
-                  itemCount: completedOrders.length,
-                  itemBuilder: (context, index) {
-                    final orderEntry = completedOrders[index];
-                    final orderData = orderEntry['order_data'];
-                    final sequenznummer =
-                        orderData['productionOrder']?['Sequenznummer'] ?? 'N/A';
-                    final hauptartikel = orderData['Hauptartikel'] ?? 'Unknown';
-                    final eckstarttermin = orderData['productionOrder'] != null
-                        ? formatDate(
-                            orderData['productionOrder']['Eckstarttermin'])
-                        : 'N/A';
-                    final arbeitsplatz = orderData['productionOrder'] != null
-                        ? orderData['productionOrder']['Arbeitsplatz'] ?? 'N/A'
-                        : 'N/A';
-                    final karton =
-                        orderData['materialDetails']?['Karton'] ?? 'N/A';
-                    final kartonlaenge =
-                        orderData['materialDetails']?['Kartonlaenge'] ?? 'N/A';
-                    final menge = calculateMenge(orderData);
+              : ListView(
+                  children: groupedOrders.entries.map((yearEntry) {
+                    final year = yearEntry.key;
+                    return ExpansionTile(
+                      title: Text(year),
+                      children: yearEntry.value.entries.map((monthEntry) {
+                        final month = monthEntry.key;
+                        final monthName = getMonthName(month);
 
-                    return Card(
-                      margin: const EdgeInsets.all(8.0),
-                      elevation: 4.0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ListTile(
-                            title: Text('Geometrie: $hauptartikel'),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Sequenznummer: $sequenznummer'),
-                                Text('Arbeitsplatz: $arbeitsplatz'),
-                                Text('Eckstart: $eckstarttermin'),
-                                Text('Karton: $karton'),
-                                Text('Kartonlänge: $kartonlaenge'),
-                                Text('Menge: $menge'),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Column(
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (kDebugMode) {
-                                      print(
-                                          'Wiederherstellen button pressed for Sequenznummer: $sequenznummer');
-                                    }
-                                    restoreCompletedOrder(sequenznummer);
-                                  },
-                                  child: const Text('Wiederherstellen'),
-                                ),
-                                const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (kDebugMode) {
-                                      print(
-                                          'Etikett für Teilmenge drucken button pressed for Sequenznummer: $sequenznummer');
-                                    }
-                                    showMengeDialog(sequenznummer, menge);
-                                  },
-                                  child: const Text(
-                                      'Etikett für Teilmenge drucken'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                        // Sort days in ascending order
+                        final sortedDays = monthEntry.value.keys.toList()
+                          ..sort();
+
+                        return ExpansionTile(
+                          title: Text(monthName),
+                          children: sortedDays.map((day) {
+                            final ordersForDay = monthEntry.value[day]!;
+                            return ExpansionTile(
+                              title: Text('Tag: $day'),
+                              children: ordersForDay.map((orderEntry) {
+                                final orderData = orderEntry['order_data'];
+                                final sequenznummer =
+                                    orderData['productionOrder']
+                                            ?['Sequenznummer'] ??
+                                        'N/A';
+                                final hauptartikel =
+                                    orderData['Hauptartikel'] ?? 'Unknown';
+                                final arbeitsplatz =
+                                    orderData['productionOrder'] != null
+                                        ? orderData['productionOrder']
+                                                ['Arbeitsplatz'] ??
+                                            'N/A'
+                                        : 'N/A';
+                                final karton = orderData['materialDetails']
+                                        ?['Karton'] ??
+                                    'N/A';
+                                final kartonlaenge =
+                                    orderData['materialDetails']
+                                            ?['Kartonlaenge'] ??
+                                        'N/A';
+                                final menge = calculateMenge(orderData);
+
+                                return Card(
+                                  margin: const EdgeInsets.all(8.0),
+                                  elevation: 4.0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ListTile(
+                                        title: Text('Geometrie: $hauptartikel'),
+                                        subtitle: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                                'Sequenznummer: $sequenznummer'),
+                                            Text('Arbeitsplatz: $arbeitsplatz'),
+                                            Text('Karton: $karton'),
+                                            Text('Kartonlänge: $kartonlaenge'),
+                                            Text('Menge: $menge'),
+                                          ],
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16.0),
+                                        child: Column(
+                                          children: [
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                restoreCompletedOrder(
+                                                    sequenznummer);
+                                              },
+                                              child: const Text(
+                                                  'Wiederherstellen'),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                showMengeDialog(
+                                                    sequenznummer, menge);
+                                              },
+                                              child: const Text(
+                                                  'Etikett für Teilmenge drucken'),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          }).toList(),
+                        );
+                      }).toList(),
                     );
-                  },
+                  }).toList(),
                 ),
     );
   }
