@@ -21,7 +21,8 @@ class NumberInputPage extends StatefulWidget {
   _NumberInputPageState createState() => _NumberInputPageState();
 }
 
-class _NumberInputPageState extends State<NumberInputPage> {
+class _NumberInputPageState extends State<NumberInputPage>
+    with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   final TextEditingController _numberController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -35,6 +36,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadRecentItems();
   }
 
@@ -54,10 +56,32 @@ class _NumberInputPageState extends State<NumberInputPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     controller?.dispose();
     _numberController.dispose();
     scanTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (controller != null) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused) {
+        controller!.pauseCamera();
+      } else if (state == AppLifecycleState.resumed) {
+        controller!.resumeCamera();
+      }
+    }
+  }
+
+  Timer? _debounce;
+
+  void _onSearchChanged(String value) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchProfileSuggestions(value);
+    });
   }
 
   @override
@@ -152,9 +176,7 @@ class _NumberInputPageState extends State<NumberInputPage> {
                       onFieldSubmitted();
                       _addRecentItem(textEditingController.text.trim());
                     },
-                    onChanged: (String value) async {
-                      await _fetchProfileSuggestions(value);
-                    },
+                    onChanged: _onSearchChanged,
                     decoration: const InputDecoration(
                       labelText: 'Profilnummer eingeben',
                       hintText: 'Geben Sie eine Profilnummer ein',
