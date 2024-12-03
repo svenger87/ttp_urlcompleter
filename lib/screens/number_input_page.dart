@@ -12,6 +12,8 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../modules/webview_module.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:http/io_client.dart' as http;
 
 class NumberInputPage extends StatefulWidget {
@@ -225,6 +227,288 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
+  Widget _createIssueModal(String scannedCode) {
+    bool operable = true;
+    String? selectedAreaCenter;
+    String? selectedLine;
+    String? selectedToolBreakdown;
+    String? selectedMachineBreakdown;
+    String? workCardComment;
+    String? imagePath;
+
+    return StatefulBuilder(builder: (context, setState) {
+      return AlertDialog(
+        title: const Text(
+          'Störfall anlegen',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Operable Checkbox
+              Row(
+                children: [
+                  Checkbox(
+                    value: operable,
+                    onChanged: (value) {
+                      setState(() {
+                        operable = value!;
+                      });
+                    },
+                  ),
+                  const Text('Operable'),
+                ],
+              ),
+
+              // Area Center Dropdown
+              FutureBuilder<List<String>>(
+                future: _fetchAreaCenters(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    final areaCenters = snapshot.data!;
+                    return DropdownButton<String>(
+                      value: selectedAreaCenter,
+                      hint: const Text('Select Area Center'),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedAreaCenter = value;
+                        });
+                      },
+                      items: areaCenters
+                          .map((e) => DropdownMenuItem<String>(
+                                value: e,
+                                child: Text(e),
+                              ))
+                          .toList(),
+                    );
+                  }
+                },
+              ),
+
+              // Line Dropdown
+              FutureBuilder<List<String>>(
+                future: _fetchLines(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    final lines = snapshot.data!;
+                    return DropdownButton<String>(
+                      value: selectedLine,
+                      hint: const Text('Select Line'),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedLine = value;
+                        });
+                      },
+                      items: lines
+                          .map((e) => DropdownMenuItem<String>(
+                                value: e,
+                                child: Text(e),
+                              ))
+                          .toList(),
+                    );
+                  }
+                },
+              ),
+
+              // Tool Breakdown Dropdown
+              FutureBuilder<List<String>>(
+                future: _fetchTools(scannedCode),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    final tools = snapshot.data!;
+                    return DropdownButton<String>(
+                      value: selectedToolBreakdown,
+                      hint: const Text('Select Tool Breakdown'),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedToolBreakdown = value;
+                        });
+                      },
+                      items: tools
+                          .map((e) => DropdownMenuItem<String>(
+                                value: e,
+                                child: Text(e),
+                              ))
+                          .toList(),
+                    );
+                  }
+                },
+              ),
+
+              // Machine Breakdown Dropdown
+              FutureBuilder<List<String>>(
+                future: _fetchMachines(scannedCode),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    final machines = snapshot.data!;
+                    return DropdownButton<String>(
+                      value: selectedMachineBreakdown,
+                      hint: const Text('Select Machine Breakdown'),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedMachineBreakdown = value;
+                        });
+                      },
+                      items: machines
+                          .map((e) => DropdownMenuItem<String>(
+                                value: e,
+                                child: Text(e),
+                              ))
+                          .toList(),
+                    );
+                  }
+                },
+              ),
+
+              // Work Card Comment Text Field
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Work Card Comment',
+                ),
+                onChanged: (value) {
+                  workCardComment = value;
+                },
+              ),
+
+              // Image Picker Button
+              ElevatedButton(
+                onPressed: () async {
+                  final pickedImage = await _pickImage();
+                  if (pickedImage != null) {
+                    setState(() {
+                      imagePath = pickedImage.path;
+                    });
+                  }
+                },
+                child: const Text('Select or Capture Image'),
+              ),
+              if (imagePath != null) Text('Selected: $imagePath'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_validateForm(
+                operable: operable,
+                areaCenter: selectedAreaCenter,
+                line: selectedLine,
+                toolBreakdown: selectedToolBreakdown,
+                machineBreakdown: selectedMachineBreakdown,
+                workCardComment: workCardComment,
+                imagePath: imagePath,
+              )) {
+                _submitIssue({
+                  'operable': operable.toString(),
+                  'areaCenter': selectedAreaCenter!,
+                  'line': selectedLine!,
+                  'toolBreakdown': selectedToolBreakdown!,
+                  'machineBreakdown': selectedMachineBreakdown!,
+                  'workCardComment': workCardComment!,
+                  'imagePath': imagePath!,
+                });
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please fill in all fields.'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      );
+    });
+  }
+
+  Future<List<String>> _fetchAreaCenters() async {
+    // Fetch from salamanderareacenter API
+    final response = await http.get(
+        Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => e['name'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch area centers');
+    }
+  }
+
+  Future<List<String>> _fetchLines() async {
+    // Fetch from salamanderline API
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/salamanderline'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => e['number'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch lines');
+    }
+  }
+
+  Future<List<String>> _fetchTools(String scannedCode) async {
+    // Fetch from projects API
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data
+          .where((e) => e['number'].toString().startsWith('WKZ'))
+          .map((e) => e['number'].toString())
+          .toList();
+    } else {
+      throw Exception('Failed to fetch tools');
+    }
+  }
+
+  Future<List<String>> _fetchMachines(String scannedCode) async {
+    // Fetch from machines API
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data
+          .where((e) => e['number'].toString().startsWith('WKZ'))
+          .map((e) => e['number'].toString())
+          .toList();
+    } else {
+      throw Exception('Failed to fetch machines');
+    }
+  }
+
+  Future<File?> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile =
+        await picker.pickImage(source: ImageSource.camera); // or .gallery
+    if (pickedFile != null) {
+      return File(pickedFile.path);
+    }
+    return null;
+  }
+
   Future<void> _fetchProfileSuggestions(String query) async {
     try {
       final httpClient = http.IOClient(
@@ -316,19 +600,17 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   void _showOptionsModal(String url) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+        return AlertDialog(
+          title: const Text(
+            'Wählen Sie eine Aktion aus',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Wählen Sie eine Aktion aus',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
               ListTile(
                 leading: const Icon(Icons.open_in_browser),
                 title: const Text('Werkzeugdetails öffnen'),
@@ -353,36 +635,32 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
-  void _reportIssue(String scannedCode) async {
-    try {
-      final Uri apiUrl = Uri.parse('http://your-backend-api/report-issue');
-      final httpClient = http.IOClient(
-          HttpClient()..badCertificateCallback = ((_, __, ___) => true));
-      final response = await httpClient.post(
-        apiUrl,
-        body: json.encode({'code': scannedCode}),
-        headers: {'Content-Type': 'application/json'},
-      );
+  void _submitIssue(Map<String, String> issueData) async {
+    final response = await http.post(
+      Uri.parse('http://localhost:3000/report-issue'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(issueData),
+    );
 
-      if (response.statusCode == 200) {
-        // Success
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Störfall erfolgreich gemeldet!')),
-        );
-      } else {
-        // Error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: ${response.statusCode}')),
-        );
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error reporting issue: $e');
-      }
+    if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Störfall konnte nicht gemeldet werden.')),
+        const SnackBar(content: Text('Issue submitted successfully!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to submit the issue.')),
       );
     }
+  }
+
+  void _reportIssue(String scannedCode) async {
+    // Show modal to fill the form
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return _createIssueModal(scannedCode);
+      },
+    );
   }
 
   void _openUrlWithNumber() async {
@@ -428,5 +706,22 @@ class _NumberInputPageState extends State<NumberInputPage>
       recentItems.clear();
     });
     _saveRecentItems();
+  }
+
+  bool _validateForm({
+    required bool operable,
+    required String? areaCenter,
+    required String? line,
+    required String? toolBreakdown,
+    required String? machineBreakdown,
+    required String? workCardComment,
+    required String? imagePath,
+  }) {
+    return areaCenter != null &&
+        line != null &&
+        toolBreakdown != null &&
+        machineBreakdown != null &&
+        workCardComment != null &&
+        imagePath != null;
   }
 }
