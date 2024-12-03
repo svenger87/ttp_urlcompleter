@@ -294,14 +294,8 @@ class _NumberInputPageState extends State<NumberInputPage>
           print('Final URL to be launched: $url');
         }
 
-        if (await canLaunch(url)) {
-          _navigateToUrl(url);
-          _addRecentItem(url);
-        } else {
-          if (kDebugMode) {
-            print('Could not launch URL: $url');
-          }
-        }
+        // Show the modal
+        _showOptionsModal(url);
 
         scanTimer = Timer(const Duration(seconds: 3), () {
           setState(() {
@@ -319,6 +313,76 @@ class _NumberInputPageState extends State<NumberInputPage>
         builder: (context) => WebViewModule(url: url),
       ),
     );
+  }
+
+  void _showOptionsModal(String url) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Wählen Sie eine Aktion aus',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.open_in_browser),
+                title: const Text('Werkzeugdetails öffnen'),
+                onTap: () {
+                  Navigator.pop(context); // Close the modal
+                  _navigateToUrl(url); // Navigate to the URL
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.add_alert),
+                title: const Text('Störfall anlegen'),
+                onTap: () {
+                  Navigator.pop(context); // Close the modal
+                  _reportIssue(url); // Call the backend API placeholder
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _reportIssue(String scannedCode) async {
+    try {
+      final Uri apiUrl = Uri.parse('http://your-backend-api/report-issue');
+      final httpClient = http.IOClient(
+          HttpClient()..badCertificateCallback = ((_, __, ___) => true));
+      final response = await httpClient.post(
+        apiUrl,
+        body: json.encode({'code': scannedCode}),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        // Success
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Störfall erfolgreich gemeldet!')),
+        );
+      } else {
+        // Error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error reporting issue: $e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Störfall konnte nicht gemeldet werden.')),
+      );
+    }
   }
 
   void _openUrlWithNumber() async {
