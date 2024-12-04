@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use, library_private_types_in_public_api
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
@@ -7,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:vibration/vibration.dart';
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../modules/webview_module.dart';
@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:http/io_client.dart' as http;
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class NumberInputPage extends StatefulWidget {
   const NumberInputPage({super.key});
@@ -242,14 +243,23 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedLine;
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
+    String? selectedEmployee;
     String? workCardComment;
     String? imagePath;
+
+    // Controllers for typeahead fields
+    final TextEditingController employeeController = TextEditingController();
+    final TextEditingController areaCenterController = TextEditingController();
+    final TextEditingController lineController = TextEditingController();
+    final TextEditingController toolController = TextEditingController();
+    final TextEditingController machineController = TextEditingController();
 
     // Local state to hold fetched data
     List<String> areaCenters = [];
     List<String> lines = [];
     List<String> tools = [];
     List<String> machines = [];
+    List<String> employees = [];
 
     // Fetch all data once
     Future<void> fetchAllData(String scannedCode) async {
@@ -259,6 +269,7 @@ class _NumberInputPageState extends State<NumberInputPage>
           _fetchLines(),
           _fetchTools(scannedCode),
           _fetchMachines(scannedCode),
+          _fetchEmployees(),
         ]);
 
         setState(() {
@@ -266,6 +277,7 @@ class _NumberInputPageState extends State<NumberInputPage>
           lines = results[1];
           tools = results[2];
           machines = results[3];
+          employees = results[4];
 
           // Preselect tool and machine breakdown based on scanned code
           selectedToolBreakdown = tools.firstWhere(
@@ -313,72 +325,135 @@ class _NumberInputPageState extends State<NumberInputPage>
                 ],
               ),
 
-              // Area Center Dropdown
-              DropdownButton<String>(
-                value: selectedAreaCenter,
-                hint: const Text('Select Area Center'),
-                onChanged: (value) {
-                  setState(() {
-                    selectedAreaCenter = value;
-                  });
+              // Employee Selection
+              TypeAheadFormField<String>(
+                textFieldConfiguration: TextFieldConfiguration(
+                  controller: employeeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Employee',
+                  ),
+                ),
+                suggestionsCallback: (pattern) {
+                  return employees
+                      .where((e) =>
+                          e.toLowerCase().contains(pattern.toLowerCase()))
+                      .toList();
                 },
-                items: areaCenters
-                    .map((e) => DropdownMenuItem<String>(
-                          value: e,
-                          child: Text(e),
-                        ))
-                    .toList(),
+                itemBuilder: (context, suggestion) {
+                  return ListTile(
+                    title: Text(suggestion),
+                  );
+                },
+                onSuggestionSelected: (suggestion) {
+                  employeeController.text = suggestion;
+                  selectedEmployee = suggestion;
+                },
+                validator: (value) =>
+                    value!.isEmpty ? 'Please select an employee' : null,
               ),
 
-              // Line Dropdown
-              DropdownButton<String>(
-                value: selectedLine,
-                hint: const Text('Select Line'),
-                onChanged: (value) {
-                  setState(() {
-                    selectedLine = value;
-                  });
+              // Area Center TypeAhead
+              TypeAheadFormField<String>(
+                textFieldConfiguration: TextFieldConfiguration(
+                  controller: areaCenterController,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Area Center',
+                  ),
+                ),
+                suggestionsCallback: (pattern) {
+                  return areaCenters
+                      .where((e) =>
+                          e.toLowerCase().contains(pattern.toLowerCase()))
+                      .toList();
                 },
-                items: lines
-                    .map((e) => DropdownMenuItem<String>(
-                          value: e,
-                          child: Text(e),
-                        ))
-                    .toList(),
+                itemBuilder: (context, suggestion) {
+                  return ListTile(
+                    title: Text(suggestion),
+                  );
+                },
+                onSuggestionSelected: (suggestion) {
+                  areaCenterController.text = suggestion;
+                  selectedAreaCenter = suggestion;
+                },
+                validator: (value) =>
+                    value!.isEmpty ? 'Please select an area center' : null,
               ),
 
-              // Tool Breakdown Dropdown
-              DropdownButton<String>(
-                value: selectedToolBreakdown,
-                hint: const Text('Select Tool Breakdown'),
-                onChanged: (value) {
-                  setState(() {
-                    selectedToolBreakdown = value;
-                  });
+              // Line TypeAhead
+              TypeAheadFormField<String>(
+                textFieldConfiguration: TextFieldConfiguration(
+                  controller: lineController,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Line',
+                  ),
+                ),
+                suggestionsCallback: (pattern) {
+                  return lines
+                      .where((e) =>
+                          e.toLowerCase().contains(pattern.toLowerCase()))
+                      .toList();
                 },
-                items: tools
-                    .map((e) => DropdownMenuItem<String>(
-                          value: e,
-                          child: Text(e),
-                        ))
-                    .toList(),
+                itemBuilder: (context, suggestion) {
+                  return ListTile(
+                    title: Text(suggestion),
+                  );
+                },
+                onSuggestionSelected: (suggestion) {
+                  lineController.text = suggestion;
+                  selectedLine = suggestion;
+                },
+                validator: (value) =>
+                    value!.isEmpty ? 'Please select a line' : null,
               ),
 
-              // Machine Breakdown Dropdown
-              DropdownButton<String>(
-                value: selectedMachineBreakdown,
-                hint: const Text('Select Machine Breakdown'),
-                onChanged: (value) {
-                  setState(() {
-                    selectedMachineBreakdown = value;
-                  });
+              // Tool Breakdown TypeAhead
+              TypeAheadFormField<String>(
+                textFieldConfiguration: TextFieldConfiguration(
+                  controller: toolController,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Tool Breakdown',
+                  ),
+                ),
+                suggestionsCallback: (pattern) {
+                  return tools
+                      .where((e) =>
+                          e.toLowerCase().contains(pattern.toLowerCase()))
+                      .toList();
                 },
-                items: machines
-                    .map((e) => DropdownMenuItem<String>(
-                          value: e,
-                          child: Text(e),
-                        ))
-                    .toList(),
+                itemBuilder: (context, suggestion) {
+                  return ListTile(
+                    title: Text(suggestion),
+                  );
+                },
+                onSuggestionSelected: (suggestion) {
+                  toolController.text = suggestion;
+                  selectedToolBreakdown = suggestion;
+                },
+              ),
+
+              // Machine Breakdown TypeAhead
+              TypeAheadFormField<String>(
+                textFieldConfiguration: TextFieldConfiguration(
+                  controller: machineController,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Machine Breakdown',
+                  ),
+                ),
+                suggestionsCallback: (pattern) {
+                  return machines
+                      .where((e) =>
+                          e.toLowerCase().contains(pattern.toLowerCase()))
+                      .toList();
+                },
+                itemBuilder: (context, suggestion) {
+                  return ListTile(
+                    title: Text(suggestion),
+                  );
+                },
+                onSuggestionSelected: (suggestion) {
+                  machineController.text = suggestion;
+                  selectedMachineBreakdown = suggestion;
+                },
               ),
 
               // Work Card Comment Text Field
@@ -420,6 +495,7 @@ class _NumberInputPageState extends State<NumberInputPage>
                 operable: operable,
                 areaCenter: selectedAreaCenter,
                 line: selectedLine,
+                employee: selectedEmployee,
                 toolBreakdown: selectedToolBreakdown,
                 machineBreakdown: selectedMachineBreakdown,
                 workCardComment: workCardComment,
@@ -429,8 +505,9 @@ class _NumberInputPageState extends State<NumberInputPage>
                   'operable': operable.toString(),
                   'areaCenter': selectedAreaCenter!,
                   'line': selectedLine!,
-                  'toolBreakdown': selectedToolBreakdown!,
-                  'machineBreakdown': selectedMachineBreakdown!,
+                  'employee': selectedEmployee!,
+                  'toolBreakdown': selectedToolBreakdown ?? '',
+                  'machineBreakdown': selectedMachineBreakdown ?? '',
                   'workCardComment': workCardComment!,
                   'imagePath': imagePath!,
                 });
@@ -438,7 +515,7 @@ class _NumberInputPageState extends State<NumberInputPage>
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Please fill in all fields.'),
+                    content: Text('Please fill in all required fields.'),
                   ),
                 );
               }
@@ -451,7 +528,6 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   Future<List<String>> _fetchAreaCenters() async {
-    // Fetch from salamanderareacenter API
     final response = await http.get(
         Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'));
     if (response.statusCode == 200) {
@@ -463,7 +539,6 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   Future<List<String>> _fetchLines() async {
-    // Fetch from salamanderline API
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/salamanderline'));
     if (response.statusCode == 200) {
@@ -475,7 +550,6 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   Future<List<String>> _fetchTools(String scannedCode) async {
-    // Fetch from projects API
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
     if (response.statusCode == 200) {
@@ -490,7 +564,6 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   Future<List<String>> _fetchMachines(String scannedCode) async {
-    // Fetch from machines API
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
     if (response.statusCode == 200) {
@@ -501,6 +574,20 @@ class _NumberInputPageState extends State<NumberInputPage>
           .toList();
     } else {
       throw Exception('Failed to fetch machines');
+    }
+  }
+
+  Future<List<String>> _fetchEmployees() async {
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/employee'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data
+          .map((e) =>
+              '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
+          .toList();
+    } else {
+      throw Exception('Failed to fetch employees');
     }
   }
 
@@ -584,7 +671,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         }
 
         // Show the modal
-        _showOptionsModal(url);
+        _showOptionsModal(url, scannedCode);
 
         scanTimer = Timer(const Duration(seconds: 3), () {
           setState(() {
@@ -604,7 +691,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
-  void _showOptionsModal(String url) {
+  void _showOptionsModal(String url, String scannedCode) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -630,7 +717,7 @@ class _NumberInputPageState extends State<NumberInputPage>
                 title: const Text('Störfall anlegen'),
                 onTap: () {
                   Navigator.pop(context); // Close the modal
-                  _reportIssue(url); // Call the backend API placeholder
+                  _reportIssue(scannedCode); // Call the report issue function
                 },
               ),
             ],
@@ -641,19 +728,30 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   void _submitIssue(Map<String, String> issueData) async {
-    final response = await http.post(
-      Uri.parse('http://wim-solution.sip.local:3006/report-issue'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(issueData),
-    );
+    final uri = Uri.parse('http://wim-solution.sip.local:3006/report-issue');
+    final request = http.MultipartRequest('POST', uri);
 
+    // Add text fields
+    issueData.forEach((key, value) {
+      if (key != 'imagePath') {
+        request.fields[key] = value;
+      }
+    });
+
+    // Add the image file
+    final imageFile = File(issueData['imagePath']!);
+    request.files
+        .add(await http.MultipartFile.fromPath('imageFile', imageFile.path));
+
+    final response = await request.send();
     if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Issue submitted successfully!')),
       );
     } else {
+      final errorMessage = await response.stream.bytesToString();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to submit the issue.')),
+        SnackBar(content: Text('Failed to submit the issue: $errorMessage')),
       );
     }
   }
@@ -707,15 +805,19 @@ class _NumberInputPageState extends State<NumberInputPage>
     required bool operable,
     required String? areaCenter,
     required String? line,
+    required String? employee,
     required String? toolBreakdown,
     required String? machineBreakdown,
     required String? workCardComment,
     required String? imagePath,
   }) {
+    bool hasBreakdown = (toolBreakdown != null && toolBreakdown.isNotEmpty) ||
+        (machineBreakdown != null && machineBreakdown.isNotEmpty);
+
     return areaCenter != null &&
         line != null &&
-        toolBreakdown != null &&
-        machineBreakdown != null &&
+        employee != null &&
+        hasBreakdown &&
         workCardComment != null &&
         imagePath != null;
   }
