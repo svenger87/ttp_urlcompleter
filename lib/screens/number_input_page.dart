@@ -227,6 +227,15 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
+  void _reportIssue(String scannedCode) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return _createIssueModal(scannedCode);
+      },
+    );
+  }
+
   Widget _createIssueModal(String scannedCode) {
     bool operable = true;
     String? selectedAreaCenter;
@@ -235,6 +244,49 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedMachineBreakdown;
     String? workCardComment;
     String? imagePath;
+
+    // Local state to hold fetched data
+    List<String> areaCenters = [];
+    List<String> lines = [];
+    List<String> tools = [];
+    List<String> machines = [];
+
+    // Fetch all data once
+    Future<void> fetchAllData() async {
+      try {
+        final fetchedAreaCenters = await _fetchAreaCenters();
+        final fetchedLines = await _fetchLines();
+        final fetchedTools = await _fetchTools(scannedCode);
+        final fetchedMachines = await _fetchMachines(scannedCode);
+
+        setState(() {
+          areaCenters = fetchedAreaCenters;
+          lines = fetchedLines;
+          tools = fetchedTools;
+          machines = fetchedMachines;
+
+          // Preselect tool and machine breakdown based on scanned code
+          selectedToolBreakdown = tools.firstWhere(
+            (tool) => tool.contains(scannedCode),
+            orElse: () => '', // Return an empty string instead of `null`
+          );
+
+          selectedMachineBreakdown = machines.firstWhere(
+            (machine) => machine.contains(scannedCode),
+            orElse: () => '', // Return an empty string instead of `null`
+          );
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error fetching data: $e');
+        }
+      }
+    }
+
+    // Trigger fetch on modal creation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchAllData();
+    });
 
     return StatefulBuilder(builder: (context, setState) {
       return AlertDialog(
@@ -261,119 +313,71 @@ class _NumberInputPageState extends State<NumberInputPage>
               ),
 
               // Area Center Dropdown
-              FutureBuilder<List<String>>(
-                future: _fetchAreaCenters(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    final areaCenters = snapshot.data!;
-                    return DropdownButton<String>(
-                      value: selectedAreaCenter,
-                      hint: const Text('Select Area Center'),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedAreaCenter = value;
-                        });
-                      },
-                      items: areaCenters
-                          .map((e) => DropdownMenuItem<String>(
-                                value: e,
-                                child: Text(e),
-                              ))
-                          .toList(),
-                    );
-                  }
+              DropdownButton<String>(
+                value: selectedAreaCenter,
+                hint: const Text('Select Area Center'),
+                onChanged: (value) {
+                  setState(() {
+                    selectedAreaCenter = value;
+                  });
                 },
+                items: areaCenters
+                    .map((e) => DropdownMenuItem<String>(
+                          value: e,
+                          child: Text(e),
+                        ))
+                    .toList(),
               ),
 
               // Line Dropdown
-              FutureBuilder<List<String>>(
-                future: _fetchLines(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    final lines = snapshot.data!;
-                    return DropdownButton<String>(
-                      value: selectedLine,
-                      hint: const Text('Select Line'),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedLine = value;
-                        });
-                      },
-                      items: lines
-                          .map((e) => DropdownMenuItem<String>(
-                                value: e,
-                                child: Text(e),
-                              ))
-                          .toList(),
-                    );
-                  }
+              DropdownButton<String>(
+                value: selectedLine,
+                hint: const Text('Select Line'),
+                onChanged: (value) {
+                  setState(() {
+                    selectedLine = value;
+                  });
                 },
+                items: lines
+                    .map((e) => DropdownMenuItem<String>(
+                          value: e,
+                          child: Text(e),
+                        ))
+                    .toList(),
               ),
 
               // Tool Breakdown Dropdown
-              FutureBuilder<List<String>>(
-                future: _fetchTools(scannedCode),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    final tools = snapshot.data!;
-                    return DropdownButton<String>(
-                      value: selectedToolBreakdown,
-                      hint: const Text('Select Tool Breakdown'),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedToolBreakdown = value;
-                        });
-                      },
-                      items: tools
-                          .map((e) => DropdownMenuItem<String>(
-                                value: e,
-                                child: Text(e),
-                              ))
-                          .toList(),
-                    );
-                  }
+              DropdownButton<String>(
+                value: selectedToolBreakdown,
+                hint: const Text('Select Tool Breakdown'),
+                onChanged: (value) {
+                  setState(() {
+                    selectedToolBreakdown = value;
+                  });
                 },
+                items: tools
+                    .map((e) => DropdownMenuItem<String>(
+                          value: e,
+                          child: Text(e),
+                        ))
+                    .toList(),
               ),
 
               // Machine Breakdown Dropdown
-              FutureBuilder<List<String>>(
-                future: _fetchMachines(scannedCode),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CircularProgressIndicator();
-                  } else if (snapshot.hasError) {
-                    return Text('Error: ${snapshot.error}');
-                  } else {
-                    final machines = snapshot.data!;
-                    return DropdownButton<String>(
-                      value: selectedMachineBreakdown,
-                      hint: const Text('Select Machine Breakdown'),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedMachineBreakdown = value;
-                        });
-                      },
-                      items: machines
-                          .map((e) => DropdownMenuItem<String>(
-                                value: e,
-                                child: Text(e),
-                              ))
-                          .toList(),
-                    );
-                  }
+              DropdownButton<String>(
+                value: selectedMachineBreakdown,
+                hint: const Text('Select Machine Breakdown'),
+                onChanged: (value) {
+                  setState(() {
+                    selectedMachineBreakdown = value;
+                  });
                 },
+                items: machines
+                    .map((e) => DropdownMenuItem<String>(
+                          value: e,
+                          child: Text(e),
+                        ))
+                    .toList(),
               ),
 
               // Work Card Comment Text Field
@@ -651,16 +655,6 @@ class _NumberInputPageState extends State<NumberInputPage>
         const SnackBar(content: Text('Failed to submit the issue.')),
       );
     }
-  }
-
-  void _reportIssue(String scannedCode) async {
-    // Show modal to fill the form
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return _createIssueModal(scannedCode);
-      },
-    );
   }
 
   void _openUrlWithNumber() async {
