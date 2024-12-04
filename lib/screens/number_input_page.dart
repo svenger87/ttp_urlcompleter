@@ -252,28 +252,29 @@ class _NumberInputPageState extends State<NumberInputPage>
     List<String> machines = [];
 
     // Fetch all data once
-    Future<void> fetchAllData() async {
+    Future<void> fetchAllData(String scannedCode) async {
       try {
-        final fetchedAreaCenters = await _fetchAreaCenters();
-        final fetchedLines = await _fetchLines();
-        final fetchedTools = await _fetchTools(scannedCode);
-        final fetchedMachines = await _fetchMachines(scannedCode);
+        final results = await Future.wait([
+          _fetchAreaCenters(),
+          _fetchLines(),
+          _fetchTools(scannedCode),
+          _fetchMachines(scannedCode),
+        ]);
 
         setState(() {
-          areaCenters = fetchedAreaCenters;
-          lines = fetchedLines;
-          tools = fetchedTools;
-          machines = fetchedMachines;
+          areaCenters = results[0];
+          lines = results[1];
+          tools = results[2];
+          machines = results[3];
 
           // Preselect tool and machine breakdown based on scanned code
           selectedToolBreakdown = tools.firstWhere(
             (tool) => tool.contains(scannedCode),
-            orElse: () => '', // Return an empty string instead of `null`
+            orElse: () => '',
           );
-
           selectedMachineBreakdown = machines.firstWhere(
             (machine) => machine.contains(scannedCode),
-            orElse: () => '', // Return an empty string instead of `null`
+            orElse: () => '',
           );
         });
       } catch (e) {
@@ -285,7 +286,7 @@ class _NumberInputPageState extends State<NumberInputPage>
 
     // Trigger fetch on modal creation
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      fetchAllData();
+      fetchAllData(scannedCode);
     });
 
     return StatefulBuilder(builder: (context, setState) {
@@ -641,7 +642,7 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   void _submitIssue(Map<String, String> issueData) async {
     final response = await http.post(
-      Uri.parse('http://localhost:3000/report-issue'),
+      Uri.parse('http://wim-solution.sip.local:3006/report-issue'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode(issueData),
     );
