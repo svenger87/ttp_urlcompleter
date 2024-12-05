@@ -289,16 +289,17 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
 
-    if (tools.map((e) => e.toLowerCase()).contains(normalizedScannedCode)) {
-      selectedToolBreakdown = tools.firstWhere(
-          (e) => e.toLowerCase() == normalizedScannedCode,
-          orElse: () => '');
-    } else if (machines
-        .map((e) => e.toLowerCase())
-        .contains(normalizedScannedCode)) {
-      selectedMachineBreakdown = machines.firstWhere(
-          (e) => e.toLowerCase() == normalizedScannedCode,
-          orElse: () => '');
+    List<String> normalizedTools =
+        tools.map((e) => e.trim().toLowerCase()).toList();
+    List<String> normalizedMachines =
+        machines.map((e) => e.trim().toLowerCase()).toList();
+
+    if (normalizedTools.contains(normalizedScannedCode)) {
+      int index = normalizedTools.indexOf(normalizedScannedCode);
+      selectedToolBreakdown = tools[index];
+    } else if (normalizedMachines.contains(normalizedScannedCode)) {
+      int index = normalizedMachines.indexOf(normalizedScannedCode);
+      selectedMachineBreakdown = machines[index];
     }
 
     if (kDebugMode) {
@@ -335,27 +336,31 @@ class _NumberInputPageState extends State<NumberInputPage>
 
         Vibration.vibrate(duration: 50);
 
-        final scannedCode = scanData.code!;
+        final scannedData = scanData.code!;
         if (kDebugMode) {
-          print('Scanned QR Code: $scannedCode');
+          print('Scanned QR Code: $scannedData');
         }
 
-        String url;
-        if (scannedCode.length >= 6) {
-          url = scannedCode;
-        } else {
-          final firstFiveChars = scannedCode.length >= 5
-              ? scannedCode.substring(0, 5)
-              : scannedCode;
-          url = '$wim/$firstFiveChars';
+        // Keep the full scanned URL
+        String fullUrl = scannedData;
+
+        // Extract the code from the URL for matching
+        String codeToUse;
+        try {
+          Uri uri = Uri.parse(scannedData);
+          codeToUse =
+              uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
+        } catch (e) {
+          // If it's not a valid URL, use the scanned data as is
+          codeToUse = scannedData;
         }
 
         if (kDebugMode) {
-          print('Final URL to be launched: $url');
+          print('Extracted code: $codeToUse');
         }
 
         // Show the modal
-        _showOptionsModal(url, scannedCode);
+        _showOptionsModal(fullUrl, codeToUse);
 
         scanTimer = Timer(const Duration(seconds: 3), () {
           setState(() {
@@ -366,7 +371,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     });
   }
 
-  void _showOptionsModal(String url, String scannedCode) {
+  void _showOptionsModal(String fullUrl, String codeToUse) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -383,7 +388,7 @@ class _NumberInputPageState extends State<NumberInputPage>
                 title: const Text('Werkzeugdetails öffnen'),
                 onTap: () {
                   Navigator.pop(context); // Close the modal
-                  _navigateToUrl(url); // Navigate to the URL
+                  _navigateToUrl(fullUrl); // Navigate to the full URL
                 },
               ),
               const Divider(),
@@ -392,7 +397,7 @@ class _NumberInputPageState extends State<NumberInputPage>
                 title: const Text('Störfall anlegen'),
                 onTap: () {
                   Navigator.pop(context); // Close the modal
-                  _reportIssue(scannedCode); // Call the report issue function
+                  _reportIssue(codeToUse); // Use the extracted code
                 },
               ),
             ],
