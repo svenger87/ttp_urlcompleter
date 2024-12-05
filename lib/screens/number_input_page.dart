@@ -267,8 +267,8 @@ class _NumberInputPageState extends State<NumberInputPage>
         final results = await Future.wait([
           _fetchAreaCenters(),
           _fetchLines(),
-          _fetchTools(scannedCode),
-          _fetchMachines(scannedCode),
+          _fetchTools(),
+          _fetchMachines(),
           _fetchEmployees(),
         ]);
 
@@ -279,15 +279,17 @@ class _NumberInputPageState extends State<NumberInputPage>
           machines = results[3];
           employees = results[4];
 
-          // Preselect tool and machine breakdown based on scanned code
-          selectedToolBreakdown = tools.firstWhere(
-            (tool) => tool.contains(scannedCode),
-            orElse: () => '',
-          );
-          selectedMachineBreakdown = machines.firstWhere(
-            (machine) => machine.contains(scannedCode),
-            orElse: () => '',
-          );
+          // Preselect tool breakdown based on scanned code
+          if (tools.contains(scannedCode)) {
+            selectedToolBreakdown = scannedCode;
+            toolController.text = scannedCode;
+          }
+
+          // Preselect machine breakdown based on scanned code
+          if (machines.contains(scannedCode)) {
+            selectedMachineBreakdown = scannedCode;
+            machineController.text = scannedCode;
+          }
         });
       } catch (e) {
         if (kDebugMode) {
@@ -549,29 +551,25 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
-  Future<List<String>> _fetchTools(String scannedCode) async {
+  Future<List<String>> _fetchTools() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      return data
-          .where((e) => e['number'].toString().startsWith('WKZ'))
-          .map((e) => e['number'].toString())
-          .toList();
+      // Assuming the data includes 'number' field
+      return data.map((e) => e['number'].toString()).toList();
     } else {
       throw Exception('Failed to fetch tools');
     }
   }
 
-  Future<List<String>> _fetchMachines(String scannedCode) async {
+  Future<List<String>> _fetchMachines() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      return data
-          .where((e) => e['number'].toString().startsWith('WKZ'))
-          .map((e) => e['number'].toString())
-          .toList();
+      // Assuming the data includes 'number' field
+      return data.map((e) => e['number'].toString()).toList();
     } else {
       throw Exception('Failed to fetch machines');
     }
