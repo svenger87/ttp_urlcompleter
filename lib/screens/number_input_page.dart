@@ -294,12 +294,24 @@ class _NumberInputPageState extends State<NumberInputPage>
     List<String> normalizedMachines =
         machines.map((e) => e.trim().toLowerCase()).toList();
 
-    if (normalizedTools.contains(normalizedScannedCode)) {
-      int index = normalizedTools.indexOf(normalizedScannedCode);
-      selectedToolBreakdown = tools[index];
-    } else if (normalizedMachines.contains(normalizedScannedCode)) {
-      int index = normalizedMachines.indexOf(normalizedScannedCode);
-      selectedMachineBreakdown = machines[index];
+    // Adjusted matching logic for tools
+    for (int i = 0; i < normalizedTools.length; i++) {
+      if (normalizedTools[i].contains(normalizedScannedCode) ||
+          normalizedScannedCode.contains(normalizedTools[i])) {
+        selectedToolBreakdown = tools[i];
+        break;
+      }
+    }
+
+    // Adjusted matching logic for machines
+    if (selectedToolBreakdown == null) {
+      for (int i = 0; i < normalizedMachines.length; i++) {
+        if (normalizedMachines[i].contains(normalizedScannedCode) ||
+            normalizedScannedCode.contains(normalizedMachines[i])) {
+          selectedMachineBreakdown = machines[i];
+          break;
+        }
+      }
     }
 
     if (kDebugMode) {
