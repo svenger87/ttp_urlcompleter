@@ -562,6 +562,16 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   }
 
   @override
+  void dispose() {
+    employeeController.dispose();
+    areaCenterController.dispose();
+    lineController.dispose();
+    toolController.dispose();
+    machineController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text(
@@ -611,6 +621,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
               validator: (value) =>
                   value!.isEmpty ? 'Please select an employee' : null,
+              // Removed initialValue
             ),
 
             // Area Center TypeAhead
@@ -638,6 +649,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
               validator: (value) =>
                   value!.isEmpty ? 'Please select an area center' : null,
+              // Removed initialValue
             ),
 
             // Line TypeAhead
@@ -665,6 +677,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
               validator: (value) =>
                   value!.isEmpty ? 'Please select a line' : null,
+              // Removed initialValue
             ),
 
             // Tool Breakdown TypeAhead
@@ -690,7 +703,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 toolController.text = suggestion;
                 selectedToolBreakdown = suggestion;
               },
-              initialValue: selectedToolBreakdown,
+              // Removed initialValue
             ),
 
             // Machine Breakdown TypeAhead
@@ -716,7 +729,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 machineController.text = suggestion;
                 selectedMachineBreakdown = suggestion;
               },
-              initialValue: selectedMachineBreakdown,
+              // Removed initialValue
             ),
 
             // Work Card Comment Text Field
@@ -759,8 +772,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               areaCenter: selectedAreaCenter,
               line: selectedLine,
               employee: selectedEmployee,
-              toolBreakdown: selectedToolBreakdown,
-              machineBreakdown: selectedMachineBreakdown,
+              toolBreakdown: toolController.text,
+              machineBreakdown: machineController.text,
               workCardComment: workCardComment,
               imagePath: imagePath,
             )) {
@@ -769,8 +782,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 'areaCenter': selectedAreaCenter!,
                 'line': selectedLine!,
                 'employee': selectedEmployee!,
-                'toolBreakdown': selectedToolBreakdown ?? '',
-                'machineBreakdown': selectedMachineBreakdown ?? '',
+                'toolBreakdown': toolController.text,
+                'machineBreakdown': machineController.text,
                 'workCardComment': workCardComment!,
                 'imagePath': imagePath!,
               });
@@ -813,10 +826,14 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         (machineBreakdown != null && machineBreakdown.isNotEmpty);
 
     return areaCenter != null &&
+        areaCenter.isNotEmpty &&
         line != null &&
+        line.isNotEmpty &&
         employee != null &&
+        employee.isNotEmpty &&
         hasBreakdown &&
         workCardComment != null &&
+        workCardComment.isNotEmpty &&
         imagePath != null;
   }
 
