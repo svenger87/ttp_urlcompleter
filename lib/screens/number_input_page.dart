@@ -525,7 +525,7 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   Future<List<String>> _fetchMaterials() async {
     final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/materials'));
+        .get(Uri.parse('http://wim-solution.sip.local:3006/material'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
       // Assuming the data includes 'name' field
