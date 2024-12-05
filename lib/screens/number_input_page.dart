@@ -16,6 +16,7 @@ import '../modules/webview_module.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:http/io_client.dart' as http;
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class NumberInputPage extends StatefulWidget {
@@ -550,8 +551,50 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   Future<void> _fetchProfileSuggestions(String query) async {
-    // Implementation of profile suggestions fetching
-    // You can fill this method as per your requirements
+    if (query.isEmpty) {
+      setState(() {
+        profileSuggestions = [];
+      });
+      return;
+    }
+
+    try {
+      final httpClient = http.IOClient(
+          HttpClient()..badCertificateCallback = ((_, __, ___) => true));
+      final response = await httpClient.get(
+        Uri.parse('$apiUrl&q=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final List<dynamic> data = jsonResponse['shortUrls']['data'];
+
+        setState(() {
+          final userEnteredValue = query.trim();
+          profileSuggestions = [
+            userEnteredValue,
+            ...data
+                .map<String>((item) => item['title']?.toString() ?? '')
+                .where((suggestion) => suggestion.isNotEmpty),
+          ];
+        });
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching profile suggestions. Status code: ${response.statusCode}');
+        }
+      }
+
+      httpClient.close();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching profile suggestions: $e');
+      }
+    }
   }
 }
 
