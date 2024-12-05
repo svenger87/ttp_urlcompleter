@@ -121,7 +121,7 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   void _onSearchChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
+    _debounce = Timer(const Duration(milliseconds: 300), () {
       _fetchProfileSuggestions(value);
     });
   }
@@ -206,11 +206,9 @@ class _NumberInputPageState extends State<NumberInputPage>
               child: Autocomplete<String>(
                 optionsBuilder: (TextEditingValue textEditingValue) {
                   return profileSuggestions
-                      .where((String suggestion) =>
-                          suggestion
-                              .toLowerCase()
-                              .contains(textEditingValue.text.toLowerCase()) &&
-                          RegExp(r"^[a-zA-Z0-9]").hasMatch(suggestion))
+                      .where((String suggestion) => suggestion
+                          .toLowerCase()
+                          .contains(textEditingValue.text.toLowerCase()))
                       .toList();
                 },
                 onSelected: (String selectedProfile) {
