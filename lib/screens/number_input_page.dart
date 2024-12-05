@@ -1,3 +1,5 @@
+// number_input_page.dart
+
 // ignore_for_file: deprecated_member_use, library_private_types_in_public_api
 
 import 'package:flutter/foundation.dart';
@@ -14,7 +16,6 @@ import '../modules/webview_module.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:http/io_client.dart' as http;
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class NumberInputPage extends StatefulWidget {
@@ -129,7 +130,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         appBar: AppBar(
           title: const Text('ttp App'),
         ),
-        body: Center(
+        body: const Center(
           child: CircularProgressIndicator(),
         ),
       );
@@ -290,7 +291,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return _createIssueModal(
+        return CreateIssueModal(
           scannedCode: scannedCode,
           selectedToolBreakdown: selectedToolBreakdown,
           selectedMachineBreakdown: selectedMachineBreakdown,
@@ -304,262 +305,136 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
-  Widget _createIssueModal({
-    required String scannedCode,
-    String? selectedToolBreakdown,
-    String? selectedMachineBreakdown,
-    required List<String> areaCenters,
-    required List<String> lines,
-    required List<String> tools,
-    required List<String> machines,
-    required List<String> employees,
-  }) {
-    bool operable = true;
-    String? selectedAreaCenter;
-    String? selectedLine;
-    String? selectedEmployee;
-    String? workCardComment;
-    String? imagePath;
+  void _onQRViewCreated(QRViewController controller) {
+    this.controller = controller;
 
-    // Controllers for typeahead fields
-    final TextEditingController employeeController = TextEditingController();
-    final TextEditingController areaCenterController = TextEditingController();
-    final TextEditingController lineController = TextEditingController();
-    final TextEditingController toolController = TextEditingController();
-    final TextEditingController machineController = TextEditingController();
+    controller.scannedDataStream.listen((scanData) async {
+      if (!hasScanned && isDataLoaded) {
+        setState(() {
+          hasScanned = true;
+        });
 
-    // Set the initial values for controllers
-    if (selectedToolBreakdown != null) {
-      toolController.text = selectedToolBreakdown;
-    }
-    if (selectedMachineBreakdown != null) {
-      machineController.text = selectedMachineBreakdown;
-    }
+        Vibration.vibrate(duration: 50);
 
-    return StatefulBuilder(builder: (context, setState) {
-      return AlertDialog(
-        title: const Text(
-          'Störfall anlegen',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
+        final scannedCode = scanData.code!;
+        if (kDebugMode) {
+          print('Scanned QR Code: $scannedCode');
+        }
+
+        String url;
+        if (scannedCode.length >= 6) {
+          url = scannedCode;
+        } else {
+          final firstFiveChars = scannedCode.length >= 5
+              ? scannedCode.substring(0, 5)
+              : scannedCode;
+          url = '$wim/$firstFiveChars';
+        }
+
+        if (kDebugMode) {
+          print('Final URL to be launched: $url');
+        }
+
+        // Show the modal
+        _showOptionsModal(url, scannedCode);
+
+        scanTimer = Timer(const Duration(seconds: 3), () {
+          setState(() {
+            hasScanned = false;
+          });
+        });
+      }
+    });
+  }
+
+  void _showOptionsModal(String url, String scannedCode) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Wählen Sie eine Aktion aus',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Operable Checkbox
-              Row(
-                children: [
-                  Checkbox(
-                    value: operable,
-                    onChanged: (value) {
-                      setState(() {
-                        operable = value!;
-                      });
-                    },
-                  ),
-                  const Text('Operable'),
-                ],
-              ),
-
-              // Employee Selection
-              TypeAheadFormField<String>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: employeeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Employee',
-                  ),
-                ),
-                suggestionsCallback: (pattern) {
-                  return employees
-                      .where((e) =>
-                          e.toLowerCase().contains(pattern.toLowerCase()))
-                      .toList();
-                },
-                itemBuilder: (context, suggestion) {
-                  return ListTile(
-                    title: Text(suggestion),
-                  );
-                },
-                onSuggestionSelected: (suggestion) {
-                  employeeController.text = suggestion;
-                  selectedEmployee = suggestion;
-                },
-                validator: (value) =>
-                    value!.isEmpty ? 'Please select an employee' : null,
-              ),
-
-              // Area Center TypeAhead
-              TypeAheadFormField<String>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: areaCenterController,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Area Center',
-                  ),
-                ),
-                suggestionsCallback: (pattern) {
-                  return areaCenters
-                      .where((e) =>
-                          e.toLowerCase().contains(pattern.toLowerCase()))
-                      .toList();
-                },
-                itemBuilder: (context, suggestion) {
-                  return ListTile(
-                    title: Text(suggestion),
-                  );
-                },
-                onSuggestionSelected: (suggestion) {
-                  areaCenterController.text = suggestion;
-                  selectedAreaCenter = suggestion;
-                },
-                validator: (value) =>
-                    value!.isEmpty ? 'Please select an area center' : null,
-              ),
-
-              // Line TypeAhead
-              TypeAheadFormField<String>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: lineController,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Line',
-                  ),
-                ),
-                suggestionsCallback: (pattern) {
-                  return lines
-                      .where((e) =>
-                          e.toLowerCase().contains(pattern.toLowerCase()))
-                      .toList();
-                },
-                itemBuilder: (context, suggestion) {
-                  return ListTile(
-                    title: Text(suggestion),
-                  );
-                },
-                onSuggestionSelected: (suggestion) {
-                  lineController.text = suggestion;
-                  selectedLine = suggestion;
-                },
-                validator: (value) =>
-                    value!.isEmpty ? 'Please select a line' : null,
-              ),
-
-              // Tool Breakdown TypeAhead
-              TypeAheadFormField<String>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: toolController,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Tool Breakdown',
-                  ),
-                ),
-                suggestionsCallback: (pattern) {
-                  return tools
-                      .where((e) =>
-                          e.toLowerCase().contains(pattern.toLowerCase()))
-                      .toList();
-                },
-                itemBuilder: (context, suggestion) {
-                  return ListTile(
-                    title: Text(suggestion),
-                  );
-                },
-                onSuggestionSelected: (suggestion) {
-                  toolController.text = suggestion;
-                  selectedToolBreakdown = suggestion;
+              ListTile(
+                leading: const Icon(Icons.open_in_browser),
+                title: const Text('Werkzeugdetails öffnen'),
+                onTap: () {
+                  Navigator.pop(context); // Close the modal
+                  _navigateToUrl(url); // Navigate to the URL
                 },
               ),
-
-              // Machine Breakdown TypeAhead
-              TypeAheadFormField<String>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: machineController,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Machine Breakdown',
-                  ),
-                ),
-                suggestionsCallback: (pattern) {
-                  return machines
-                      .where((e) =>
-                          e.toLowerCase().contains(pattern.toLowerCase()))
-                      .toList();
-                },
-                itemBuilder: (context, suggestion) {
-                  return ListTile(
-                    title: Text(suggestion),
-                  );
-                },
-                onSuggestionSelected: (suggestion) {
-                  machineController.text = suggestion;
-                  selectedMachineBreakdown = suggestion;
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.add_alert),
+                title: const Text('Störfall anlegen'),
+                onTap: () {
+                  Navigator.pop(context); // Close the modal
+                  _reportIssue(scannedCode); // Call the report issue function
                 },
               ),
-
-              // Work Card Comment Text Field
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Work Card Comment',
-                ),
-                onChanged: (value) {
-                  workCardComment = value;
-                },
-              ),
-
-              // Image Picker Button
-              ElevatedButton(
-                onPressed: () async {
-                  final pickedImage = await _pickImage();
-                  if (pickedImage != null) {
-                    setState(() {
-                      imagePath = pickedImage.path;
-                    });
-                  }
-                },
-                child: const Text('Select or Capture Image'),
-              ),
-              if (imagePath != null) Text('Selected: $imagePath'),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_validateForm(
-                operable: operable,
-                areaCenter: selectedAreaCenter,
-                line: selectedLine,
-                employee: selectedEmployee,
-                toolBreakdown: selectedToolBreakdown,
-                machineBreakdown: selectedMachineBreakdown,
-                workCardComment: workCardComment,
-                imagePath: imagePath,
-              )) {
-                _submitIssue({
-                  'operable': operable.toString(),
-                  'areaCenter': selectedAreaCenter!,
-                  'line': selectedLine!,
-                  'employee': selectedEmployee!,
-                  'toolBreakdown': selectedToolBreakdown ?? '',
-                  'machineBreakdown': selectedMachineBreakdown ?? '',
-                  'workCardComment': workCardComment!,
-                  'imagePath': imagePath!,
-                });
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please fill in all required fields.'),
-                  ),
-                );
-              }
-            },
-            child: const Text('Submit'),
-          ),
-        ],
-      );
+        );
+      },
+    );
+  }
+
+  void _navigateToUrl(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebViewModule(url: url),
+      ),
+    );
+  }
+
+  void _openUrlWithNumber() async {
+    final String number = _numberController.text.trim().toUpperCase();
+
+    if (number.isNotEmpty) {
+      final url = '$wim/$number';
+
+      if (await canLaunch(url)) {
+        _navigateToUrl(url);
+        _addRecentItem(url);
+      } else {
+        if (kDebugMode) {
+          print('Could not launch $url');
+        }
+      }
+    }
+  }
+
+  void _addRecentItem(String item) async {
+    final Uri uri = Uri.parse(item);
+    final String profileNumber = uri.pathSegments.last;
+
+    setState(() {
+      if (!recentItems.contains(profileNumber)) {
+        recentItems.insert(0, profileNumber);
+        if (recentItems.length > 10) {
+          recentItems.removeLast();
+        }
+      }
     });
+
+    await _saveRecentItems();
+  }
+
+  Future<void> _saveRecentItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('recentItems', recentItems);
+  }
+
+  void _clearRecentItems() {
+    setState(() {
+      recentItems.clear();
+    });
+    _saveRecentItems();
   }
 
   Future<List<String>> _fetchAreaCenters() async {
@@ -622,6 +497,298 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
+  Future<void> _fetchProfileSuggestions(String query) async {
+    // Implementation of profile suggestions fetching
+    // You can fill this method as per your requirements
+  }
+}
+
+class CreateIssueModal extends StatefulWidget {
+  final String scannedCode;
+  final String? selectedToolBreakdown;
+  final String? selectedMachineBreakdown;
+  final List<String> areaCenters;
+  final List<String> lines;
+  final List<String> tools;
+  final List<String> machines;
+  final List<String> employees;
+
+  const CreateIssueModal({
+    super.key,
+    required this.scannedCode,
+    this.selectedToolBreakdown,
+    this.selectedMachineBreakdown,
+    required this.areaCenters,
+    required this.lines,
+    required this.tools,
+    required this.machines,
+    required this.employees,
+  });
+
+  @override
+  _CreateIssueModalState createState() => _CreateIssueModalState();
+}
+
+class _CreateIssueModalState extends State<CreateIssueModal> {
+  bool operable = true;
+  String? selectedAreaCenter;
+  String? selectedLine;
+  String? selectedToolBreakdown;
+  String? selectedMachineBreakdown;
+  String? selectedEmployee;
+  String? workCardComment;
+  String? imagePath;
+
+  // Controllers for typeahead fields
+  final TextEditingController employeeController = TextEditingController();
+  final TextEditingController areaCenterController = TextEditingController();
+  final TextEditingController lineController = TextEditingController();
+  final TextEditingController toolController = TextEditingController();
+  final TextEditingController machineController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Set initial values based on matched scanned code
+    if (widget.selectedToolBreakdown != null) {
+      selectedToolBreakdown = widget.selectedToolBreakdown;
+      toolController.text = selectedToolBreakdown!;
+    }
+    if (widget.selectedMachineBreakdown != null) {
+      selectedMachineBreakdown = widget.selectedMachineBreakdown;
+      machineController.text = selectedMachineBreakdown!;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'Störfall anlegen',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Operable Checkbox
+            Row(
+              children: [
+                Checkbox(
+                  value: operable,
+                  onChanged: (value) {
+                    setState(() {
+                      operable = value!;
+                    });
+                  },
+                ),
+                const Text('Operable'),
+              ],
+            ),
+
+            // Employee Selection
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: employeeController,
+                decoration: const InputDecoration(
+                  labelText: 'Select Employee',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.employees
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  title: Text(suggestion),
+                );
+              },
+              onSuggestionSelected: (suggestion) {
+                employeeController.text = suggestion;
+                selectedEmployee = suggestion;
+              },
+              validator: (value) =>
+                  value!.isEmpty ? 'Please select an employee' : null,
+            ),
+
+            // Area Center TypeAhead
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: areaCenterController,
+                decoration: const InputDecoration(
+                  labelText: 'Select Area Center',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.areaCenters
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  title: Text(suggestion),
+                );
+              },
+              onSuggestionSelected: (suggestion) {
+                areaCenterController.text = suggestion;
+                selectedAreaCenter = suggestion;
+              },
+              validator: (value) =>
+                  value!.isEmpty ? 'Please select an area center' : null,
+            ),
+
+            // Line TypeAhead
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: lineController,
+                decoration: const InputDecoration(
+                  labelText: 'Select Line',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.lines
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  title: Text(suggestion),
+                );
+              },
+              onSuggestionSelected: (suggestion) {
+                lineController.text = suggestion;
+                selectedLine = suggestion;
+              },
+              validator: (value) =>
+                  value!.isEmpty ? 'Please select a line' : null,
+            ),
+
+            // Tool Breakdown TypeAhead
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: toolController,
+                decoration: const InputDecoration(
+                  labelText: 'Select Tool Breakdown',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.tools
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  title: Text(suggestion),
+                );
+              },
+              onSuggestionSelected: (suggestion) {
+                toolController.text = suggestion;
+                selectedToolBreakdown = suggestion;
+              },
+              initialValue: selectedToolBreakdown,
+            ),
+
+            // Machine Breakdown TypeAhead
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: machineController,
+                decoration: const InputDecoration(
+                  labelText: 'Select Machine Breakdown',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.machines
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  title: Text(suggestion),
+                );
+              },
+              onSuggestionSelected: (suggestion) {
+                machineController.text = suggestion;
+                selectedMachineBreakdown = suggestion;
+              },
+              initialValue: selectedMachineBreakdown,
+            ),
+
+            // Work Card Comment Text Field
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Work Card Comment',
+              ),
+              onChanged: (value) {
+                workCardComment = value;
+              },
+            ),
+
+            // Image Picker Button
+            ElevatedButton(
+              onPressed: () async {
+                final pickedImage = await _pickImage();
+                if (pickedImage != null) {
+                  setState(() {
+                    imagePath = pickedImage.path;
+                  });
+                }
+              },
+              child: const Text('Select or Capture Image'),
+            ),
+            if (imagePath != null) Text('Selected: $imagePath'),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_validateForm(
+              operable: operable,
+              areaCenter: selectedAreaCenter,
+              line: selectedLine,
+              employee: selectedEmployee,
+              toolBreakdown: selectedToolBreakdown,
+              machineBreakdown: selectedMachineBreakdown,
+              workCardComment: workCardComment,
+              imagePath: imagePath,
+            )) {
+              _submitIssue({
+                'operable': operable.toString(),
+                'areaCenter': selectedAreaCenter!,
+                'line': selectedLine!,
+                'employee': selectedEmployee!,
+                'toolBreakdown': selectedToolBreakdown ?? '',
+                'machineBreakdown': selectedMachineBreakdown ?? '',
+                'workCardComment': workCardComment!,
+                'imagePath': imagePath!,
+              });
+              Navigator.pop(context);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please fill in all required fields.'),
+                ),
+              );
+            }
+          },
+          child: const Text('Submit'),
+        ),
+      ],
+    );
+  }
+
   Future<File?> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile =
@@ -632,130 +799,25 @@ class _NumberInputPageState extends State<NumberInputPage>
     return null;
   }
 
-  Future<void> _fetchProfileSuggestions(String query) async {
-    try {
-      final httpClient = http.IOClient(
-          HttpClient()..badCertificateCallback = ((_, __, ___) => true));
-      final response = await httpClient.get(
-        Uri.parse('$apiUrl&q=$query'),
-        headers: {
-          'accept': 'application/json',
-          'X-Api-Key': apiKey,
-        },
-      );
+  bool _validateForm({
+    required bool operable,
+    required String? areaCenter,
+    required String? line,
+    required String? employee,
+    required String? toolBreakdown,
+    required String? machineBreakdown,
+    required String? workCardComment,
+    required String? imagePath,
+  }) {
+    bool hasBreakdown = (toolBreakdown != null && toolBreakdown.isNotEmpty) ||
+        (machineBreakdown != null && machineBreakdown.isNotEmpty);
 
-      if (response.statusCode == 200) {
-        final jsonResponse = json.decode(response.body);
-        final List<dynamic> data = jsonResponse['shortUrls']['data'];
-
-        setState(() {
-          final userEnteredValue = query.trim();
-          profileSuggestions = [
-            userEnteredValue,
-            ...data
-                .map<String>((item) => item['title']?.toString() ?? '')
-                .where((suggestion) => suggestion.isNotEmpty),
-          ];
-        });
-      } else {
-        if (kDebugMode) {
-          print('Error: ${response.statusCode}');
-        }
-      }
-
-      httpClient.close();
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error: $e');
-      }
-    }
-  }
-
-  void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
-
-    controller.scannedDataStream.listen((scanData) async {
-      if (!hasScanned && isDataLoaded) {
-        setState(() {
-          hasScanned = true;
-        });
-
-        Vibration.vibrate(duration: 50);
-
-        final scannedCode = scanData.code!;
-        if (kDebugMode) {
-          print('Scanned QR Code: $scannedCode');
-        }
-
-        String url;
-        if (scannedCode.length >= 6) {
-          url = scannedCode;
-        } else {
-          final firstFiveChars = scannedCode.length >= 5
-              ? scannedCode.substring(0, 5)
-              : scannedCode;
-          url = '$wim/$firstFiveChars';
-        }
-
-        if (kDebugMode) {
-          print('Final URL to be launched: $url');
-        }
-
-        // Show the modal
-        _showOptionsModal(url, scannedCode);
-
-        scanTimer = Timer(const Duration(seconds: 3), () {
-          setState(() {
-            hasScanned = false;
-          });
-        });
-      }
-    });
-  }
-
-  void _navigateToUrl(String url) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WebViewModule(url: url),
-      ),
-    );
-  }
-
-  void _showOptionsModal(String url, String scannedCode) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Wählen Sie eine Aktion aus',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.open_in_browser),
-                title: const Text('Werkzeugdetails öffnen'),
-                onTap: () {
-                  Navigator.pop(context); // Close the modal
-                  _navigateToUrl(url); // Navigate to the URL
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.add_alert),
-                title: const Text('Störfall anlegen'),
-                onTap: () {
-                  Navigator.pop(context); // Close the modal
-                  _reportIssue(scannedCode); // Call the report issue function
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    return areaCenter != null &&
+        line != null &&
+        employee != null &&
+        hasBreakdown &&
+        workCardComment != null &&
+        imagePath != null;
   }
 
   void _submitIssue(Map<String, String> issueData) async {
@@ -785,71 +847,5 @@ class _NumberInputPageState extends State<NumberInputPage>
         SnackBar(content: Text('Failed to submit the issue: $errorMessage')),
       );
     }
-  }
-
-  void _openUrlWithNumber() async {
-    final String number = _numberController.text.trim().toUpperCase();
-
-    if (number.isNotEmpty) {
-      final url = '$wim/$number';
-
-      if (await canLaunch(url)) {
-        _navigateToUrl(url);
-        _addRecentItem(url);
-      } else {
-        if (kDebugMode) {
-          print('Could not launch $url');
-        }
-      }
-    }
-  }
-
-  void _addRecentItem(String item) async {
-    final Uri uri = Uri.parse(item);
-    final String profileNumber = uri.pathSegments.last;
-
-    setState(() {
-      if (!recentItems.contains(profileNumber)) {
-        recentItems.insert(0, profileNumber);
-        if (recentItems.length > 10) {
-          recentItems.removeLast();
-        }
-      }
-    });
-
-    await _saveRecentItems();
-  }
-
-  Future<void> _saveRecentItems() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('recentItems', recentItems);
-  }
-
-  void _clearRecentItems() {
-    setState(() {
-      recentItems.clear();
-    });
-    _saveRecentItems();
-  }
-
-  bool _validateForm({
-    required bool operable,
-    required String? areaCenter,
-    required String? line,
-    required String? employee,
-    required String? toolBreakdown,
-    required String? machineBreakdown,
-    required String? workCardComment,
-    required String? imagePath,
-  }) {
-    bool hasBreakdown = (toolBreakdown != null && toolBreakdown.isNotEmpty) ||
-        (machineBreakdown != null && machineBreakdown.isNotEmpty);
-
-    return areaCenter != null &&
-        line != null &&
-        employee != null &&
-        hasBreakdown &&
-        workCardComment != null &&
-        imagePath != null;
   }
 }
