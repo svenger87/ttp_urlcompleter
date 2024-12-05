@@ -69,7 +69,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         tools = results[2];
         machines = results[3];
         employees = results[4];
-        isDataLoaded = true;
+        isDataLoaded = true; // Ensure this is set after data is loaded
       });
     } catch (e) {
       if (kDebugMode) {
@@ -276,15 +276,34 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   void _reportIssue(String scannedCode) {
-    // Perform matching here
+    if (kDebugMode) {
+      print('Reporting issue for scanned code: $scannedCode');
+      print('Tools list loaded with ${tools.length} items');
+      print('Machines list loaded with ${machines.length} items');
+    }
+
+    // Normalize scannedCode
+    String normalizedScannedCode = scannedCode.trim().toLowerCase();
+
+    // Match scanned code with tools and machines
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
 
-    // Match scanned code with tools and machines
-    if (tools.contains(scannedCode)) {
-      selectedToolBreakdown = scannedCode;
-    } else if (machines.contains(scannedCode)) {
-      selectedMachineBreakdown = scannedCode;
+    if (tools.map((e) => e.toLowerCase()).contains(normalizedScannedCode)) {
+      selectedToolBreakdown = tools.firstWhere(
+          (e) => e.toLowerCase() == normalizedScannedCode,
+          orElse: () => '');
+    } else if (machines
+        .map((e) => e.toLowerCase())
+        .contains(normalizedScannedCode)) {
+      selectedMachineBreakdown = machines.firstWhere(
+          (e) => e.toLowerCase() == normalizedScannedCode,
+          orElse: () => '');
+    }
+
+    if (kDebugMode) {
+      print('Matched tool breakdown: $selectedToolBreakdown');
+      print('Matched machine breakdown: $selectedMachineBreakdown');
     }
 
     // Show the modal and pass the selected values and data
