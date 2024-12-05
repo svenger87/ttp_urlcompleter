@@ -36,11 +36,45 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> recentItems = [];
   List<String> profileSuggestions = [];
 
+  // Data lists
+  List<String> areaCenters = [];
+  List<String> lines = [];
+  List<String> tools = [];
+  List<String> machines = [];
+  List<String> employees = [];
+  bool isDataLoaded = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadRecentItems();
+    _preloadData();
+  }
+
+  void _preloadData() async {
+    try {
+      final results = await Future.wait([
+        _fetchAreaCenters(),
+        _fetchLines(),
+        _fetchTools(),
+        _fetchMachines(),
+        _fetchEmployees(),
+      ]);
+
+      setState(() {
+        areaCenters = results[0];
+        lines = results[1];
+        tools = results[2];
+        machines = results[3];
+        employees = results[4];
+        isDataLoaded = true;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error preloading data: $e');
+      }
+    }
   }
 
   void _loadRecentItems() async {
@@ -89,6 +123,18 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   @override
   Widget build(BuildContext context) {
+    if (!isDataLoaded) {
+      // Show loading indicator
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('ttp App'),
+        ),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -229,20 +275,48 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   void _reportIssue(String scannedCode) {
+    // Perform matching here
+    String? selectedToolBreakdown;
+    String? selectedMachineBreakdown;
+
+    // Match scanned code with tools and machines
+    if (tools.contains(scannedCode)) {
+      selectedToolBreakdown = scannedCode;
+    } else if (machines.contains(scannedCode)) {
+      selectedMachineBreakdown = scannedCode;
+    }
+
+    // Show the modal and pass the selected values and data
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return _createIssueModal(scannedCode);
+        return _createIssueModal(
+          scannedCode: scannedCode,
+          selectedToolBreakdown: selectedToolBreakdown,
+          selectedMachineBreakdown: selectedMachineBreakdown,
+          areaCenters: areaCenters,
+          lines: lines,
+          tools: tools,
+          machines: machines,
+          employees: employees,
+        );
       },
     );
   }
 
-  Widget _createIssueModal(String scannedCode) {
+  Widget _createIssueModal({
+    required String scannedCode,
+    String? selectedToolBreakdown,
+    String? selectedMachineBreakdown,
+    required List<String> areaCenters,
+    required List<String> lines,
+    required List<String> tools,
+    required List<String> machines,
+    required List<String> employees,
+  }) {
     bool operable = true;
     String? selectedAreaCenter;
     String? selectedLine;
-    String? selectedToolBreakdown;
-    String? selectedMachineBreakdown;
     String? selectedEmployee;
     String? workCardComment;
     String? imagePath;
@@ -254,54 +328,13 @@ class _NumberInputPageState extends State<NumberInputPage>
     final TextEditingController toolController = TextEditingController();
     final TextEditingController machineController = TextEditingController();
 
-    // Local state to hold fetched data
-    List<String> areaCenters = [];
-    List<String> lines = [];
-    List<String> tools = [];
-    List<String> machines = [];
-    List<String> employees = [];
-
-    // Fetch all data once
-    Future<void> fetchAllData(String scannedCode) async {
-      try {
-        final results = await Future.wait([
-          _fetchAreaCenters(),
-          _fetchLines(),
-          _fetchTools(),
-          _fetchMachines(),
-          _fetchEmployees(),
-        ]);
-
-        setState(() {
-          areaCenters = results[0];
-          lines = results[1];
-          tools = results[2];
-          machines = results[3];
-          employees = results[4];
-
-          // Preselect tool breakdown based on scanned code
-          if (tools.contains(scannedCode)) {
-            selectedToolBreakdown = scannedCode;
-            toolController.text = scannedCode;
-          }
-
-          // Preselect machine breakdown based on scanned code
-          if (machines.contains(scannedCode)) {
-            selectedMachineBreakdown = scannedCode;
-            machineController.text = scannedCode;
-          }
-        });
-      } catch (e) {
-        if (kDebugMode) {
-          print('Error fetching data: $e');
-        }
-      }
+    // Set the initial values for controllers
+    if (selectedToolBreakdown != null) {
+      toolController.text = selectedToolBreakdown;
     }
-
-    // Trigger fetch on modal creation
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      fetchAllData(scannedCode);
-    });
+    if (selectedMachineBreakdown != null) {
+      machineController.text = selectedMachineBreakdown;
+    }
 
     return StatefulBuilder(builder: (context, setState) {
       return AlertDialog(
@@ -642,7 +675,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     this.controller = controller;
 
     controller.scannedDataStream.listen((scanData) async {
-      if (!hasScanned) {
+      if (!hasScanned && isDataLoaded) {
         setState(() {
           hasScanned = true;
         });
