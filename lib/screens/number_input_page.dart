@@ -42,6 +42,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> lines = [];
   List<String> tools = [];
   List<String> machines = [];
+  List<String> materials = []; // Added materials list
   List<String> employees = [];
   bool isDataLoaded = false;
 
@@ -61,6 +62,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         _fetchTools(),
         _fetchMachines(),
         _fetchEmployees(),
+        _fetchMaterials(), // Fetch materials data
       ]);
 
       setState(() {
@@ -69,6 +71,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         tools = results[2];
         machines = results[3];
         employees = results[4];
+        materials = results[5]; // Set materials data
         isDataLoaded = true; // Ensure this is set after data is loaded
       });
     } catch (e) {
@@ -331,6 +334,7 @@ class _NumberInputPageState extends State<NumberInputPage>
           lines: lines,
           tools: tools,
           machines: machines,
+          materials: materials, // Pass materials to modal
           employees: employees,
         );
       },
@@ -519,6 +523,18 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
+  Future<List<String>> _fetchMaterials() async {
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/materials'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      // Assuming the data includes 'name' field
+      return data.map((e) => e['name'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch materials');
+    }
+  }
+
   Future<List<String>> _fetchEmployees() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/employee'));
@@ -547,6 +563,7 @@ class CreateIssueModal extends StatefulWidget {
   final List<String> lines;
   final List<String> tools;
   final List<String> machines;
+  final List<String> materials; // Added materials list
   final List<String> employees;
 
   const CreateIssueModal({
@@ -558,6 +575,7 @@ class CreateIssueModal extends StatefulWidget {
     required this.lines,
     required this.tools,
     required this.machines,
+    required this.materials, // Added materials to constructor
     required this.employees,
   });
 
@@ -571,6 +589,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   String? selectedLine;
   String? selectedToolBreakdown;
   String? selectedMachineBreakdown;
+  String? selectedMaterialBreakdown; // Added material breakdown
   String? selectedEmployee;
   String? workCardComment;
   String? imagePath;
@@ -581,17 +600,21 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   final TextEditingController lineController = TextEditingController();
   final TextEditingController toolController = TextEditingController();
   final TextEditingController machineController = TextEditingController();
+  final TextEditingController materialController =
+      TextEditingController(); // Material controller
 
   @override
   void initState() {
     super.initState();
 
     // Set initial values based on matched scanned code
-    if (widget.selectedToolBreakdown != null) {
+    if (widget.selectedToolBreakdown != null &&
+        widget.selectedToolBreakdown!.isNotEmpty) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
     }
-    if (widget.selectedMachineBreakdown != null) {
+    if (widget.selectedMachineBreakdown != null &&
+        widget.selectedMachineBreakdown!.isNotEmpty) {
       selectedMachineBreakdown = widget.selectedMachineBreakdown;
       machineController.text = selectedMachineBreakdown!;
     }
@@ -604,6 +627,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     lineController.dispose();
     toolController.dispose();
     machineController.dispose();
+    materialController.dispose(); // Dispose material controller
     super.dispose();
   }
 
@@ -628,7 +652,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                     });
                   },
                 ),
-                const Text('Operable'),
+                const Text('Betrieb möglich?'),
               ],
             ),
 
@@ -637,7 +661,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               textFieldConfiguration: TextFieldConfiguration(
                 controller: employeeController,
                 decoration: const InputDecoration(
-                  labelText: 'Select Employee',
+                  labelText: 'Mitarbeiter auswählen',
                 ),
               ),
               suggestionsCallback: (pattern) {
@@ -656,8 +680,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 selectedEmployee = suggestion;
               },
               validator: (value) =>
-                  value!.isEmpty ? 'Please select an employee' : null,
-              // Removed initialValue
+                  value!.isEmpty ? 'Bitte Mitarbeiter auswählen' : null,
             ),
 
             // Area Center TypeAhead
@@ -665,7 +688,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               textFieldConfiguration: TextFieldConfiguration(
                 controller: areaCenterController,
                 decoration: const InputDecoration(
-                  labelText: 'Select Area Center',
+                  labelText: 'Zuständige Stelle',
                 ),
               ),
               suggestionsCallback: (pattern) {
@@ -684,8 +707,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 selectedAreaCenter = suggestion;
               },
               validator: (value) =>
-                  value!.isEmpty ? 'Please select an area center' : null,
-              // Removed initialValue
+                  value!.isEmpty ? 'Bitte zuständige Stelle auswählen' : null,
             ),
 
             // Line TypeAhead
@@ -693,7 +715,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               textFieldConfiguration: TextFieldConfiguration(
                 controller: lineController,
                 decoration: const InputDecoration(
-                  labelText: 'Select Line',
+                  labelText: 'Linie',
                 ),
               ),
               suggestionsCallback: (pattern) {
@@ -712,8 +734,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 selectedLine = suggestion;
               },
               validator: (value) =>
-                  value!.isEmpty ? 'Please select a line' : null,
-              // Removed initialValue
+                  value!.isEmpty ? 'Bitte Linie auswählen' : null,
             ),
 
             // Tool Breakdown TypeAhead
@@ -721,7 +742,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               textFieldConfiguration: TextFieldConfiguration(
                 controller: toolController,
                 decoration: const InputDecoration(
-                  labelText: 'Select Tool Breakdown',
+                  labelText: 'Werkzeug',
                 ),
               ),
               suggestionsCallback: (pattern) {
@@ -739,7 +760,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 toolController.text = suggestion;
                 selectedToolBreakdown = suggestion;
               },
-              // Removed initialValue
             ),
 
             // Machine Breakdown TypeAhead
@@ -747,7 +767,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               textFieldConfiguration: TextFieldConfiguration(
                 controller: machineController,
                 decoration: const InputDecoration(
-                  labelText: 'Select Machine Breakdown',
+                  labelText: 'Maschine / Anlage',
                 ),
               ),
               suggestionsCallback: (pattern) {
@@ -765,13 +785,37 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 machineController.text = suggestion;
                 selectedMachineBreakdown = suggestion;
               },
-              // Removed initialValue
+            ),
+
+            // Material Breakdown TypeAhead
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: materialController,
+                decoration: const InputDecoration(
+                  labelText: 'Material',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.materials
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  title: Text(suggestion),
+                );
+              },
+              onSuggestionSelected: (suggestion) {
+                materialController.text = suggestion;
+                selectedMaterialBreakdown = suggestion;
+              },
             ),
 
             // Work Card Comment Text Field
             TextField(
               decoration: const InputDecoration(
-                labelText: 'Work Card Comment',
+                labelText: 'Fehlerbeschreibung',
               ),
               onChanged: (value) {
                 workCardComment = value;
@@ -788,9 +832,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   });
                 }
               },
-              child: const Text('Select or Capture Image'),
+              child: const Text('Bild auswählen oder Foto aufnehmen'),
             ),
-            if (imagePath != null) Text('Selected: $imagePath'),
+            if (imagePath != null) Text('Ausgewählt: $imagePath'),
           ],
         ),
       ),
@@ -799,7 +843,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
           onPressed: () {
             Navigator.pop(context);
           },
-          child: const Text('Cancel'),
+          child: const Text('Abbrechen'),
         ),
         ElevatedButton(
           onPressed: () {
@@ -810,6 +854,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               employee: selectedEmployee,
               toolBreakdown: toolController.text,
               machineBreakdown: machineController.text,
+              materialBreakdown: materialController.text,
               workCardComment: workCardComment,
               imagePath: imagePath,
             )) {
@@ -820,6 +865,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 'employee': selectedEmployee!,
                 'toolBreakdown': toolController.text,
                 'machineBreakdown': machineController.text,
+                'materialBreakdown': materialController.text,
                 'workCardComment': workCardComment!,
                 'imagePath': imagePath!,
               });
@@ -827,12 +873,12 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Please fill in all required fields.'),
+                  content: Text('Bitte alle erforderlichen Felder ausfüllen.'),
                 ),
               );
             }
           },
-          child: const Text('Submit'),
+          child: const Text('An IKOffice senden'),
         ),
       ],
     );
@@ -855,11 +901,13 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     required String? employee,
     required String? toolBreakdown,
     required String? machineBreakdown,
+    required String? materialBreakdown,
     required String? workCardComment,
     required String? imagePath,
   }) {
-    bool hasBreakdown = (toolBreakdown != null && toolBreakdown.isNotEmpty) ||
-        (machineBreakdown != null && machineBreakdown.isNotEmpty);
+    bool hasBreakdown = ((toolBreakdown != null && toolBreakdown.isNotEmpty) ||
+        (machineBreakdown != null && machineBreakdown.isNotEmpty) ||
+        (materialBreakdown != null && materialBreakdown.isNotEmpty));
 
     return areaCenter != null &&
         areaCenter.isNotEmpty &&
@@ -892,12 +940,12 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     final response = await request.send();
     if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Issue submitted successfully!')),
+        const SnackBar(content: Text('Störfall angelegt!')),
       );
     } else {
       final errorMessage = await response.stream.bytesToString();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit the issue: $errorMessage')),
+        SnackBar(content: Text('Fehler: $errorMessage')),
       );
     }
   }
