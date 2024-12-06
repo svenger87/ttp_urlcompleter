@@ -881,7 +881,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 children: [
                   const Icon(Icons.camera_alt),
                   const SizedBox(width: 8.0),
-                  const Text('Bild auswählen oder Foto aufnehmen'),
+                  const Text('Bild auswählen\noder Foto aufnehmen',
+                      textAlign: TextAlign.center),
                 ],
               ),
             ),
