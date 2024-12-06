@@ -43,7 +43,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> lines = [];
   List<String> tools = [];
   List<String> machines = [];
-  List<String> materials = []; // Added materials list
+  List<String> materials = [];
   List<String> employees = [];
   bool isDataLoaded = false;
 
@@ -63,7 +63,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         _fetchTools(),
         _fetchMachines(),
         _fetchEmployees(),
-        _fetchMaterials(), // Fetch materials data
+        _fetchMaterials(),
       ]);
 
       setState(() {
@@ -72,8 +72,8 @@ class _NumberInputPageState extends State<NumberInputPage>
         tools = results[2];
         machines = results[3];
         employees = results[4];
-        materials = results[5]; // Set materials data
-        isDataLoaded = true; // Ensure this is set after data is loaded
+        materials = results[5];
+        isDataLoaded = true;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -129,7 +129,6 @@ class _NumberInputPageState extends State<NumberInputPage>
   @override
   Widget build(BuildContext context) {
     if (!isDataLoaded) {
-      // Show loading indicator
       return Scaffold(
         appBar: AppBar(
           title: const Text('ttp App'),
@@ -160,9 +159,9 @@ class _NumberInputPageState extends State<NumberInputPage>
           ),
         ],
         titleTextStyle: const TextStyle(
-          color: Colors.white, // Set the text color to white
-          fontSize: 20, // Optionally adjust the font size
-          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
       ),
       drawer: const MainDrawer(),
@@ -284,10 +283,8 @@ class _NumberInputPageState extends State<NumberInputPage>
       print('Machines list loaded with ${machines.length} items');
     }
 
-    // Normalize scannedCode
     String normalizedScannedCode = scannedCode.trim().toLowerCase();
 
-    // Match scanned code with tools and machines
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
 
@@ -296,7 +293,6 @@ class _NumberInputPageState extends State<NumberInputPage>
     List<String> normalizedMachines =
         machines.map((e) => e.trim().toLowerCase()).toList();
 
-    // Adjusted matching logic for tools
     for (int i = 0; i < normalizedTools.length; i++) {
       if (normalizedTools[i].contains(normalizedScannedCode) ||
           normalizedScannedCode.contains(normalizedTools[i])) {
@@ -305,7 +301,6 @@ class _NumberInputPageState extends State<NumberInputPage>
       }
     }
 
-    // Adjusted matching logic for machines
     if (selectedToolBreakdown == null) {
       for (int i = 0; i < normalizedMachines.length; i++) {
         if (normalizedMachines[i].contains(normalizedScannedCode) ||
@@ -321,20 +316,25 @@ class _NumberInputPageState extends State<NumberInputPage>
       print('Matched machine breakdown: $selectedMachineBreakdown');
     }
 
-    // Show the modal and pass the selected values and data
-    showDialog(
+    // Use showModalBottomSheet instead of showDialog
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (BuildContext context) {
-        return CreateIssueModal(
-          scannedCode: scannedCode,
-          selectedToolBreakdown: selectedToolBreakdown,
-          selectedMachineBreakdown: selectedMachineBreakdown,
-          areaCenters: areaCenters,
-          lines: lines,
-          tools: tools,
-          machines: machines,
-          materials: materials, // Pass materials to modal
-          employees: employees,
+        return Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: CreateIssueModal(
+            scannedCode: scannedCode,
+            selectedToolBreakdown: selectedToolBreakdown,
+            selectedMachineBreakdown: selectedMachineBreakdown,
+            areaCenters: areaCenters,
+            lines: lines,
+            tools: tools,
+            machines: machines,
+            materials: materials,
+            employees: employees,
+          ),
         );
       },
     );
@@ -356,17 +356,14 @@ class _NumberInputPageState extends State<NumberInputPage>
           print('Scanned QR Code: $scannedData');
         }
 
-        // Keep the full scanned URL
         String fullUrl = scannedData;
 
-        // Extract the code from the URL for matching
         String codeToUse;
         try {
           Uri uri = Uri.parse(scannedData);
           codeToUse =
               uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
         } catch (e) {
-          // If it's not a valid URL, use the scanned data as is
           codeToUse = scannedData;
         }
 
@@ -374,7 +371,6 @@ class _NumberInputPageState extends State<NumberInputPage>
           print('Extracted code: $codeToUse');
         }
 
-        // Show the modal
         _showOptionsModal(fullUrl, codeToUse);
 
         scanTimer = Timer(const Duration(seconds: 3), () {
@@ -402,8 +398,8 @@ class _NumberInputPageState extends State<NumberInputPage>
                 leading: const Icon(Icons.open_in_browser),
                 title: const Text('Werkzeugdetails öffnen'),
                 onTap: () {
-                  Navigator.pop(context); // Close the modal
-                  _navigateToUrl(fullUrl); // Navigate to the full URL
+                  Navigator.pop(context);
+                  _navigateToUrl(fullUrl);
                 },
               ),
               const Divider(),
@@ -411,8 +407,8 @@ class _NumberInputPageState extends State<NumberInputPage>
                 leading: const Icon(Icons.add_alert),
                 title: const Text('Störfall anlegen'),
                 onTap: () {
-                  Navigator.pop(context); // Close the modal
-                  _reportIssue(codeToUse); // Use the extracted code
+                  Navigator.pop(context);
+                  _reportIssue(codeToUse);
                 },
               ),
             ],
@@ -503,7 +499,6 @@ class _NumberInputPageState extends State<NumberInputPage>
         .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      // Assuming the data includes 'number' field
       return data.map((e) => e['number'].toString()).toList();
     } else {
       throw Exception('Failed to fetch tools');
@@ -515,7 +510,6 @@ class _NumberInputPageState extends State<NumberInputPage>
         .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      // Assuming the data includes 'number' field
       return data.map((e) => e['number'].toString()).toList();
     } else {
       throw Exception('Failed to fetch machines');
@@ -527,7 +521,6 @@ class _NumberInputPageState extends State<NumberInputPage>
         .get(Uri.parse('http://wim-solution.sip.local:3006/material'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      // Assuming the data includes 'name' field
       return data.map((e) => e['name'].toString()).toList();
     } else {
       throw Exception('Failed to fetch materials');
@@ -604,7 +597,7 @@ class CreateIssueModal extends StatefulWidget {
   final List<String> lines;
   final List<String> tools;
   final List<String> machines;
-  final List<String> materials; // Added materials list
+  final List<String> materials;
   final List<String> employees;
 
   const CreateIssueModal({
@@ -616,7 +609,7 @@ class CreateIssueModal extends StatefulWidget {
     required this.lines,
     required this.tools,
     required this.machines,
-    required this.materials, // Added materials to constructor
+    required this.materials,
     required this.employees,
   });
 
@@ -630,25 +623,22 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   String? selectedLine;
   String? selectedToolBreakdown;
   String? selectedMachineBreakdown;
-  String? selectedMaterialBreakdown; // Added material breakdown
+  String? selectedMaterialBreakdown;
   String? selectedEmployee;
   String? workCardComment;
   String? imagePath;
 
-  // Controllers for typeahead fields
   final TextEditingController employeeController = TextEditingController();
   final TextEditingController areaCenterController = TextEditingController();
   final TextEditingController lineController = TextEditingController();
   final TextEditingController toolController = TextEditingController();
   final TextEditingController machineController = TextEditingController();
-  final TextEditingController materialController =
-      TextEditingController(); // Material controller
+  final TextEditingController materialController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
 
-    // Set initial values based on matched scanned code
     if (widget.selectedToolBreakdown != null &&
         widget.selectedToolBreakdown!.isNotEmpty) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
@@ -668,21 +658,24 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     lineController.dispose();
     toolController.dispose();
     machineController.dispose();
-    materialController.dispose(); // Dispose material controller
+    materialController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text(
-        'Störfall anlegen',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-      content: SingleChildScrollView(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Operable Checkbox
+            const Text(
+              'Störfall anlegen',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
             Row(
               children: [
                 Checkbox(
@@ -697,7 +690,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               ],
             ),
 
-            // Employee Selection
+            // Employee selection
             TypeAheadFormField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: employeeController,
@@ -711,20 +704,18 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(
-                  title: Text(suggestion),
-                );
-              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSuggestionSelected: (suggestion) {
                 employeeController.text = suggestion;
                 selectedEmployee = suggestion;
               },
-              validator: (value) =>
-                  value!.isEmpty ? 'Bitte Mitarbeiter auswählen' : null,
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Bitte Mitarbeiter auswählen'
+                  : null,
             ),
 
-            // Area Center TypeAhead
+            // Area Center selection
             TypeAheadFormField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: areaCenterController,
@@ -738,20 +729,18 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(
-                  title: Text(suggestion),
-                );
-              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSuggestionSelected: (suggestion) {
                 areaCenterController.text = suggestion;
                 selectedAreaCenter = suggestion;
               },
-              validator: (value) =>
-                  value!.isEmpty ? 'Bitte zuständige Stelle auswählen' : null,
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Bitte zuständige Stelle auswählen'
+                  : null,
             ),
 
-            // Line TypeAhead
+            // Line selection
             TypeAheadFormField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: lineController,
@@ -765,20 +754,18 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(
-                  title: Text(suggestion),
-                );
-              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSuggestionSelected: (suggestion) {
                 lineController.text = suggestion;
                 selectedLine = suggestion;
               },
-              validator: (value) =>
-                  value!.isEmpty ? 'Bitte Linie auswählen' : null,
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Bitte Linie auswählen'
+                  : null,
             ),
 
-            // Tool Breakdown TypeAhead
+            // Tool selection
             TypeAheadFormField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: toolController,
@@ -792,18 +779,15 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(
-                  title: Text(suggestion),
-                );
-              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSuggestionSelected: (suggestion) {
                 toolController.text = suggestion;
                 selectedToolBreakdown = suggestion;
               },
             ),
 
-            // Machine Breakdown TypeAhead
+            // Machine selection
             TypeAheadFormField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: machineController,
@@ -817,18 +801,15 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(
-                  title: Text(suggestion),
-                );
-              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSuggestionSelected: (suggestion) {
                 machineController.text = suggestion;
                 selectedMachineBreakdown = suggestion;
               },
             ),
 
-            // Material Breakdown TypeAhead
+            // Material selection
             TypeAheadFormField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: materialController,
@@ -842,18 +823,15 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(
-                  title: Text(suggestion),
-                );
-              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSuggestionSelected: (suggestion) {
                 materialController.text = suggestion;
                 selectedMaterialBreakdown = suggestion;
               },
             ),
 
-            // Work Card Comment Text Field
+            // Work card comment
             TextField(
               decoration: const InputDecoration(
                 labelText: 'Fehlerbeschreibung',
@@ -863,10 +841,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
 
-            // Image Picker Button
-            // Add spacing above the button
             SizedBox(height: 16.0),
-
             ElevatedButton(
               onPressed: () async {
                 final pickedImage = await _pickImage();
@@ -886,66 +861,71 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 ],
               ),
             ),
-
-            // Add spacing below the button
             SizedBox(height: 16.0),
 
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
+
+            const SizedBox(height: 16.0),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Abbrechen'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_validateForm(
+                      operable: operable,
+                      areaCenter: selectedAreaCenter,
+                      line: selectedLine,
+                      employee: selectedEmployee,
+                      toolBreakdown: toolController.text,
+                      machineBreakdown: machineController.text,
+                      materialBreakdown: materialController.text,
+                      workCardComment: workCardComment,
+                      imagePath: imagePath,
+                    )) {
+                      _submitIssue({
+                        'operable': operable.toString(),
+                        'areaCenter': selectedAreaCenter!,
+                        'line': selectedLine!,
+                        'employee': selectedEmployee!,
+                        'toolBreakdown': toolController.text,
+                        'machineBreakdown': machineController.text,
+                        'materialBreakdown': materialController.text,
+                        'workCardComment': workCardComment!,
+                        'imagePath': imagePath!,
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Störfall angelegt!')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                'Bitte alle erforderlichen Felder ausfüllen.')),
+                      );
+                    }
+                  },
+                  child: const Text('An IKOffice senden'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text('Abbrechen'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            if (_validateForm(
-              operable: operable,
-              areaCenter: selectedAreaCenter,
-              line: selectedLine,
-              employee: selectedEmployee,
-              toolBreakdown: toolController.text,
-              machineBreakdown: machineController.text,
-              materialBreakdown: materialController.text,
-              workCardComment: workCardComment,
-              imagePath: imagePath,
-            )) {
-              _submitIssue({
-                'operable': operable.toString(),
-                'areaCenter': selectedAreaCenter!,
-                'line': selectedLine!,
-                'employee': selectedEmployee!,
-                'toolBreakdown': toolController.text,
-                'machineBreakdown': machineController.text,
-                'materialBreakdown': materialController.text,
-                'workCardComment': workCardComment!,
-                'imagePath': imagePath!,
-              });
-              Navigator.pop(context);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Bitte alle erforderlichen Felder ausfüllen.'),
-                ),
-              );
-            }
-          },
-          child: const Text('An IKOffice senden'),
-        ),
-      ],
     );
   }
 
   Future<File?> _pickImage() async {
     final picker = ImagePicker();
 
-    // Show a dialog to let the user choose between camera and gallery
     ImageSource? source = await showDialog<ImageSource>(
-      context: context, // Ensure that you have access to a BuildContext here.
+      context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Bildquelle wählen'),
@@ -968,10 +948,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       },
     );
 
-    // If the user canceled the dialog, source will be null
     if (source == null) return null;
 
-    // Now pick the image using the chosen source
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
       return File(pickedFile.path);
@@ -1010,23 +988,19 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     final uri = Uri.parse('http://wim-solution.sip.local:3006/report-issue');
     final request = http.MultipartRequest('POST', uri);
 
-    // Add text fields
     issueData.forEach((key, value) {
       if (key != 'imagePath') {
         request.fields[key] = value;
       }
     });
 
-    // Add the image file
     final imageFile = File(issueData['imagePath']!);
     request.files
         .add(await http.MultipartFile.fromPath('imageFile', imageFile.path));
 
     final response = await request.send();
     if (response.statusCode == 201) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Störfall angelegt!')),
-      );
+      // If you want to show SnackBar after closing the modal, do it in the calling code.
     } else {
       final errorMessage = await response.stream.bytesToString();
       ScaffoldMessenger.of(context).showSnackBar(
