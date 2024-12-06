@@ -904,10 +904,22 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         const SnackBar(content: Text('Störfall angelegt!')),
                       );
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text(
-                                'Bitte alle erforderlichen Felder ausfüllen.')),
+                      ScaffoldMessenger.of(context).showMaterialBanner(
+                        MaterialBanner(
+                          content: const Text(
+                              'Bitte alle erforderlichen Felder ausfüllen.'),
+                          leading: const Icon(Icons.info_outline),
+                          backgroundColor: Colors.yellow[700],
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context)
+                                    .hideCurrentMaterialBanner();
+                              },
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
                       );
                     }
                   },
