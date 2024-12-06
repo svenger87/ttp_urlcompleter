@@ -841,7 +841,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
 
-            SizedBox(height: 16.0),
+            const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () async {
                 final pickedImage = await _pickImage();
@@ -861,7 +861,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 ],
               ),
             ),
-            SizedBox(height: 16.0),
+            const SizedBox(height: 16.0),
 
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
 
@@ -900,27 +900,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         'imagePath': imagePath!,
                       });
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Störfall angelegt!')),
-                      );
+                      showOverlayMessage(context, 'Störfall angelegt!');
                     } else {
-                      ScaffoldMessenger.of(context).showMaterialBanner(
-                        MaterialBanner(
-                          content: const Text(
-                              'Bitte alle erforderlichen Felder ausfüllen.'),
-                          leading: const Icon(Icons.info_outline),
-                          backgroundColor: Colors.yellow[700],
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context)
-                                    .hideCurrentMaterialBanner();
-                              },
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      );
+                      showOverlayMessage(context,
+                          'Bitte alle erforderlichen Felder ausfüllen.');
                     }
                   },
                   child: const Text('An IKOffice senden'),
@@ -931,6 +914,42 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         ),
       ),
     );
+  }
+
+  void showOverlayMessage(BuildContext context, String message) {
+    // Obtain the top-level Overlay from the rootNavigator (ensures we get the highest possible overlay layer)
+    final overlay = Navigator.of(context, rootNavigator: true).overlay;
+    if (overlay == null) return;
+
+    // Create the overlay entry
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 50.0,
+        left: 20.0,
+        right: 20.0,
+        child: Material(
+          elevation: 10.0,
+          borderRadius: BorderRadius.circular(8.0),
+          color: Colors.red,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Text(
+              message,
+              style: const TextStyle(color: Colors.white, fontSize: 16.0),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Insert the entry into the overlay
+    overlay.insert(overlayEntry);
+
+    // Remove the entry after a delay, e.g., 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
   }
 
   Future<File?> _pickImage() async {
