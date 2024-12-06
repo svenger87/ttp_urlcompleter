@@ -864,6 +864,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
 
             // Image Picker Button
+            // Add spacing above the button
+            SizedBox(height: 16.0),
+
             ElevatedButton(
               onPressed: () async {
                 final pickedImage = await _pickImage();
@@ -873,8 +876,19 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   });
                 }
               },
-              child: const Text('Bild auswählen oder Foto aufnehmen'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.camera_alt),
+                  const SizedBox(width: 8.0),
+                  const Text('Bild auswählen oder Foto aufnehmen'),
+                ],
+              ),
             ),
+
+            // Add spacing below the button
+            SizedBox(height: 16.0),
+
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
           ],
         ),
@@ -927,8 +941,37 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
   Future<File?> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile =
-        await picker.pickImage(source: ImageSource.camera); // or .gallery
+
+    // Show a dialog to let the user choose between camera and gallery
+    ImageSource? source = await showDialog<ImageSource>(
+      context: context, // Ensure that you have access to a BuildContext here.
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Bildquelle wählen'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Kamera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_album),
+                title: const Text('Galerie'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    // If the user canceled the dialog, source will be null
+    if (source == null) return null;
+
+    // Now pick the image using the chosen source
+    final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
       return File(pickedFile.path);
     }
