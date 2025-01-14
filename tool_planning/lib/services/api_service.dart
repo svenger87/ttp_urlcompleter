@@ -455,4 +455,59 @@ class ApiService {
       throw Exception('Failed to retrieve download token: ${response.body}');
     }
   }
+
+  static const baseUrl = 'http://wim-solution.sip.local:3004';
+  // Replace with actual server IP or hostname
+
+  /// Fetch all rows from the new einfahr_schedule table
+  static Future<List<Map<String, dynamic>>> fetchEinfahrPlan() async {
+    final response = await http.get(Uri.parse('$baseUrl/einfahrplan'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return List<Map<String, dynamic>>.from(data);
+    } else {
+      throw Exception('Failed to load Einfahrplan: ${response.body}');
+    }
+  }
+
+  /// Insert or update an item in einfahr_schedule
+  /// If id > 0, we update that row; otherwise we insert
+  static Future<Map<String, dynamic>> updateEinfahrPlan({
+    int? id,
+    required String projectName,
+    String toolNumber = '',
+    String dayName = 'Montag',
+    int slotIndex = 0,
+    String status = 'in_progress',
+    required int tryoutIndex,
+  }) async {
+    final body = jsonEncode({
+      'id': id,
+      'project_name': projectName,
+      'tool_number': toolNumber,
+      'day_name': dayName,
+      'slot_index': slotIndex,
+      'status': status,
+    });
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/einfahrplan/update'),
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update/insert: ${response.body}');
+    }
+  }
+
+  /// (Optional) Delete an item
+  static Future<void> deleteEinfahrItem(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/einfahrplan/$id'));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete item: ${response.body}');
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tool_planning/screens/einfahr_planer_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import '../constants.dart';
@@ -243,6 +244,18 @@ class MainDrawer extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ToolPlanningScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.view_kanban),
+                title: const Text('Einfahrplaner'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EinfahrPlanerScreen(),
                     ),
                   );
                 },

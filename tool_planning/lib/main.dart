@@ -1,7 +1,10 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
-import 'screens/tool_planning_screen.dart';
-import 'screens/login_screen.dart';
-import 'shared/theme.dart';
+import 'screens/tool_planning_screen.dart'; // Your existing ToolPlanning
+import 'screens/einfahr_planer_screen.dart'; // The new EinfahrPlaner
+import 'screens/login_screen.dart'; // If you have a login screen
+import 'shared/theme.dart'; // Your custom themes, if any
 
 void main() {
   runApp(const ToolPlanningApp());
@@ -14,14 +17,66 @@ class ToolPlanningApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tool Planning Module',
-      theme: appLightTheme,
+      theme: appLightTheme, // or your own theme
       darkTheme: appDarkTheme,
-      themeMode: ThemeMode.system, // Use system theme (light/dark)
-      home: const ToolPlanningScreen(), // Start directly with the main screen
+      themeMode: ThemeMode.system,
+      initialRoute: '/', // Start at Home (which has the drawer)
       routes: {
-        '/login': (context) => const LoginScreen(), // Add the LoginScreen route
+        '/': (context) => const HomeScreen(), // The drawer scaffold
+        '/tool-planning': (context) => const ToolPlanningScreen(),
+        '/einfahr-planer': (context) => const EinfahrPlanerScreen(),
+        '/login': (context) => const LoginScreen(), // If used
       },
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+/// The home screen that just wraps a Drawer for navigation.
+/// It can immediately push '/tool-planning' or anything else.
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Main Menu'),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Text('Navigation Menu',
+                  style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.build),
+              title: const Text('Tool Planning'),
+              onTap: () {
+                Navigator.pop(context); // close drawer
+                Navigator.pushNamed(context, '/tool-planning');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_month),
+              title: const Text('Einfahr Planer'),
+              onTap: () {
+                Navigator.pop(context); // close drawer
+                Navigator.pushNamed(context, '/einfahr-planer');
+              },
+            ),
+            // Add more nav items as needed
+          ],
+        ),
+      ),
+      body: const Center(
+        child: Text(
+          'Welcome! Use the Drawer menu to navigate.',
+          style: TextStyle(fontSize: 18),
+        ),
+      ),
     );
   }
 }
