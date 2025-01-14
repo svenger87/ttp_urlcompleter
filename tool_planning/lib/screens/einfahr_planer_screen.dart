@@ -1,10 +1,12 @@
-// ignore_for_file: use_build_context_synchronously
+// lib/screens/einfahr_planer_screen.dart
+
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart'; // for kDebugMode
 import 'package:flutter/material.dart';
-import '../modals/fahrversuche.dart'; // Contains color mapping for statuses
+import '../modals/fahrversuche.dart'; // Contains FahrversuchItem class
 import '../services/api_service.dart';
 
 class EinfahrPlanerScreen extends StatefulWidget {
@@ -26,12 +28,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     'Sonntag'
   ];
 
-  // Tryouts = columns
+  // Tryouts = columns (now including two additional tryouts for drop targets)
   final List<String> tryouts = [
     'Fahrversuch #1',
     'Fahrversuch #2',
     'Fahrversuch #3',
-    'Fahrversuch #4'
+    'Fahrversuch #4',
   ];
 
   // Weeks to choose from (1..53).
@@ -41,11 +43,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   bool isLoading = true;
 
   // The schedule for the selected week: day -> list-of-lists
+  // Each inner list corresponds to a tryout index (0..5)
   Map<String, List<List<FahrversuchItem>>> schedule = {};
 
   // This map will hold "toolNumber" -> full secondary project record
   // Example: { 'WKZP14226W01': { 'id': 17514, 'number': 'WKZP14226W01', ... }, ... }
-  Map<String, Map<String, dynamic>> _secondaryProjectsMap = {};
+  final Map<String, Map<String, dynamic>> _secondaryProjectsMap = {};
 
   final ScrollController _horizontalScrollCtrl = ScrollController();
   Timer? _autoScrollTimer;
@@ -62,6 +65,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     if (kDebugMode) {
       print(
           '++ initState: Current ISO week is $currentWeek, clamped to $safeWeek');
+      print('++ tryouts.length: ${tryouts.length}');
     }
 
     _initializeEmptySchedule();
@@ -89,10 +93,19 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   void _initializeEmptySchedule() {
     schedule.clear();
     for (var day in days) {
+      // Initialize grid tryouts (0 to tryouts.length - 1)
       schedule[day] = List.generate(
         tryouts.length,
         (_) => <FahrversuchItem>[],
       );
+
+      // Add extra slots for independent drop boxes (tryoutIndex 4 and 5)
+      schedule[day]!.add([]); // For tryout index 4
+      schedule[day]!.add([]); // For tryout index 5
+
+      if (kDebugMode) {
+        print('++ schedule[$day].length = ${schedule[day]!.length}');
+      }
     }
     if (kDebugMode) {
       print(
@@ -184,7 +197,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           projectName: row['project_name'],
           toolNumber: toolNumber,
           dayName: row['day_name'] ?? 'Montag',
-          tryoutIndex: row['tryout_index'] ?? 0,
+          tryoutIndex:
+              row['tryout_index'] ?? 0, // Use the index from the backend
           status: row['status'] ?? 'In Arbeit',
           weekNumber: row['week_number'] ?? weekNumber,
           imageUri: finalImageUri, // docustore/download/Project/...
@@ -198,10 +212,16 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           item.dayName = days.first;
         }
 
-        final validTryIndex =
-            (item.tryoutIndex >= 0 && item.tryoutIndex < tryouts.length)
-                ? item.tryoutIndex
-                : 0;
+        // Ensure tryoutIndex is valid
+        final validTryIndex = (item.tryoutIndex >= 0 &&
+                item.tryoutIndex < schedule[item.dayName]!.length)
+            ? item.tryoutIndex
+            : 0;
+
+        if (kDebugMode) {
+          print(
+              '++ _fetchDataForWeek: Adding ${item.projectName} to ${item.dayName}/$validTryIndex');
+        }
 
         schedule[item.dayName]![validTryIndex].add(item);
       }
@@ -234,6 +254,18 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     if (kDebugMode) {
       print(
           '++ _moveItem: Moving ${item.projectName} from $oldDay/$oldTryIndex to $newDay/$newTryIndex');
+      print('++ schedule[$oldDay].length = ${schedule[oldDay]?.length}');
+    }
+
+    if (newTryIndex >= tryouts.length || newTryIndex < 0) {
+      if (kDebugMode) {
+        print(
+            '!! _moveItem: Invalid newTryIndex $newTryIndex for tryouts.length ${tryouts.length}');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ungültiger Versuch-Index: $newTryIndex')),
+      );
+      return;
     }
 
     setState(() {
@@ -263,6 +295,72 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       setState(() {
         schedule[newDay]![newTryIndex].remove(item);
         item.dayName = oldDay;
+        item.tryoutIndex = oldTryIndex;
+        schedule[oldDay]![oldTryIndex].add(item);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Verschieben: $err')),
+      );
+    }
+  }
+
+  // Move item to a specific tryout index (for the new drop targets)
+  Future<void> _moveItemToTryout(
+      FahrversuchItem item, int targetTryoutIndex) async {
+    final oldDay = item.dayName;
+    final oldTryIndex = item.tryoutIndex;
+
+    if (kDebugMode) {
+      print(
+          '++ _moveItemToTryout: Moving ${item.projectName} from $oldDay/$oldTryIndex to tryoutIndex $targetTryoutIndex');
+      print('++ schedule[$oldDay].length = ${schedule[oldDay]?.length}');
+    }
+
+    // Check if the target index is valid in the schedule
+    if (targetTryoutIndex >= schedule[oldDay]!.length ||
+        targetTryoutIndex < 0) {
+      if (kDebugMode) {
+        print(
+            '!! _moveItemToTryout: Invalid targetTryoutIndex $targetTryoutIndex for schedule[$oldDay].length ${schedule[oldDay]!.length}');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Ungültiger Zielversuch-Index: $targetTryoutIndex')),
+      );
+      return;
+    }
+
+    setState(() {
+      // Remove item from its old location
+      schedule[oldDay]![oldTryIndex].remove(item);
+      // Update item's index
+      item.tryoutIndex = targetTryoutIndex;
+      // Add item to the new location
+      schedule[oldDay]![targetTryoutIndex].add(item);
+    });
+
+    try {
+      await ApiService.updateEinfahrPlan(
+        id: item.id,
+        projectName: item.projectName,
+        toolNumber: item.toolNumber,
+        dayName: item.dayName,
+        tryoutIndex: item.tryoutIndex,
+        status: item.status,
+        weekNumber: item.weekNumber,
+      );
+      if (kDebugMode) {
+        print(
+            '++ _moveItemToTryout: Update success on server for ${item.projectName}');
+      }
+    } catch (err) {
+      if (kDebugMode) {
+        print(
+            '!! _moveItemToTryout: Error updating: $err. Reverting local state.');
+      }
+      setState(() {
+        // Revert changes if the server update fails
+        schedule[oldDay]![targetTryoutIndex].remove(item);
         item.tryoutIndex = oldTryIndex;
         schedule[oldDay]![oldTryIndex].add(item);
       });
@@ -621,11 +719,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     if (kDebugMode) {
       print('++ build: isLoading=$isLoading, _selectedWeek=$_selectedWeek');
     }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einfahr Planer'),
         actions: [
-          // Dropdown for selecting week
           DropdownButton<int>(
             value: _selectedWeek,
             dropdownColor: Colors.blueGrey[50],
@@ -652,14 +750,153 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           : SingleChildScrollView(
               controller: _horizontalScrollCtrl,
               scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: Column(
-                  children: [
-                    _buildTryoutsHeader(),
-                    _buildDaysRows(),
-                  ],
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // === LEFT: Main Grid ===
+                  SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    child: Column(
+                      children: [
+                        _buildTryoutsHeader(),
+                        _buildDaysRows(),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 14), // Some horizontal spacing
+
+                  // === RIGHT: Side-by-side boxes ===
+                  Column(
+                    children: [
+                      Row(
+                        children: [
+                          // Box 1: Werkzeuge in Änderung
+                          Container(
+                            width: 300, // Adjust width as needed
+                            height: (days.length * 180).toDouble() +
+                                50, // Grid height
+                            padding: const EdgeInsets.all(0),
+                            color: Colors.blueGrey[50],
+                            child: Column(
+                              children: [
+                                // Header
+                                Container(
+                                  height: 50,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: Colors.blueAccent,
+                                    borderRadius: BorderRadius.circular(0),
+                                  ),
+                                  child: const Text(
+                                    'Werkzeuge in Änderung',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                // DragTarget Box
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.red[100],
+                                      borderRadius: BorderRadius.circular(0),
+                                      border: Border.all(color: Colors.red),
+                                    ),
+                                    child: DragTarget<FahrversuchItem>(
+                                      builder: (context, candidateData,
+                                          rejectedData) {
+                                        final items = schedule.entries
+                                            .expand((entry) => entry.value[4])
+                                            .toList(); // Tryout index 4
+                                        return ListView.builder(
+                                          itemCount: items.length,
+                                          itemBuilder: (context, index) {
+                                            final item = items[index];
+                                            return _buildDraggableItem(item);
+                                          },
+                                        );
+                                      },
+                                      onWillAccept: (data) => true,
+                                      onAccept: (item) {
+                                        _moveItemToTryout(
+                                            item, 4); // TryoutIndex 4
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 14), // Some horizontal spacing
+
+                          // Box 2: Bereit für Einfahrversuch
+                          Container(
+                            width: 300, // Adjust width as needed
+                            height: (days.length * 180).toDouble() +
+                                50, // Grid height
+                            padding: const EdgeInsets.all(0),
+                            color: Colors.blueGrey[50],
+                            child: Column(
+                              children: [
+                                // Header
+                                Container(
+                                  height: 50,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: Colors.blueAccent,
+                                    borderRadius: BorderRadius.circular(0),
+                                  ),
+                                  child: const Text(
+                                    'Bereit für Einfahrversuch',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                // DragTarget Box
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[100],
+                                      borderRadius: BorderRadius.circular(0),
+                                      border: Border.all(color: Colors.green),
+                                    ),
+                                    child: DragTarget<FahrversuchItem>(
+                                      builder: (context, candidateData,
+                                          rejectedData) {
+                                        final items = schedule.entries
+                                            .expand((entry) => entry.value[5])
+                                            .toList(); // Tryout index 5
+                                        return ListView.builder(
+                                          itemCount: items.length,
+                                          itemBuilder: (context, index) {
+                                            final item = items[index];
+                                            return _buildDraggableItem(item);
+                                          },
+                                        );
+                                      },
+                                      onWillAccept: (data) => true,
+                                      onAccept: (item) {
+                                        _moveItemToTryout(
+                                            item, 5); // TryoutIndex 5
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
     );
@@ -680,7 +917,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         ),
         for (int i = 0; i < tryouts.length; i++)
           Container(
-            width: 200,
+            width: 260,
             height: 50,
             margin: const EdgeInsets.only(left: 2),
             alignment: Alignment.center,
@@ -702,7 +939,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           children: [
             Container(
               width: 150,
-              height: 150,
+              height: 180,
               margin: const EdgeInsets.only(top: 2),
               color: Colors.blueAccent,
               alignment: Alignment.center,
@@ -723,8 +960,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   Widget _buildGridCell(String day, int colIndex) {
     final items = schedule[day]![colIndex];
     return Container(
-      width: 200,
-      height: 150,
+      width: 260,
+      height: 180,
       margin: const EdgeInsets.only(left: 2, top: 2),
       color: Colors.grey.shade100,
       child: Stack(
@@ -766,7 +1003,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           ),
           // Button to add a new item
           Positioned(
-            right: -4,
+            right: 220,
             bottom: -4,
             child: IconButton(
               icon: const Icon(Icons.add_circle, color: Colors.green, size: 28),
@@ -780,33 +1017,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   }
 
   Widget _buildDraggableItem(FahrversuchItem item) {
-    // If we haven't downloaded the image yet, do so:
+    // Trigger download if needed (same logic as before):
     if (item.imageUri != null && item.localImagePath == null) {
-      if (kDebugMode) {
-        print(
-            '++ _buildDraggableItem: Triggering _downloadItemImage for ${item.projectName}, uri=${item.imageUri}');
-      }
-
-      // Kick off the async download
-      _downloadItemImage(item).then((file) {
-        if (!mounted) return; // Ensure widget still in tree
-        if (file != null) {
-          setState(() {
-            item.localImagePath = file.path;
-          });
-          if (kDebugMode) {
-            print('++ _buildDraggableItem: Download success => ${file.path}');
-          }
-        } else {
-          if (kDebugMode) {
-            print('!! _buildDraggableItem: Download returned null');
-          }
-        }
-      }).catchError((error) {
-        if (kDebugMode) {
-          print('!! _buildDraggableItem: Error downloading: $error');
-        }
-      });
+      _downloadItemImage(item);
     }
 
     return LongPressDraggable<FahrversuchItem>(
@@ -814,41 +1027,97 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       feedback: Material(
         elevation: 4,
         child: Container(
-          width: 180,
+          width: 220,
           padding: const EdgeInsets.all(8),
           color: item.color,
           child: Text('${item.projectName} (${item.toolNumber})'),
         ),
       ),
-      child: Card(
-        color: item.color,
-        margin: const EdgeInsets.only(bottom: 4),
-        child: SizedBox(
-          height: 120,
-          child: ListTile(
-            leading: (item.localImagePath != null)
-                ? Image.file(
-                    File(item.localImagePath!),
-                    width: 50,
-                    fit: BoxFit.cover,
-                  )
-                : null,
-            title: Text(
-              item.projectName,
-              style: const TextStyle(color: Colors.white),
-            ),
-            subtitle: Text(
-              'Tool: ${item.toolNumber}\nStatus: ${item.status}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white),
-              tooltip: 'Status/Mehr',
-              onPressed: () => _editItemDialog(item),
-            ),
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: Card(
+          color: item.color,
+          margin: const EdgeInsets.only(bottom: 4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: SizedBox(
+            height: 160,
+            width: 220,
+            child: _buildCardContent(item),
           ),
         ),
       ),
+      child: Card(
+        color: item.color,
+        margin: const EdgeInsets.only(bottom: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: SizedBox(
+          height: 160,
+          width: 220,
+          child: _buildCardContent(item),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardContent(FahrversuchItem item) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        // Image container with restricted height
+        if (item.localImagePath != null)
+          Container(
+            height: 55, // Restrict image height
+            margin: const EdgeInsets.only(top: 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.file(
+                File(item.localImagePath!),
+                fit: BoxFit.cover, // Ensure the image fits within the container
+              ),
+            ),
+          ),
+
+        // Spacing
+        const SizedBox(height: 6),
+
+        // Project/Tool info
+        Expanded(
+          child: Column(
+            children: [
+              Text(
+                item.projectName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2, // Prevent overflow
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'Tool: ${item.toolNumber}',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                'Status: ${item.status}',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+
+        // Edit button fixed at the bottom
+        Align(
+          alignment: Alignment.bottomRight,
+          child: IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            tooltip: 'Status/Mehr',
+            onPressed: () => _editItemDialog(item),
+          ),
+        ),
+      ],
     );
   }
 
