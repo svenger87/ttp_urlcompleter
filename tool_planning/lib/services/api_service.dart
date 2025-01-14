@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 import 'dart:io';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:http/http.dart' as http;
@@ -459,9 +461,11 @@ class ApiService {
   static const baseUrl = 'http://wim-solution.sip.local:3004';
   // Replace with actual server IP or hostname
 
-  /// Fetch all rows from the new einfahr_schedule table
-  static Future<List<Map<String, dynamic>>> fetchEinfahrPlan() async {
-    final response = await http.get(Uri.parse('$baseUrl/einfahrplan'));
+  // Now fetch data only for the given week
+  static Future<List<Map<String, dynamic>>> fetchEinfahrPlan(
+      {int week = 1}) async {
+    final url = Uri.parse('$baseUrl/einfahrplan?week=$week');
+    final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return List<Map<String, dynamic>>.from(data);
@@ -470,24 +474,24 @@ class ApiService {
     }
   }
 
-  /// Insert or update an item in einfahr_schedule
-  /// If id > 0, we update that row; otherwise we insert
+  // Insert/update with week_number
   static Future<Map<String, dynamic>> updateEinfahrPlan({
     int? id,
     required String projectName,
-    String toolNumber = '',
-    String dayName = 'Montag',
-    int slotIndex = 0,
-    String status = 'in_progress',
+    required String toolNumber,
+    required String dayName,
     required int tryoutIndex,
+    required String status,
+    required int weekNumber, // new
   }) async {
     final body = jsonEncode({
       'id': id,
       'project_name': projectName,
       'tool_number': toolNumber,
       'day_name': dayName,
-      'slot_index': slotIndex,
+      'tryout_index': tryoutIndex,
       'status': status,
+      'week_number': weekNumber,
     });
 
     final response = await http.post(
@@ -495,7 +499,6 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: body,
     );
-
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -503,11 +506,64 @@ class ApiService {
     }
   }
 
-  /// (Optional) Delete an item
-  static Future<void> deleteEinfahrItem(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/einfahrplan/$id'));
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete item: ${response.body}');
+  // IKOffice docustore base
+  static const String IKOFFICE_BASE =
+      'http://ikoffice.sip.local:8080/ikoffice/api';
+  static const String API_KEY = '7Clu1FuBh9AkA7LSf1YsB7u76msuQ52esDnmcD9SbB8';
+  static const int TENANT_ID = 3;
+
+  /// This method downloads a file from the docustore,
+  /// building a final URL like:
+  ///   http://ikoffice.sip.local:8080/ikoffice/api/docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png
+  ///
+  /// [imagePath] should be something like:
+  ///   "docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png"
+  /// We return a [File] in the temp directory, or null if it fails.
+  static Future<File?> downloadIkofficeFile(String imagePath) async {
+    try {
+      // Build full URL
+      // e.g. IKOFFICE_BASE + "/docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png"
+      final url = Uri.parse('$IKOFFICE_BASE/$imagePath');
+
+      // Create the GET request
+      final request = http.Request('GET', url);
+
+      // Add required IKOffice headers
+      request.headers['X-API-Key'] = API_KEY;
+      request.headers['X-Tenant-ID'] = TENANT_ID.toString();
+      // request.headers['Accept'] = '*/*'; // or 'application/json' if needed
+
+      // Send it
+      final streamedResponse = await request.send();
+
+      // Check status
+      if (streamedResponse.statusCode == 200) {
+        // On success, read the bytes
+        final bytes = await streamedResponse.stream.toBytes();
+
+        // Create a new file in temp directory
+        final tempDir = await getTemporaryDirectory();
+        final filePath =
+            '${tempDir.path}/ikoffice_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final file = File(filePath);
+
+        // Write the bytes
+        await file.writeAsBytes(bytes, flush: true);
+
+        return file;
+      } else {
+        // If not 200, log or handle
+        if (kDebugMode) {
+          print(
+              'Download failed with status code: ${streamedResponse.statusCode}');
+        }
+        return null;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error downloading from IKOffice docustore: $e');
+      }
+      return null;
     }
   }
 }

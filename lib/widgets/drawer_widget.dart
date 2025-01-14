@@ -249,7 +249,7 @@ class MainDrawer extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.view_kanban),
+                leading: Icon(MdiIcons.carHatchback),
                 title: const Text('Einfahrplaner'),
                 onTap: () {
                   Navigator.push(
