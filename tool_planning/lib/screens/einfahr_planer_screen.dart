@@ -45,8 +45,20 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
   final Map<String, Map<String, dynamic>> _secondaryProjectsMap = {};
 
+  // Existing horizontal ScrollController
   final ScrollController _horizontalScrollCtrl = ScrollController();
-  Timer? _autoScrollTimer;
+
+  // === New ScrollController for Vertical Scrolling ===
+  final ScrollController _verticalScrollCtrl = ScrollController();
+
+  // === Timers for Auto-Scrolling ===
+  Timer? _autoScrollVerticalTimer;
+  Timer? _autoScrollHorizontalTimer;
+
+  // === Auto-Scroll Configuration ===
+  final double _autoScrollThreshold =
+      50.0; // Distance from edge to trigger scroll
+  final double _autoScrollSpeed = 20.0; // Pixels per scroll interval
 
   // === New State Variable for Edit Mode ===
   bool _editModeEnabled = false;
@@ -75,6 +87,113 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     _fetchAndBuildMaps().then((_) {
       _fetchDataForWeek(_selectedWeek);
     });
+  }
+
+  /// === New Method: Handle Drag Updates for Auto-Scroll ===
+  void _handleDragUpdate(DragUpdateDetails details) {
+    final position = details.globalPosition;
+    final size = MediaQuery.of(context).size;
+
+    // Define the edges threshold
+    final double edgeMargin = _autoScrollThreshold;
+
+    // === Vertical Auto-Scroll ===
+    if (position.dy < edgeMargin) {
+      // Near top, scroll up
+      if (_autoScrollVerticalTimer == null ||
+          !_autoScrollVerticalTimer!.isActive) {
+        _autoScrollVerticalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_verticalScrollCtrl.hasClients) {
+            final newOffset = _verticalScrollCtrl.offset - _autoScrollSpeed;
+            _verticalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _verticalScrollCtrl.position.minScrollExtent,
+                _verticalScrollCtrl.position.maxScrollExtent,
+              ),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else if (position.dy > size.height - edgeMargin) {
+      // Near bottom, scroll down
+      if (_autoScrollVerticalTimer == null ||
+          !_autoScrollVerticalTimer!.isActive) {
+        _autoScrollVerticalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_verticalScrollCtrl.hasClients) {
+            final newOffset = _verticalScrollCtrl.offset + _autoScrollSpeed;
+            _verticalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _verticalScrollCtrl.position.minScrollExtent,
+                _verticalScrollCtrl.position.maxScrollExtent,
+              ),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else {
+      // Not near vertical edges, cancel vertical scrolling
+      _autoScrollVerticalTimer?.cancel();
+      _autoScrollVerticalTimer = null;
+    }
+
+    // === Horizontal Auto-Scroll ===
+    if (position.dx < edgeMargin) {
+      // Near left, scroll left
+      if (_autoScrollHorizontalTimer == null ||
+          !_autoScrollHorizontalTimer!.isActive) {
+        _autoScrollHorizontalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_horizontalScrollCtrl.hasClients) {
+            final newOffset = _horizontalScrollCtrl.offset - _autoScrollSpeed;
+            _horizontalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _horizontalScrollCtrl.position.minScrollExtent,
+                _horizontalScrollCtrl.position.maxScrollExtent,
+              ),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else if (position.dx > size.width - edgeMargin) {
+      // Near right, scroll right
+      if (_autoScrollHorizontalTimer == null ||
+          !_autoScrollHorizontalTimer!.isActive) {
+        _autoScrollHorizontalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_horizontalScrollCtrl.hasClients) {
+            final newOffset = _horizontalScrollCtrl.offset + _autoScrollSpeed;
+            _horizontalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _horizontalScrollCtrl.position.minScrollExtent,
+                _horizontalScrollCtrl.position.maxScrollExtent,
+              ),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else {
+      // Not near horizontal edges, cancel horizontal scrolling
+      _autoScrollHorizontalTimer?.cancel();
+      _autoScrollHorizontalTimer = null;
+    }
+  }
+
+  /// === New Method: Handle Drag End to Cancel Auto-Scroll ===
+  void _handleDragEnd(DraggableDetails details) {
+    _autoScrollVerticalTimer?.cancel();
+    _autoScrollHorizontalTimer?.cancel();
+    _autoScrollVerticalTimer = null;
+    _autoScrollHorizontalTimer = null;
   }
 
   /// === New Method: Prompt for PIN ===
@@ -991,13 +1110,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              controller: _horizontalScrollCtrl,
+              controller: _horizontalScrollCtrl, // Horizontal ScrollController
               scrollDirection: Axis.horizontal,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // === LEFT: Main Grid ===
                   SingleChildScrollView(
+                    controller:
+                        _verticalScrollCtrl, // Assigned Vertical ScrollController
                     scrollDirection: Axis.vertical,
                     child: Column(
                       children: [
@@ -1273,6 +1394,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
     return LongPressDraggable<FahrversuchItem>(
       data: item,
+      // === New Callbacks for Auto-Scroll ===
+      onDragUpdate: (details) => _handleDragUpdate(details),
+      onDragEnd: (details) => _handleDragEnd(details),
       feedback: Material(
         elevation: 4,
         child: Container(
@@ -1413,8 +1537,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
   @override
   void dispose() {
-    _autoScrollTimer?.cancel();
+    // === Dispose Controllers and Timers ===
+    _autoScrollVerticalTimer?.cancel();
+    _autoScrollHorizontalTimer?.cancel();
     _horizontalScrollCtrl.dispose();
+    _verticalScrollCtrl.dispose();
     super.dispose();
   }
 }
