@@ -1,8 +1,7 @@
-// lib/modals/fahrversuche.dart
 import 'package:flutter/material.dart';
 
 class FahrversuchItem {
-  int? id;
+  final int id; // Changed from int? to int
   String projectName;
   String toolNumber;
   String dayName;
@@ -16,8 +15,14 @@ class FahrversuchItem {
   // Once downloaded, store the local file path
   String? localImagePath;
 
+  // New field to indicate if the item has been moved
+  bool hasBeenMoved;
+
+  int? extrudermainId;
+  String? machineNumber;
+
   FahrversuchItem({
-    this.id,
+    required this.id, // Now required
     required this.projectName,
     required this.toolNumber,
     required this.dayName,
@@ -26,6 +31,9 @@ class FahrversuchItem {
     required this.weekNumber,
     this.imageUri, // from secondaryProjects
     this.localImagePath, // after we download
+    this.hasBeenMoved = false,
+    this.extrudermainId, // Initialize as null
+    this.machineNumber, // Initialize as null
   });
 
   // Map statuses to color

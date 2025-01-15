@@ -42,6 +42,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   late int _selectedWeek;
   bool isLoading = true;
 
+  // New map for extrudermain_id -> machineNumber
+  final Map<int, String> _machineNumberMap = {};
+
   // The schedule for the selected week: day -> list-of-lists
   // Each inner list corresponds to a tryout index (0..5)
   Map<String, List<List<FahrversuchItem>>> schedule = {};
@@ -71,9 +74,64 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     _initializeEmptySchedule();
 
     // First fetch secondary data to build the lookup map, then fetch the plan
-    _fetchAndBuildSecondaryMap().then((_) {
+    _fetchAndBuildMaps().then((_) {
       _fetchDataForWeek(_selectedWeek);
     });
+  }
+
+  /// Fetch both secondary projects and machines, building their respective maps
+  Future<void> _fetchAndBuildMaps() async {
+    try {
+      setState(() => isLoading = true);
+
+      // Fetch secondary projects
+      final allTools = await ApiService.fetchSecondaryProjects();
+      if (kDebugMode) {
+        print(
+            '++ _fetchAndBuildMaps: Fetched ${allTools.length} secondary projects.');
+      }
+
+      _secondaryProjectsMap.clear();
+      for (var tool in allTools) {
+        final number = tool['number'];
+        final extrudermainId = tool['extrudermain_id'];
+        if (number != null) {
+          _secondaryProjectsMap[number] = tool;
+          // Add extrudermain_id for easier lookup later
+          _secondaryProjectsMap[number]?['extrudermain_id'] = extrudermainId;
+        }
+      }
+
+      // Fetch machines
+      final machines = await ApiService.fetchMachines();
+      if (kDebugMode) {
+        print('++ _fetchAndBuildMaps: Fetched ${machines.length} machines.');
+      }
+
+      _machineNumberMap.clear();
+      for (var machine in machines) {
+        final id = machine['id'];
+        final number = machine['salamandermachinepitch'];
+        if (id != null && number != null) {
+          _machineNumberMap[id] = number;
+        }
+      }
+
+      if (kDebugMode) {
+        print(
+            '++ _fetchAndBuildMaps: _machineNumberMap populated with ${_machineNumberMap.length} entries.');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('!! _fetchAndBuildMaps: $e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Fehler beim Laden der Tools oder Maschinen: $e')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   /// Returns the ISO-8601 week number (1..53).
@@ -113,36 +171,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  /// Build our local map from "number" -> entire secondary record
-  Future<void> _fetchAndBuildSecondaryMap() async {
-    try {
-      setState(() => isLoading = true);
-      final allTools = await ApiService.fetchSecondaryProjects();
-
-      _secondaryProjectsMap.clear();
-      for (var tool in allTools) {
-        final number = tool['number'];
-        if (number != null) {
-          _secondaryProjectsMap[number] = tool;
-        }
-      }
-
-      if (kDebugMode) {
-        print(
-            '++ _fetchAndBuildSecondaryMap: loaded ${_secondaryProjectsMap.length} tools.');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('!! _fetchAndBuildSecondaryMap: $e');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Laden der Tools: $e')),
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
   /// Convert "ikoffice:/docustore/3/Project/17514/..." to "docustore/download/Project/17514/..."
   String? _parseIkOfficeUri(String? raw) {
     if (raw == null || raw.isEmpty) return null;
@@ -175,55 +203,62 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       _initializeEmptySchedule();
 
       for (var row in result) {
-        // Check if we have an imageUri from the plan itself
-        String? rowImageUri = row['imageuri'] as String?;
+        if (kDebugMode) {
+          print('++ _fetchDataForWeek: Row data: $row');
+        }
+
+        // Extract or lookup extrudermain_id
+        int? extrudermainId = row['extrudermain_id'];
         final toolNumber = row['tool_number'];
 
-        // If there's no image or it's empty, do a reverse lookup in our map
-        if ((rowImageUri == null || rowImageUri.isEmpty) &&
-            toolNumber != null &&
-            _secondaryProjectsMap.containsKey(toolNumber)) {
-          final secondaryRec = _secondaryProjectsMap[toolNumber]!;
-          if (secondaryRec['imageuri'] != null) {
-            rowImageUri = secondaryRec['imageuri'];
+        if (extrudermainId == null && toolNumber != null) {
+          extrudermainId =
+              _secondaryProjectsMap[toolNumber]?['extrudermain_id'];
+          if (kDebugMode) {
+            print(
+                '++ _fetchDataForWeek: Fetched extrudermain_id=$extrudermainId for tool=$toolNumber');
           }
         }
 
-        // Convert "ikoffice:/docustore/3/..." to "docustore/download/..."
+        // Lookup machineNumber
+        String? machineNumber;
+        if (extrudermainId != null) {
+          machineNumber = _machineNumberMap[extrudermainId];
+        }
+
+        // Process image URI
+        String? rowImageUri = row['imageuri'] as String?;
+        if ((rowImageUri == null || rowImageUri.isEmpty) &&
+            toolNumber != null) {
+          rowImageUri = _secondaryProjectsMap[toolNumber]?['imageuri'];
+        }
         final finalImageUri = _parseIkOfficeUri(rowImageUri);
 
+        // Build FahrversuchItem
         final item = FahrversuchItem(
           id: row['id'],
           projectName: row['project_name'],
           toolNumber: toolNumber,
           dayName: row['day_name'] ?? 'Montag',
-          tryoutIndex:
-              row['tryout_index'] ?? 0, // Use the index from the backend
+          tryoutIndex: row['tryout_index'] ?? 0,
           status: row['status'] ?? 'In Arbeit',
           weekNumber: row['week_number'] ?? weekNumber,
-          imageUri: finalImageUri, // docustore/download/Project/...
+          imageUri: finalImageUri,
+          hasBeenMoved: row['has_been_moved'] == 1,
+          extrudermainId: extrudermainId,
+          machineNumber: machineNumber,
         );
 
-        if (!schedule.containsKey(item.dayName)) {
-          if (kDebugMode) {
-            print(
-                '!! Found invalid dayName ${item.dayName}, defaulting to Montag.');
-          }
-          item.dayName = days.first;
-        }
+        final validDay =
+            days.contains(item.dayName) ? item.dayName : days.first;
+        item.dayName = validDay;
 
-        // Ensure tryoutIndex is valid
         final validTryIndex = (item.tryoutIndex >= 0 &&
-                item.tryoutIndex < schedule[item.dayName]!.length)
+                item.tryoutIndex < schedule[validDay]!.length)
             ? item.tryoutIndex
             : 0;
 
-        if (kDebugMode) {
-          print(
-              '++ _fetchDataForWeek: Adding ${item.projectName} to ${item.dayName}/$validTryIndex');
-        }
-
-        schedule[item.dayName]![validTryIndex].add(item);
+        schedule[validDay]![validTryIndex].add(item);
       }
 
       if (kDebugMode) {
@@ -284,6 +319,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         tryoutIndex: item.tryoutIndex,
         status: item.status,
         weekNumber: item.weekNumber,
+        hasBeenMoved: false,
       );
       if (kDebugMode) {
         print('++ _moveItem: Update success on server for ${item.projectName}');
@@ -348,6 +384,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         tryoutIndex: item.tryoutIndex,
         status: item.status,
         weekNumber: item.weekNumber,
+        hasBeenMoved: false,
       );
       if (kDebugMode) {
         print(
@@ -409,6 +446,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                     label: const Text('Schiebe in nächste Kalenderwoche'),
                     onPressed: () => Navigator.pop(context, 'nextWeek'),
                   ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Löschen'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent),
+                    onPressed: () => Navigator.pop(context, 'delete'),
+                  ),
                 ],
               );
             },
@@ -432,59 +477,79 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         print('++ _editItemDialog: User canceled for ${item.projectName}');
       }
       return;
-    } else if (result == 'nextWeek') {
-      // move item to next KW
-      if (kDebugMode) {
-        print('++ _editItemDialog: Move ${item.projectName} to next week');
-      }
+    }
+
+    if (result == 'delete') {
+      await _deleteItem(item);
+      return;
+    }
+
+    if (result == 'nextWeek') {
       await _moveToNextWeek(item);
-    } else {
-      // user changed status
-      final newStatus = result;
+      return;
+    }
+
+    // Update the status if changed
+    if (result != oldStatus) {
+      setState(() => item.status = result);
+      try {
+        await ApiService.updateEinfahrPlan(
+          id: item.id,
+          projectName: item.projectName,
+          toolNumber: item.toolNumber,
+          dayName: item.dayName,
+          tryoutIndex: item.tryoutIndex,
+          status: result,
+          weekNumber: item.weekNumber,
+          hasBeenMoved: false,
+        );
+        if (kDebugMode) {
+          print(
+              '++ _editItemDialog: Status updated on server for ${item.projectName}');
+        }
+      } catch (err) {
+        if (kDebugMode) {
+          print(
+              '!! _editItemDialog: Error setting newStatus for ${item.projectName}: $err');
+        }
+        setState(() => item.status = oldStatus);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Setzen von $result: $err')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteItem(FahrversuchItem item) async {
+    try {
+      // Call the backend to mark the item as deleted
+      await ApiService.deleteEinfahrPlan(item.id);
+
+      // Remove the item from the local schedule
+      setState(() {
+        schedule[item.dayName]![item.tryoutIndex].remove(item);
+      });
+
       if (kDebugMode) {
         print(
-            '++ _editItemDialog: Setting status of ${item.projectName} from $oldStatus to $newStatus');
+            '++ _deleteItem: Successfully marked as deleted ${item.projectName}');
       }
-      if (newStatus != oldStatus) {
-        setState(() => item.status = newStatus);
-        try {
-          await ApiService.updateEinfahrPlan(
-            id: item.id,
-            projectName: item.projectName,
-            toolNumber: item.toolNumber,
-            dayName: item.dayName,
-            tryoutIndex: item.tryoutIndex,
-            status: newStatus,
-            weekNumber: item.weekNumber,
-          );
-          if (kDebugMode) {
-            print(
-                '++ _editItemDialog: Status updated on server for ${item.projectName}');
-          }
-        } catch (err) {
-          if (kDebugMode) {
-            print(
-                '!! _editItemDialog: Error setting newStatus for ${item.projectName}: $err');
-          }
-          setState(() => item.status = oldStatus);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Setzen von $newStatus: $err')),
-          );
-        }
+    } catch (err) {
+      if (kDebugMode) {
+        print('!! _deleteItem: Error marking item as deleted: $err');
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Löschen: $err')),
+      );
     }
   }
 
   Future<void> _moveToNextWeek(FahrversuchItem item) async {
     final oldWeek = item.weekNumber;
-    setState(() => item.weekNumber = oldWeek + 1);
-
-    if (kDebugMode) {
-      print(
-          '++ _moveToNextWeek: ${item.projectName} from $oldWeek -> ${item.weekNumber}');
-    }
+    final newWeek = oldWeek + 1;
 
     try {
+      // Step 1: Update the old item to mark it as moved
       await ApiService.updateEinfahrPlan(
         id: item.id,
         projectName: item.projectName,
@@ -493,20 +558,51 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         tryoutIndex: item.tryoutIndex,
         status: item.status,
         weekNumber: item.weekNumber,
+        hasBeenMoved: true, // Set the flag to true
       );
-      if (kDebugMode) {
-        print(
-            '++ _moveToNextWeek: Server update OK. Removing from local schedule now');
-      }
+
+      // Update the local item
       setState(() {
-        schedule[item.dayName]![item.tryoutIndex].remove(item);
+        item.hasBeenMoved = true;
       });
+
+      // Step 2: Save a new copy in the database for the next week
+      final response = await ApiService.updateEinfahrPlan(
+        id: null, // Let the backend create a new ID
+        projectName: item.projectName,
+        toolNumber: item.toolNumber,
+        dayName: item.dayName,
+        tryoutIndex: item.tryoutIndex,
+        status: item.status,
+        weekNumber: newWeek, hasBeenMoved: false,
+      );
+
+      final newId = response['newId'];
+
+      // Step 3: Create and add the new item locally
+      final newItem = FahrversuchItem(
+        id: newId,
+        projectName: item.projectName,
+        toolNumber: item.toolNumber,
+        dayName: item.dayName,
+        tryoutIndex: item.tryoutIndex,
+        status: item.status,
+        weekNumber: newWeek,
+        imageUri: item.imageUri,
+        hasBeenMoved: false, // New item hasn't been moved yet
+      );
+
+      setState(() {
+        schedule[item.dayName]![item.tryoutIndex].add(newItem);
+      });
+
+      if (kDebugMode) {
+        print('++ _moveToNextWeek: Successfully copied to week $newWeek');
+      }
     } catch (err) {
       if (kDebugMode) {
-        print(
-            '!! _moveToNextWeek: Error shifting ${item.projectName} into next week: $err');
+        print('!! _moveToNextWeek: Error copying to next week: $err');
       }
-      setState(() => item.weekNumber = oldWeek);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Fehler beim Verschieben in nächste KW: $err')),
       );
@@ -570,6 +666,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         tryoutIndex: tryIndex,
         status: 'In Arbeit',
         weekNumber: _selectedWeek,
+        hasBeenMoved: false,
       );
       final newId = response['newId'];
       if (kDebugMode) {
@@ -734,9 +831,10 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
               );
             }).toList(),
             onChanged: (value) {
-              if (value == null) return;
-              setState(() => _selectedWeek = value);
-              _fetchDataForWeek(value);
+              // Provide a default value in case value is null
+              final int selectedWeek = value ?? 1;
+              setState(() => _selectedWeek = selectedWeek);
+              _fetchDataForWeek(selectedWeek);
             },
           ),
           IconButton(
@@ -939,7 +1037,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           children: [
             Container(
               width: 150,
-              height: 180,
+              height: 190,
               margin: const EdgeInsets.only(top: 2),
               color: Colors.blueAccent,
               alignment: Alignment.center,
@@ -961,7 +1059,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     final items = schedule[day]![colIndex];
     return Container(
       width: 260,
-      height: 180,
+      height: 190,
       margin: const EdgeInsets.only(left: 2, top: 2),
       color: Colors.grey.shade100,
       child: Stack(
@@ -1051,7 +1149,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         margin: const EdgeInsets.only(bottom: 4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         child: SizedBox(
-          height: 160,
+          height: 170,
           width: 220,
           child: _buildCardContent(item),
         ),
@@ -1060,63 +1158,103 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   }
 
   Widget _buildCardContent(FahrversuchItem item) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
+    if (kDebugMode) {
+      print(
+          '++ _buildCardContent: Building card for ${item.projectName} with extrudermain_id=${item.extrudermainId} and machineNumber=${item.machineNumber}');
+    }
+
+    return Stack(
       children: [
-        // Image container with restricted height
-        if (item.localImagePath != null)
-          Container(
-            height: 55, // Restrict image height
-            margin: const EdgeInsets.only(top: 8),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.file(
-                File(item.localImagePath!),
-                fit: BoxFit.cover, // Ensure the image fits within the container
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            // Image container with restricted height
+            if (item.localImagePath != null)
+              Container(
+                height: 55, // Restrict image height
+                margin: const EdgeInsets.only(top: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.file(
+                    File(item.localImagePath!),
+                    fit: BoxFit
+                        .contain, // Ensure the image fits within the container
+                  ),
+                ),
+              ),
+
+            // Spacing
+            const SizedBox(height: 6),
+
+            // Project/Tool info
+            Expanded(
+              child: Column(
+                children: [
+                  Text(
+                    item.projectName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2, // Prevent overflow
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Tool: ${item.toolNumber}',
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                  // Display machine number if available
+                  if (item.machineNumber != null)
+                    Text(
+                      'Maschine: ${item.machineNumber}',
+                      style: const TextStyle(
+                        color: Colors.yellow, // Temporary color for visibility
+                        fontWeight: FontWeight.bold, // Temporary bold styling
+                      ),
+                      textAlign: TextAlign.center,
+                    )
+                  else
+                    const Text(
+                      'Maschine: Unbekannt', // Placeholder for missing machine numbers
+                      style: TextStyle(
+                        color: Colors.grey, // Grey color for placeholder
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  Text(
+                    'Status: ${item.status}',
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
-          ),
 
-        // Spacing
-        const SizedBox(height: 6),
-
-        // Project/Tool info
-        Expanded(
-          child: Column(
-            children: [
-              Text(
-                item.projectName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2, // Prevent overflow
-                overflow: TextOverflow.ellipsis,
+            // Edit button fixed at the bottom
+            Align(
+              alignment: Alignment.bottomRight,
+              child: IconButton(
+                icon: const Icon(Icons.edit, color: Colors.white),
+                tooltip: 'Status/Mehr',
+                onPressed: () => _editItemDialog(item),
               ),
-              Text(
-                'Tool: ${item.toolNumber}',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.center,
-              ),
-              Text(
-                'Status: ${item.status}',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
 
-        // Edit button fixed at the bottom
-        Align(
-          alignment: Alignment.bottomRight,
-          child: IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
-            tooltip: 'Status/Mehr',
-            onPressed: () => _editItemDialog(item),
+        // Cross icon for moved items
+        if (item.hasBeenMoved)
+          Positioned(
+            top: -24,
+            right: 24,
+            child: Icon(
+              Icons.close,
+              color: Colors.redAccent.withOpacity(0.8),
+              size: 200,
+            ),
           ),
-        ),
       ],
     );
   }

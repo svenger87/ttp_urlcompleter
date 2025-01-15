@@ -24,7 +24,7 @@ dependencies:
   shared_preferences: ^2.2.0
   flutter_dropdown: ^1.0.1+hotfix.1
   webview_windows: ^0.4.0
-  window_manager: ^0.4.2
+  window_manager: ^0.4.3
   flutter_html: 3.0.0-beta.2
   http: ^1.1.0
   html: ^0.15.4

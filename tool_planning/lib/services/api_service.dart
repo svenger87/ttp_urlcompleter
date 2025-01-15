@@ -482,7 +482,8 @@ class ApiService {
     required String dayName,
     required int tryoutIndex,
     required String status,
-    required int weekNumber, // new
+    required int weekNumber,
+    bool hasBeenMoved = false,
   }) async {
     final body = jsonEncode({
       'id': id,
@@ -492,6 +493,7 @@ class ApiService {
       'tryout_index': tryoutIndex,
       'status': status,
       'week_number': weekNumber,
+      'has_been_moved': hasBeenMoved,
     });
 
     final response = await http.post(
@@ -564,6 +566,28 @@ class ApiService {
         print('Error downloading from IKOffice docustore: $e');
       }
       return null;
+    }
+  }
+
+  static Future<void> deleteEinfahrPlan(int id) async {
+    final url = 'http://wim-solution.sip.local:3004/einfahrplan/$id';
+    final response = await http.delete(Uri.parse(url));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to mark item as deleted');
+    }
+  }
+
+  // New method to fetch machines
+  static Future<List<Map<String, dynamic>>> fetchMachines() async {
+    final url = Uri.parse(machinesUrl);
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      List<dynamic> machinesJson = json.decode(response.body);
+      return machinesJson.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to load machines');
     }
   }
 }
