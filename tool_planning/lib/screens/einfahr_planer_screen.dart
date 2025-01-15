@@ -522,6 +522,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   ),
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
+                    icon: const Icon(Icons.close),
+                    label: const Text('Fahrversuch nicht durchgeführt'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueGrey),
+                    onPressed: () => Navigator.pop(context, 'notConducted'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
                     icon: const Icon(Icons.delete),
                     label: const Text('Löschen'),
                     style: ElevatedButton.styleFrom(
@@ -560,6 +568,44 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
     if (result == 'nextWeek') {
       await _moveToNextWeek(item);
+      return;
+    }
+
+    if (result == 'notConducted') {
+      // Mark as not conducted by setting hasBeenMoved to true and status accordingly
+      setState(() {
+        item.hasBeenMoved = true;
+        item.status = 'Nicht durchgeführt';
+      });
+      try {
+        await ApiService.updateEinfahrPlan(
+          id: item.id,
+          projectName: item.projectName,
+          toolNumber: item.toolNumber,
+          dayName: item.dayName,
+          tryoutIndex: item.tryoutIndex,
+          status: item.status,
+          weekNumber: item.weekNumber,
+          hasBeenMoved: true, // Mark as moved to indicate it's been handled
+        );
+        if (kDebugMode) {
+          print(
+              '++ _editItemDialog: Marked as not conducted on server for ${item.projectName}');
+        }
+      } catch (err) {
+        if (kDebugMode) {
+          print(
+              '!! _editItemDialog: Error marking as not conducted for ${item.projectName}: $err');
+        }
+        setState(() {
+          // Revert changes if the server update fails
+          item.hasBeenMoved = false;
+          item.status = oldStatus;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Markieren: $err')),
+        );
+      }
       return;
     }
 
@@ -1103,6 +1149,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     );
   }
 
+  /// === Helper Methods ===
+
   Widget _buildTryoutsHeader() {
     return Row(
       children: [
@@ -1218,7 +1266,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   }
 
   Widget _buildDraggableItem(FahrversuchItem item) {
-    // Trigger download if needed (same logic as before):
+    // Trigger download if needed
     if (item.imageUri != null && item.localImagePath == null) {
       _downloadItemImage(item);
     }
