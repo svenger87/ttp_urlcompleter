@@ -57,8 +57,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
   // === Auto-Scroll Configuration ===
   final double _autoScrollThreshold =
-      50.0; // Distance from edge to trigger scroll
-  final double _autoScrollSpeed = 20.0; // Pixels per scroll interval
+      75.0; // Distance from edge to trigger scroll
+  final double _autoScrollSpeed = 80.0; // Pixels per scroll interval
 
   // === New State Variable for Edit Mode ===
   bool _editModeEnabled = false;
