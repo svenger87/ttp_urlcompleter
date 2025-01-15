@@ -52,7 +52,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   bool _editModeEnabled = false;
 
   // === PIN Configuration ===
-  final String _correctPIN = '1234'; // Replace with your desired PIN
+  final String _correctPIN = '3006'; // Replace with your desired PIN
 
   @override
   void initState() {
