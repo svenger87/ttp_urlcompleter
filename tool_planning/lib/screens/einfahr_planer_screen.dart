@@ -17,7 +17,7 @@ class EinfahrPlanerScreen extends StatefulWidget {
 }
 
 class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
-  // Days = rows
+  // === Existing State Variables ===
   final List<String> days = [
     'Montag',
     'Dienstag',
@@ -28,7 +28,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     'Sonntag'
   ];
 
-  // Tryouts = columns (now including two additional tryouts for drop targets)
   final List<String> tryouts = [
     'Fahrversuch #1',
     'Fahrversuch #2',
@@ -36,25 +35,24 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     'Fahrversuch #4',
   ];
 
-  // Weeks to choose from (1..53).
   final List<int> weekNumbers = List.generate(53, (i) => i + 1);
 
   late int _selectedWeek;
   bool isLoading = true;
 
-  // New map for extrudermain_id -> machineNumber
   final Map<int, String> _machineNumberMap = {};
-
-  // The schedule for the selected week: day -> list-of-lists
-  // Each inner list corresponds to a tryout index (0..5)
   Map<String, List<List<FahrversuchItem>>> schedule = {};
 
-  // This map will hold "toolNumber" -> full secondary project record
-  // Example: { 'WKZP14226W01': { 'id': 17514, 'number': 'WKZP14226W01', ... }, ... }
   final Map<String, Map<String, dynamic>> _secondaryProjectsMap = {};
 
   final ScrollController _horizontalScrollCtrl = ScrollController();
   Timer? _autoScrollTimer;
+
+  // === New State Variable for Edit Mode ===
+  bool _editModeEnabled = false;
+
+  // === PIN Configuration ===
+  final String _correctPIN = '1234'; // Replace with your desired PIN
 
   @override
   void initState() {
@@ -78,6 +76,82 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       _fetchDataForWeek(_selectedWeek);
     });
   }
+
+  /// === New Method: Prompt for PIN ===
+  Future<void> _promptForPIN() async {
+    String enteredPIN = '';
+    bool isError = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // User must enter PIN
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('PIN eingeben'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'PIN',
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        enteredPIN = value;
+                        isError = false; // Reset error state on input change
+                      });
+                    },
+                  ),
+                  if (isError)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        'Falscher PIN. Bitte versuchen Sie es erneut.',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Abbrechen'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (enteredPIN == _correctPIN) {
+                      Navigator.of(context).pop(true);
+                    } else {
+                      setStateDialog(() {
+                        isError = true;
+                      });
+                    }
+                  },
+                  child: const Text('Entsperren'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true) {
+      setState(() {
+        _editModeEnabled = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Editiermodus aktiviert')),
+      );
+    }
+  }
+
+  /// === Existing Methods ===
 
   /// Fetch both secondary projects and machines, building their respective maps
   Future<void> _fetchAndBuildMaps() async {
@@ -574,7 +648,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         dayName: item.dayName,
         tryoutIndex: item.tryoutIndex,
         status: item.status,
-        weekNumber: newWeek, hasBeenMoved: false,
+        weekNumber: newWeek,
+        hasBeenMoved: false,
       );
 
       final newId = response['newId'];
@@ -814,13 +889,37 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
-      print('++ build: isLoading=$isLoading, _selectedWeek=$_selectedWeek');
+      print(
+          '++ build: isLoading=$isLoading, _selectedWeek=$_selectedWeek, _editModeEnabled=$_editModeEnabled');
     }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einfahr Planer'),
         actions: [
+          // === New IconButton for Unlocking Edit Mode ===
+          IconButton(
+            icon: Icon(
+              _editModeEnabled ? Icons.lock_open : Icons.lock,
+              color: _editModeEnabled ? Colors.greenAccent : Colors.white,
+            ),
+            tooltip: _editModeEnabled
+                ? 'Editiermodus aktiv'
+                : 'Editiermodus entsperren',
+            onPressed: () {
+              if (!_editModeEnabled) {
+                _promptForPIN();
+              } else {
+                // Optionally, allow locking again
+                setState(() {
+                  _editModeEnabled = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Editiermodus deaktiviert')),
+                );
+              }
+            },
+          ),
           DropdownButton<int>(
             value: _selectedWeek,
             dropdownColor: Colors.blueGrey[50],
@@ -917,10 +1016,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                           },
                                         );
                                       },
-                                      onWillAccept: (data) => true,
+                                      onWillAccept: (data) => _editModeEnabled,
                                       onAccept: (item) {
-                                        _moveItemToTryout(
-                                            item, 4); // TryoutIndex 4
+                                        if (_editModeEnabled) {
+                                          _moveItemToTryout(
+                                              item, 4); // TryoutIndex 4
+                                        }
                                       },
                                     ),
                                   ),
@@ -979,10 +1080,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                           },
                                         );
                                       },
-                                      onWillAccept: (data) => true,
+                                      onWillAccept: (data) => _editModeEnabled,
                                       onAccept: (item) {
-                                        _moveItemToTryout(
-                                            item, 5); // TryoutIndex 5
+                                        if (_editModeEnabled) {
+                                          _moveItemToTryout(
+                                              item, 5); // TryoutIndex 5
+                                        }
                                       },
                                     ),
                                   ),
@@ -1066,16 +1169,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         clipBehavior: Clip.none,
         children: [
           DragTarget<FahrversuchItem>(
-            onWillAccept: (data) {
-              if (kDebugMode) {
-                print(
-                    '++ onWillAccept: Hovering over $day col $colIndex with item: ${data?.projectName}');
+            onWillAccept: (data) => _editModeEnabled,
+            onAccept: (data) {
+              if (_editModeEnabled) {
+                _moveItem(data, day, colIndex);
               }
-              return true;
             },
-            onAccept: (data) => _moveItem(data, day, colIndex),
             builder: (context, candidateData, rejectedData) {
-              final isHovering = candidateData.isNotEmpty;
+              final isHovering = candidateData.isNotEmpty && _editModeEnabled;
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 100),
                 padding: const EdgeInsets.all(4),
@@ -1099,16 +1200,18 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
               );
             },
           ),
-          // Button to add a new item
-          Positioned(
-            right: 220,
-            bottom: -4,
-            child: IconButton(
-              icon: const Icon(Icons.add_circle, color: Colors.green, size: 28),
-              tooltip: 'Neues Projekt hinzufügen',
-              onPressed: () => _selectToolForCell(day, colIndex),
+          // === Conditionally Show Add Button ===
+          if (_editModeEnabled)
+            Positioned(
+              right: 220,
+              bottom: -4,
+              child: IconButton(
+                icon:
+                    const Icon(Icons.add_circle, color: Colors.green, size: 28),
+                tooltip: 'Neues Projekt hinzufügen',
+                onPressed: () => _selectToolForCell(day, colIndex),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1232,15 +1335,16 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
               ),
             ),
 
-            // Edit button fixed at the bottom
-            Align(
-              alignment: Alignment.bottomRight,
-              child: IconButton(
-                icon: const Icon(Icons.edit, color: Colors.white),
-                tooltip: 'Status/Mehr',
-                onPressed: () => _editItemDialog(item),
+            // === Conditionally Show Edit Button ===
+            if (_editModeEnabled)
+              Align(
+                alignment: Alignment.bottomRight,
+                child: IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  tooltip: 'Status/Mehr',
+                  onPressed: () => _editItemDialog(item),
+                ),
               ),
-            ),
           ],
         ),
 
