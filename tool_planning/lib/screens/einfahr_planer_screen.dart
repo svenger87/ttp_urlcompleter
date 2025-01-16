@@ -10,6 +10,44 @@ import 'package:shared_preferences/shared_preferences.dart'; // For persisting p
 import '../models/fahrversuche.dart'; // Contains FahrversuchItem class
 import '../services/api_service.dart';
 
+enum ActionType { add, delete, move }
+
+class ScheduleAction {
+  final ActionType type;
+  final FahrversuchItem item;
+  final String fromDay;
+  final int fromIndex;
+  final String toDay;
+  final int toIndex;
+
+  // Constructor for Add Action
+  ScheduleAction.add({
+    required this.item,
+    required this.toDay,
+    required this.toIndex,
+  })  : type = ActionType.add,
+        fromDay = '',
+        fromIndex = -1;
+
+  // Constructor for Delete Action
+  ScheduleAction.delete({
+    required this.item,
+    required this.fromDay,
+    required this.fromIndex,
+  })  : type = ActionType.delete,
+        toDay = '',
+        toIndex = -1;
+
+  // Constructor for Move Action
+  ScheduleAction.move({
+    required this.item,
+    required this.fromDay,
+    required this.fromIndex,
+    required this.toDay,
+    required this.toIndex,
+  }) : type = ActionType.move;
+}
+
 class EinfahrPlanerScreen extends StatefulWidget {
   const EinfahrPlanerScreen({super.key});
 
@@ -69,6 +107,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
   // === PIN Configuration ===
   final String _correctPIN = '3006'; // Replace with your desired PIN
+
+  // === Action History for Undo ===
+  final List<ScheduleAction> _actionHistory = [];
 
   @override
   void initState() {
@@ -208,6 +249,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
       setState(() {
         schedule[day]![tryoutIndex].add(newItem);
+        // === Push Add Action to History ===
+        _actionHistory.add(ScheduleAction.add(
+          item: newItem,
+          toDay: day,
+          toIndex: tryoutIndex,
+        ));
       });
       if (kDebugMode) {
         print(
@@ -389,6 +436,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   TextField(
                     obscureText: true,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done, // Show 'Done' button
                     decoration: const InputDecoration(
                       labelText: 'PIN',
                       prefixIcon: Icon(Icons.lock),
@@ -398,6 +446,16 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                         enteredPIN = value;
                         isError = false; // Reset error state on input change
                       });
+                    },
+                    onSubmitted: (value) {
+                      // Trigger the same as pressing 'Entsperren'
+                      if (value == _correctPIN) {
+                        Navigator.of(context).pop(true);
+                      } else {
+                        setStateDialog(() {
+                          isError = true;
+                        });
+                      }
                     },
                   ),
                   if (isError)
@@ -759,6 +817,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       item.dayName = newDay;
       item.tryoutIndex = newTryIndex;
       schedule[newDay]![newTryIndex].add(item);
+
+      // === Push Move Action to History ===
+      _actionHistory.add(ScheduleAction.move(
+        item: item,
+        fromDay: oldDay,
+        fromIndex: oldTryIndex,
+        toDay: newDay,
+        toIndex: newTryIndex,
+      ));
     });
 
     try {
@@ -787,6 +854,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         item.dayName = oldDay;
         item.tryoutIndex = oldTryIndex;
         schedule[oldDay]![oldTryIndex].add(item);
+
+        // Remove the last action as it failed
+        _actionHistory.removeLast();
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Fehler beim Verschieben: $err')),
@@ -827,6 +897,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       item.tryoutIndex = targetTryoutIndex;
       // Add item to the new location
       schedule[oldDay]![targetTryoutIndex].add(item);
+
+      // === Push Move Action to History ===
+      _actionHistory.add(ScheduleAction.move(
+        item: item,
+        fromDay: oldDay,
+        fromIndex: oldTryIndex,
+        toDay: oldDay, // Assuming same day; adjust if different
+        toIndex: targetTryoutIndex,
+      ));
     });
 
     try {
@@ -840,6 +919,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         weekNumber: item.weekNumber,
         year: item.year,
         hasBeenMoved: false,
+        extrudermainId: item.extrudermainId, // Pass extrudermainId
       );
       if (kDebugMode) {
         print(
@@ -855,6 +935,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         schedule[oldDay]![targetTryoutIndex].remove(item);
         item.tryoutIndex = oldTryIndex;
         schedule[oldDay]![oldTryIndex].add(item);
+
+        // Remove the last action as it failed
+        _actionHistory.removeLast();
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Fehler beim Verschieben: $err')),
@@ -943,7 +1026,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
 
     if (result == 'delete') {
-      await _deleteItem(item);
+      await _confirmDeleteItem(item); // Use confirmation dialog
       return;
     }
 
@@ -969,11 +1052,21 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           weekNumber: item.weekNumber,
           year: item.year,
           hasBeenMoved: true, // Mark as moved to indicate it's been handled
+          extrudermainId: item.extrudermainId,
         );
         if (kDebugMode) {
           print(
               '++ _editItemDialog: Marked as not conducted on server for ${item.projectName}');
         }
+
+        // === Push Move Action to History ===
+        _actionHistory.add(ScheduleAction.move(
+          item: item,
+          fromDay: item.dayName,
+          fromIndex: item.tryoutIndex,
+          toDay: item.dayName,
+          toIndex: item.tryoutIndex,
+        ));
       } catch (err) {
         if (kDebugMode) {
           print(
@@ -1005,11 +1098,21 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           weekNumber: item.weekNumber,
           year: item.year,
           hasBeenMoved: false,
+          extrudermainId: item.extrudermainId,
         );
         if (kDebugMode) {
           print(
               '++ _editItemDialog: Status updated on server for ${item.projectName}');
         }
+
+        // === Push Move Action to History ===
+        _actionHistory.add(ScheduleAction.move(
+          item: item,
+          fromDay: item.dayName,
+          fromIndex: item.tryoutIndex,
+          toDay: item.dayName,
+          toIndex: item.tryoutIndex,
+        ));
       } catch (err) {
         if (kDebugMode) {
           print(
@@ -1023,6 +1126,33 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
+  /// === New Method: Confirm Delete Item ===
+  Future<void> _confirmDeleteItem(FahrversuchItem item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Bestätigen'),
+          content: Text('Möchten Sie ${item.projectName} wirklich löschen?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Abbrechen'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Löschen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await _deleteItem(item);
+    }
+  }
+
   Future<void> _deleteItem(FahrversuchItem item) async {
     try {
       // Call the backend to mark the item as deleted
@@ -1031,6 +1161,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       // Remove the item from the local schedule
       setState(() {
         schedule[item.dayName]![item.tryoutIndex].remove(item);
+        // === Push Delete Action to History ===
+        _actionHistory.add(ScheduleAction.delete(
+          item: item,
+          fromDay: item.dayName,
+          fromIndex: item.tryoutIndex,
+        ));
       });
 
       if (kDebugMode) {
@@ -1075,6 +1211,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       setState(() {
         item.hasBeenMoved = true;
       });
+
+      // === Push Move Action to History ===
+      _actionHistory.add(ScheduleAction.move(
+        item: item,
+        fromDay: item.dayName,
+        fromIndex: item.tryoutIndex,
+        toDay: item.dayName,
+        toIndex: item.tryoutIndex,
+      ));
 
       // Step 3: Insert a new copy in the database for the next week
       final response = await ApiService.updateEinfahrPlan(
@@ -1221,6 +1366,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
       setState(() {
         schedule[day]![tryIndex].add(newItem);
+        // === Push Add Action to History ===
+        _actionHistory.add(ScheduleAction.add(
+          item: newItem,
+          toDay: day,
+          toIndex: tryIndex,
+        ));
       });
       if (kDebugMode) {
         print(
@@ -1360,7 +1511,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       appBar: AppBar(
         title: const Text('Einfahr Planer'),
         actions: [
-          // === New IconButton for Unlocking Edit Mode ===
+          // === Undo Button ===
+          IconButton(
+            icon: const Icon(Icons.undo),
+            tooltip: 'Rückgängig',
+            onPressed: _actionHistory.isNotEmpty ? _undoLastAction : null,
+            color: _actionHistory.isNotEmpty ? Colors.white : Colors.grey,
+          ),
+
+          // === Existing IconButton for Unlocking Edit Mode ===
           IconButton(
             icon: Icon(
               _editModeEnabled ? Icons.lock_open : Icons.lock,
@@ -1383,6 +1542,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
               }
             },
           ),
+
           // Dropdown for Year Selection
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -1559,8 +1719,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                   // Add Button Positioned at Bottom Right
                                   if (_editModeEnabled)
                                     Positioned(
-                                      top: 4,
-                                      left: 8,
+                                      right: 8,
+                                      bottom: 8,
                                       child: FloatingActionButton(
                                         mini: true,
                                         backgroundColor: Colors.green,
@@ -1654,8 +1814,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                   // Add Button Positioned at Bottom Right
                                   if (_editModeEnabled)
                                     Positioned(
-                                      top: 4,
-                                      left: 8,
+                                      right: 8,
+                                      bottom: 8,
                                       child: FloatingActionButton(
                                         mini: true,
                                         backgroundColor: Colors.green,
@@ -1974,5 +2134,114 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     _horizontalScrollCtrl.dispose();
     _verticalScrollCtrl.dispose();
     super.dispose();
+  }
+
+  /// === New Method: Undo Last Action ===
+  Future<void> _undoLastAction() async {
+    if (_actionHistory.isEmpty) return;
+
+    final lastAction = _actionHistory.removeLast();
+
+    switch (lastAction.type) {
+      case ActionType.add:
+        // Undo Add: Remove the item
+        setState(() {
+          schedule[lastAction.toDay]![lastAction.toIndex]
+              .remove(lastAction.item);
+        });
+        try {
+          await ApiService.deleteEinfahrPlan(lastAction.item.id);
+          if (kDebugMode) {
+            print(
+                '++ _undoLastAction: Undid add by deleting ${lastAction.item.projectName}');
+          }
+        } catch (err) {
+          if (kDebugMode) {
+            print('!! _undoLastAction: Error undoing add: $err');
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler beim Rückgängig machen: $err')),
+          );
+        }
+        break;
+
+      case ActionType.delete:
+        // Undo Delete: Re-add the item
+        setState(() {
+          schedule[lastAction.fromDay]![lastAction.fromIndex]
+              .add(lastAction.item);
+        });
+        try {
+          await ApiService.updateEinfahrPlan(
+            id: lastAction.item.id,
+            projectName: lastAction.item.projectName,
+            toolNumber: lastAction.item.toolNumber,
+            dayName: lastAction.fromDay,
+            tryoutIndex: lastAction.fromIndex,
+            status: lastAction.item.status,
+            weekNumber: lastAction.item.weekNumber,
+            year: lastAction.item.year,
+            hasBeenMoved: lastAction.item.hasBeenMoved,
+            extrudermainId: lastAction.item.extrudermainId,
+          );
+          if (kDebugMode) {
+            print(
+                '++ _undoLastAction: Undid delete by re-adding ${lastAction.item.projectName}');
+          }
+        } catch (err) {
+          if (kDebugMode) {
+            print('!! _undoLastAction: Error undoing delete: $err');
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler beim Rückgängig machen: $err')),
+          );
+        }
+        break;
+
+      case ActionType.move:
+        // Undo Move: Move the item back to its original position
+        setState(() {
+          schedule[lastAction.toDay]![lastAction.toIndex]
+              .remove(lastAction.item);
+          schedule[lastAction.fromDay]![lastAction.fromIndex]
+              .add(lastAction.item);
+          lastAction.item.dayName = lastAction.fromDay;
+          lastAction.item.tryoutIndex = lastAction.fromIndex;
+        });
+        try {
+          await ApiService.updateEinfahrPlan(
+            id: lastAction.item.id,
+            projectName: lastAction.item.projectName,
+            toolNumber: lastAction.item.toolNumber,
+            dayName: lastAction.fromDay,
+            tryoutIndex: lastAction.fromIndex,
+            status: lastAction.item.status,
+            weekNumber: lastAction.item.weekNumber,
+            year: lastAction.item.year,
+            hasBeenMoved: false,
+            extrudermainId: lastAction.item.extrudermainId,
+          );
+          if (kDebugMode) {
+            print(
+                '++ _undoLastAction: Undid move by moving ${lastAction.item.projectName} back');
+          }
+        } catch (err) {
+          if (kDebugMode) {
+            print('!! _undoLastAction: Error undoing move: $err');
+          }
+          setState(() {
+            schedule[lastAction.fromDay]![lastAction.fromIndex]
+                .remove(lastAction.item);
+            schedule[lastAction.toDay]![lastAction.toIndex]
+                .add(lastAction.item);
+            lastAction.item.dayName = lastAction.toDay;
+            lastAction.item.tryoutIndex = lastAction.toIndex;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler beim Rückgängig machen: $err')),
+          );
+        }
+        break;
+    }
   }
 }
