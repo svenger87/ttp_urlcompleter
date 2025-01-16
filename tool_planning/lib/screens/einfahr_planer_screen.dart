@@ -1634,18 +1634,19 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                       ),
                     ),
 
-                    const SizedBox(width: 7), // Some horizontal spacing
+                    const SizedBox(width: 3), // Some horizontal spacing
 
                     // === RIGHT: Side-by-side boxes ===
                     Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
                             // Box 1: Werkzeuge in Änderung
                             Container(
-                              width: 300, // Adjust width as needed
-                              height: (days.length * 180).toDouble() +
-                                  50, // Grid height
+                              width: 210, // Adjust width as needed
+                              height: (days.length * 172).toDouble() +
+                                  35, // Grid height
                               padding: const EdgeInsets.all(0),
                               color: Colors.blueGrey[50],
                               child: Stack(
@@ -1654,7 +1655,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                     children: [
                                       // Header
                                       Container(
-                                        height: 50,
+                                        height: 35,
                                         alignment: Alignment.center,
                                         decoration: BoxDecoration(
                                           color: Colors.blueAccent,
@@ -1662,14 +1663,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                               BorderRadius.circular(0),
                                         ),
                                         child: const Text(
-                                          'Werkzeuge in Änderung',
+                                          '    Werkzeuge in Änderung',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 4),
                                       // DragTarget Box
                                       Expanded(
                                         child: Container(
@@ -1716,31 +1717,35 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                       ),
                                     ],
                                   ),
-                                  // Add Button Positioned at Bottom Right
+                                  // Add Button Positioned at Bottom Left
                                   if (_editModeEnabled)
                                     Positioned(
-                                      right: 8,
-                                      bottom: 8,
-                                      child: FloatingActionButton(
-                                        mini: true,
-                                        backgroundColor: Colors.green,
-                                        tooltip: 'Neues Projekt hinzufügen',
-                                        onPressed: () => _addToSeparateBox(5),
-                                        child: const Icon(Icons.add,
-                                            color: Colors.white),
-                                      ),
-                                    ),
+                                        top: 5,
+                                        left: 2,
+                                        child: SizedBox(
+                                          width: 24, // Adjust button width
+                                          height: 24, // Adjust button height
+                                          child: FloatingActionButton(
+                                            mini: true, // Smaller size
+                                            backgroundColor: Colors.green,
+                                            tooltip: 'Neues Projekt hinzufügen',
+                                            onPressed: () =>
+                                                _addToSeparateBox(5),
+                                            child: const Icon(Icons.add,
+                                                color: Colors.white, size: 16),
+                                          ),
+                                        )),
                                 ],
                               ),
                             ),
 
-                            const SizedBox(width: 7), // Some horizontal spacing
+                            const SizedBox(width: 3), // Some horizontal spacing
 
                             // Box 2: Bereit für Einfahrversuch
                             Container(
-                              width: 300, // Adjust width as needed
-                              height: (days.length * 180).toDouble() +
-                                  50, // Grid height
+                              width: 210, // Adjust width as needed
+                              height: (days.length * 172).toDouble() +
+                                  35, // Grid height
                               padding: const EdgeInsets.all(0),
                               color: Colors.blueGrey[50],
                               child: Stack(
@@ -1749,7 +1754,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                     children: [
                                       // Header
                                       Container(
-                                        height: 50,
+                                        height: 35,
                                         alignment: Alignment.center,
                                         decoration: BoxDecoration(
                                           color: Colors.blueAccent,
@@ -1757,14 +1762,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                               BorderRadius.circular(0),
                                         ),
                                         child: const Text(
-                                          'Bereit für Einfahrversuch',
+                                          '    Bereit für Einfahrversuch',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 4),
                                       // DragTarget Box
                                       Expanded(
                                         child: Container(
@@ -1811,20 +1816,24 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                       ),
                                     ],
                                   ),
-                                  // Add Button Positioned at Bottom Right
+                                  // Add Button Positioned at Bottom Left
                                   if (_editModeEnabled)
                                     Positioned(
-                                      right: 8,
-                                      bottom: 8,
-                                      child: FloatingActionButton(
-                                        mini: true,
-                                        backgroundColor: Colors.green,
-                                        tooltip: 'Neues Projekt hinzufügen',
-                                        onPressed: () => _addToSeparateBox(6),
-                                        child: const Icon(Icons.add,
-                                            color: Colors.white),
-                                      ),
-                                    ),
+                                        top: 5,
+                                        left: 2,
+                                        child: SizedBox(
+                                          width: 24, // Adjust button width
+                                          height: 24, // Adjust button height
+                                          child: FloatingActionButton(
+                                            mini: true, // Smaller size
+                                            backgroundColor: Colors.green,
+                                            tooltip: 'Neues Projekt hinzufügen',
+                                            onPressed: () =>
+                                                _addToSeparateBox(5),
+                                            child: const Icon(Icons.add,
+                                                color: Colors.white, size: 16),
+                                          ),
+                                        )),
                                 ],
                               ),
                             ),
@@ -1845,8 +1854,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     return Row(
       children: [
         Container(
-          width: 150,
-          height: 50,
+          width: 100,
+          height: 35,
           color: Colors.blueAccent,
           alignment: Alignment.center,
           child: const Text(
@@ -1856,8 +1865,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         ),
         for (int i = 0; i < tryouts.length; i++)
           Container(
-            width: 260,
-            height: 50,
+            width: 180,
+            height: 35,
             margin: const EdgeInsets.only(left: 2),
             alignment: Alignment.center,
             color: Colors.blueAccent,
@@ -1877,8 +1886,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         return Row(
           children: [
             Container(
-              width: 150,
-              height: 190,
+              width: 100,
+              height: 170,
               margin: const EdgeInsets.only(top: 2),
               color: Colors.blueAccent,
               alignment: Alignment.center,
@@ -1899,8 +1908,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   Widget _buildGridCell(String day, int colIndex) {
     final items = schedule[day]![colIndex];
     return Container(
-      width: 260,
-      height: 190,
+      width: 180,
+      height: 170,
       margin: const EdgeInsets.only(left: 2, top: 2),
       color: Colors.grey.shade100,
       child: Stack(
@@ -1943,7 +1952,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           // === Conditionally Show Add Button ===
           if (_editModeEnabled)
             Positioned(
-              right: 220,
+              right: 140,
               bottom: -4,
               child: IconButton(
                 icon:
@@ -1972,7 +1981,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       feedback: Material(
         elevation: 4,
         child: Container(
-          width: 220,
+          width: 180,
           padding: const EdgeInsets.all(8),
           color: item.color, // Use item.color
           child: Text('${item.projectName} (${item.toolNumber})',
@@ -1987,7 +1996,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: SizedBox(
             height: 160,
-            width: 220,
+            width: 180,
             child: _buildCardContent(item),
           ),
         ),
@@ -1997,7 +2006,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         margin: const EdgeInsets.only(bottom: 4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         child: SizedBox(
-          height: 170,
+          height: 160,
           width: 220,
           child: _buildCardContent(item),
         ),
@@ -2025,7 +2034,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             // Image container with restricted height
             if (item.localImagePath != null)
               Container(
-                height: 55, // Restrict image height
+                height: 40, // Restrict image height
                 margin: const EdgeInsets.only(top: 8),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
@@ -2041,15 +2050,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
               )
             else
               Container(
-                height: 55,
-                margin: const EdgeInsets.only(top: 8),
+                height: 40,
+                margin: const EdgeInsets.only(top: 4),
                 alignment: Alignment.center,
                 child:
                     const Icon(Icons.image_not_supported, color: Colors.grey),
               ),
 
             // Spacing
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
 
             // Project/Tool info
             Column(
@@ -2114,12 +2123,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         // Cross icon for moved items
         if (item.hasBeenMoved)
           Positioned(
-            top: -14, // Adjusted position to prevent overlap
-            right: 24,
+            top: 0, // Adjusted position to prevent overlap
+            right: 10,
             child: Icon(
               Icons.close,
               color: Colors.redAccent.withOpacity(0.8),
-              size: 200, // Reduced size for better aesthetics
+              size: 140, // Reduced size for better aesthetics
             ),
           ),
       ],
@@ -2166,32 +2175,26 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         break;
 
       case ActionType.delete:
-        // Undo Delete: Re-add the item
+        // Undo Delete: Re-add the item by calling undeleteEinfahrPlan
         setState(() {
           schedule[lastAction.fromDay]![lastAction.fromIndex]
               .add(lastAction.item);
         });
         try {
-          await ApiService.updateEinfahrPlan(
-            id: lastAction.item.id,
-            projectName: lastAction.item.projectName,
-            toolNumber: lastAction.item.toolNumber,
-            dayName: lastAction.fromDay,
-            tryoutIndex: lastAction.fromIndex,
-            status: lastAction.item.status,
-            weekNumber: lastAction.item.weekNumber,
-            year: lastAction.item.year,
-            hasBeenMoved: lastAction.item.hasBeenMoved,
-            extrudermainId: lastAction.item.extrudermainId,
-          );
+          await ApiService.undeleteEinfahrPlan(lastAction.item.id);
           if (kDebugMode) {
             print(
-                '++ _undoLastAction: Undid delete by re-adding ${lastAction.item.projectName}');
+                '++ _undoLastAction: Undid delete by undeleting ${lastAction.item.projectName}');
           }
         } catch (err) {
           if (kDebugMode) {
             print('!! _undoLastAction: Error undoing delete: $err');
           }
+          // Revert local state if API call fails
+          setState(() {
+            schedule[lastAction.fromDay]![lastAction.fromIndex]
+                .remove(lastAction.item);
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Fehler beim Rückgängig machen: $err')),
           );
@@ -2229,6 +2232,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           if (kDebugMode) {
             print('!! _undoLastAction: Error undoing move: $err');
           }
+          // Revert changes if the server update fails
           setState(() {
             schedule[lastAction.fromDay]![lastAction.fromIndex]
                 .remove(lastAction.item);

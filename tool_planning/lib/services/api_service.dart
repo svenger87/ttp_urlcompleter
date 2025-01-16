@@ -1,4 +1,4 @@
-// lib/api_service.dart
+// lib/services/api_service.dart
 
 // ignore_for_file: constant_identifier_names
 
@@ -6,7 +6,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../constants/constants.dart'; // Ensure this contains activeCollabApiUrl
+import '../constants/constants.dart'; // Ensure this contains activeCollabApiUrl and other constants
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
@@ -14,6 +14,9 @@ import 'package:path_provider/path_provider.dart';
 
 class ApiService {
   static const _storage = FlutterSecureStorage();
+
+  // Base URL for the Einfahrplan API
+  static const String baseUrl = 'http://wim-solution.sip.local:3004';
 
   // Fetch primary projects with initial data
   static Future<List<Map<String, dynamic>>> fetchPrimaryProjects() async {
@@ -103,7 +106,7 @@ class ApiService {
     }
   }
 
-  // Delete project by ID
+  // Delete project by ID (mark as deleted)
   static Future<void> deleteProjectById(int projectId) async {
     final response = await http.delete(Uri.parse('$primaryApiUrl/$projectId'));
     if (response.statusCode != 200) {
@@ -460,10 +463,21 @@ class ApiService {
     }
   }
 
-  static const baseUrl = 'http://wim-solution.sip.local:3004';
-  // Replace with actual server IP or hostname
+  // Fetch machines
+  static Future<List<Map<String, dynamic>>> fetchMachines() async {
+    final url =
+        Uri.parse(machinesUrl); // Ensure machinesUrl is defined in constants
+    final response = await http.get(url);
 
-  // Now fetch data only for the given week and year
+    if (response.statusCode == 200) {
+      List<dynamic> machinesJson = json.decode(response.body);
+      return machinesJson.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to load machines');
+    }
+  }
+
+  // Fetch data for a specific week and year
   static Future<List<Map<String, dynamic>>> fetchEinfahrPlan({
     required int week,
     required int year,
@@ -471,14 +485,14 @@ class ApiService {
     final url = Uri.parse('$baseUrl/einfahrplan?week=$week&year=$year');
     final response = await http.get(url);
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final data = json.decode(response.body);
       return List<Map<String, dynamic>>.from(data);
     } else {
       throw Exception('Failed to load Einfahrplan: ${response.body}');
     }
   }
 
-  // Insert/update with week_number
+  // Insert/update with week_number, year, and is_deleted
   static Future<Map<String, dynamic>> updateEinfahrPlan({
     int? id,
     required String projectName,
@@ -490,8 +504,9 @@ class ApiService {
     required int year, // New parameter
     bool hasBeenMoved = false,
     int? extrudermainId, // Added parameter
+    bool? isDeleted, // New optional parameter
   }) async {
-    final bodyMap = {
+    final Map<String, dynamic> bodyMap = {
       'project_name': projectName,
       'tool_number': toolNumber,
       'day_name': dayName,
@@ -502,6 +517,12 @@ class ApiService {
       'has_been_moved': hasBeenMoved,
       'extrudermain_id': extrudermainId, // Include extrudermain_id
     };
+
+    // Include is_deleted if provided
+    if (isDeleted != null) {
+      bodyMap['is_deleted'] =
+          isDeleted ? 1 : 0; // Assuming is_deleted is TINYINT(1)
+    }
 
     if (id != null) {
       bodyMap['id'] = id;
@@ -528,6 +549,26 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to update/insert: ${response.body}');
+    }
+  }
+
+  // Mark item as deleted instead of physically deleting
+  static Future<void> deleteEinfahrPlan(int id) async {
+    final url = '$baseUrl/einfahrplan/$id';
+    final response = await http.delete(Uri.parse(url));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to mark item as deleted');
+    }
+  }
+
+  // Undelete an EinfahrPlan item by setting is_deleted to 0
+  static Future<void> undeleteEinfahrPlan(int id) async {
+    final url = '$baseUrl/einfahrplan/undelete/$id';
+    final response = await http.post(Uri.parse(url));
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to undelete item with ID: $id');
     }
   }
 
@@ -589,28 +630,6 @@ class ApiService {
         print('Error downloading from IKOffice docustore: $e');
       }
       return null;
-    }
-  }
-
-  static Future<void> deleteEinfahrPlan(int id) async {
-    final url = 'http://wim-solution.sip.local:3004/einfahrplan/$id';
-    final response = await http.delete(Uri.parse(url));
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to mark item as deleted');
-    }
-  }
-
-  // New method to fetch machines
-  static Future<List<Map<String, dynamic>>> fetchMachines() async {
-    final url = Uri.parse(machinesUrl);
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      List<dynamic> machinesJson = json.decode(response.body);
-      return machinesJson.cast<Map<String, dynamic>>();
-    } else {
-      throw Exception('Failed to load machines');
     }
   }
 }
