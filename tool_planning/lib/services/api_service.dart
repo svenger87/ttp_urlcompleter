@@ -1,3 +1,5 @@
+// lib/api_service.dart
+
 // ignore_for_file: constant_identifier_names
 
 import 'dart:io';
@@ -461,10 +463,12 @@ class ApiService {
   static const baseUrl = 'http://wim-solution.sip.local:3004';
   // Replace with actual server IP or hostname
 
-  // Now fetch data only for the given week
-  static Future<List<Map<String, dynamic>>> fetchEinfahrPlan(
-      {int week = 1}) async {
-    final url = Uri.parse('$baseUrl/einfahrplan?week=$week');
+  // Now fetch data only for the given week and year
+  static Future<List<Map<String, dynamic>>> fetchEinfahrPlan({
+    required int week,
+    required int year,
+  }) async {
+    final url = Uri.parse('$baseUrl/einfahrplan?week=$week&year=$year');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -483,24 +487,43 @@ class ApiService {
     required int tryoutIndex,
     required String status,
     required int weekNumber,
+    required int year, // New parameter
     bool hasBeenMoved = false,
+    int? extrudermainId, // Added parameter
   }) async {
-    final body = jsonEncode({
-      'id': id,
+    final bodyMap = {
       'project_name': projectName,
       'tool_number': toolNumber,
       'day_name': dayName,
       'tryout_index': tryoutIndex,
       'status': status,
       'week_number': weekNumber,
+      'year': year, // Include year
       'has_been_moved': hasBeenMoved,
-    });
+      'extrudermain_id': extrudermainId, // Include extrudermain_id
+    };
+
+    if (id != null) {
+      bodyMap['id'] = id;
+    }
+
+    final body = jsonEncode(bodyMap);
+
+    if (kDebugMode) {
+      print('++ updateEinfahrPlan: Sending payload: $bodyMap');
+    }
 
     final response = await http.post(
       Uri.parse('$baseUrl/einfahrplan/update'),
       headers: {'Content-Type': 'application/json'},
       body: body,
     );
+
+    if (kDebugMode) {
+      print('++ updateEinfahrPlan: Response status: ${response.statusCode}');
+      print('++ updateEinfahrPlan: Response body: ${response.body}');
+    }
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {

@@ -6,7 +6,7 @@ import '../services/api_service.dart';
 import '../screens/loading_indicator.dart';
 import '../modules/webview_module.dart';
 import '../screens/login_screen.dart';
-import '../modals/comments_thread_modal.dart';
+import '../models/comments_thread_modal.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final int projectId;

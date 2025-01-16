@@ -1,39 +1,37 @@
+// lib/models/fahrversuche.dart
+
 import 'package:flutter/material.dart';
 
 class FahrversuchItem {
-  final int id; // Changed from int? to int
+  final int id;
   String projectName;
   String toolNumber;
   String dayName;
   int tryoutIndex;
-  String status; // "In Arbeit", "In Änderung", "Erledigt", etc.
+  String status;
   int weekNumber;
+  int year; // New field
 
-  // If we have an imageUri from the secondary API, we store it here
   String? imageUri;
-
-  // Once downloaded, store the local file path
   String? localImagePath;
-
-  // New field to indicate if the item has been moved
   bool hasBeenMoved;
-
   int? extrudermainId;
   String? machineNumber;
 
   FahrversuchItem({
-    required this.id, // Now required
+    required this.id,
     required this.projectName,
     required this.toolNumber,
     required this.dayName,
     required this.tryoutIndex,
     required this.status,
     required this.weekNumber,
-    this.imageUri, // from secondaryProjects
-    this.localImagePath, // after we download
+    required this.year, // Initialize
+    this.imageUri,
+    this.localImagePath,
     this.hasBeenMoved = false,
-    this.extrudermainId, // Initialize as null
-    this.machineNumber, // Initialize as null
+    this.extrudermainId,
+    this.machineNumber,
   });
 
   // Map statuses to color
