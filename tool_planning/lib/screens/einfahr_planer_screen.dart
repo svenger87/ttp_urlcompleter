@@ -105,6 +105,124 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
+  Future<void> _addToSeparateBox(int tryoutIndex) async {
+    // Define a default day
+    const String defaultDay =
+        'Montag'; // You can change this to any day you prefer
+
+    // Proceed to select and add the tool without prompting for a day
+    await _selectToolForSeparateBox(defaultDay, tryoutIndex);
+  }
+
+  /// === New Method: Select Tool for Separate Box ===
+  Future<void> _selectToolForSeparateBox(String day, int tryoutIndex) async {
+    setState(() => isLoading = true);
+    if (kDebugMode) {
+      print(
+          '++ _selectToolForSeparateBox: Loading secondary projects for day=$day, tryoutIndex=$tryoutIndex');
+    }
+
+    List<Map<String, dynamic>> allTools = [];
+    try {
+      allTools = await ApiService.fetchSecondaryProjects();
+      if (kDebugMode) {
+        print(
+            '++ _selectToolForSeparateBox: Received ${allTools.length} tools from secondary API');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('!! _selectToolForSeparateBox: Error fetching secondary: $e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Laden der Tools: $e')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+
+    if (allTools.isEmpty) return;
+
+    final selectedTool = await _showToolSelectionDialog(context, allTools);
+    if (selectedTool == null) {
+      if (kDebugMode) {
+        print('++ _selectToolForSeparateBox: User canceled picking a tool');
+      }
+      return;
+    }
+
+    final projectName = selectedTool['name'] ?? 'Unbenannt';
+    final toolNumber = selectedTool['number'] ?? '';
+    // Convert the "ikoffice:/docustore..." to "docustore/download/...":
+    final finalImageUri =
+        _parseIkOfficeUri(selectedTool['imageuri'] as String?);
+
+    if (kDebugMode) {
+      print(
+          '++ _selectToolForSeparateBox: Creating new item => name:$projectName, number:$toolNumber, imageUri:$finalImageUri');
+    }
+
+    setState(() => isLoading = true);
+    try {
+      final response = await ApiService.updateEinfahrPlan(
+        id: null,
+        projectName: projectName,
+        toolNumber: toolNumber,
+        dayName: day, // Set to default day
+        tryoutIndex: tryoutIndex,
+        status: 'In Arbeit',
+        weekNumber: _selectedWeek,
+        year: _selectedYear, // Include year
+        hasBeenMoved: false,
+        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
+      );
+
+      final newId = response['newId'];
+      if (newId == null) {
+        throw Exception('No newId returned from server.');
+      }
+      if (kDebugMode) {
+        print(
+            '++ _selectToolForSeparateBox: Server assigned ID $newId to new item $projectName');
+      }
+
+      final newItem = FahrversuchItem(
+        id: newId,
+        projectName: projectName,
+        toolNumber: toolNumber,
+        dayName: day, // Set to default day
+        tryoutIndex: tryoutIndex,
+        status: 'In Arbeit',
+        weekNumber: _selectedWeek,
+        year: _selectedYear, // Include year
+        imageUri: finalImageUri,
+        hasBeenMoved: false,
+        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
+        machineNumber:
+            _secondaryProjectsMap[toolNumber]?['extrudermain_id'] != null
+                ? _machineNumberMap[
+                    _secondaryProjectsMap[toolNumber]!['extrudermain_id']]
+                : null,
+      );
+
+      setState(() {
+        schedule[day]![tryoutIndex].add(newItem);
+      });
+      if (kDebugMode) {
+        print(
+            '++ _selectToolForSeparateBox: Added $projectName locally => day=$day, tryoutIndex=$tryoutIndex');
+      }
+    } catch (err) {
+      if (kDebugMode) {
+        print('!! _selectToolForSeparateBox: Error adding new item: $err');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Hinzufügen: $err')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
   /// === New Method: Save User Preferences ===
   Future<void> _saveUserPreferences() async {
     try {
@@ -1350,64 +1468,89 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                   50, // Grid height
                               padding: const EdgeInsets.all(0),
                               color: Colors.blueGrey[50],
-                              child: Column(
+                              child: Stack(
                                 children: [
-                                  // Header
-                                  Container(
-                                    height: 50,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blueAccent,
-                                      borderRadius: BorderRadius.circular(0),
-                                    ),
-                                    child: const Text(
-                                      'Werkzeuge in Änderung',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                                  Column(
+                                    children: [
+                                      // Header
+                                      Container(
+                                        height: 50,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: Colors.blueAccent,
+                                          borderRadius:
+                                              BorderRadius.circular(0),
+                                        ),
+                                        child: const Text(
+                                          'Werkzeuge in Änderung',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      // DragTarget Box
+                                      Expanded(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.red[100],
+                                            borderRadius:
+                                                BorderRadius.circular(0),
+                                            border:
+                                                Border.all(color: Colors.red),
+                                          ),
+                                          child: DragTarget<FahrversuchItem>(
+                                            builder: (context, candidateData,
+                                                rejectedData) {
+                                              final items = schedule.entries
+                                                  .expand(
+                                                      (entry) => entry.value[4])
+                                                  .toList(); // Tryout index 4
+                                              return items.isNotEmpty
+                                                  ? ListView.builder(
+                                                      itemCount: items.length,
+                                                      itemBuilder:
+                                                          (context, index) {
+                                                        final item =
+                                                            items[index];
+                                                        return _buildDraggableItem(
+                                                            item);
+                                                      },
+                                                    )
+                                                  : const Center(
+                                                      child: Text(
+                                                          'Keine Einträge'),
+                                                    );
+                                            },
+                                            onWillAccept: (data) =>
+                                                _editModeEnabled,
+                                            onAccept: (item) {
+                                              if (_editModeEnabled) {
+                                                _moveItemToTryout(
+                                                    item, 4); // TryoutIndex 4
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  // DragTarget Box
-                                  Expanded(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.red[100],
-                                        borderRadius: BorderRadius.circular(0),
-                                        border: Border.all(color: Colors.red),
-                                      ),
-                                      child: DragTarget<FahrversuchItem>(
-                                        builder: (context, candidateData,
-                                            rejectedData) {
-                                          final items = schedule.entries
-                                              .expand((entry) => entry.value[4])
-                                              .toList(); // Tryout index 4
-                                          return items.isNotEmpty
-                                              ? ListView.builder(
-                                                  itemCount: items.length,
-                                                  itemBuilder:
-                                                      (context, index) {
-                                                    final item = items[index];
-                                                    return _buildDraggableItem(
-                                                        item);
-                                                  },
-                                                )
-                                              : const Center(
-                                                  child: Text('Keine Einträge'),
-                                                );
-                                        },
-                                        onWillAccept: (data) =>
-                                            _editModeEnabled,
-                                        onAccept: (item) {
-                                          if (_editModeEnabled) {
-                                            _moveItemToTryout(
-                                                item, 4); // TryoutIndex 4
-                                          }
-                                        },
+                                  // Add Button Positioned at Bottom Right
+                                  if (_editModeEnabled)
+                                    Positioned(
+                                      right: 8,
+                                      bottom: 8,
+                                      child: FloatingActionButton(
+                                        mini: true,
+                                        backgroundColor: Colors.green,
+                                        tooltip: 'Neues Projekt hinzufügen',
+                                        onPressed: () => _addToSeparateBox(4),
+                                        child: const Icon(Icons.add,
+                                            color:
+                                                Colors.white), // TryoutIndex 4
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -1422,64 +1565,89 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                   50, // Grid height
                               padding: const EdgeInsets.all(0),
                               color: Colors.blueGrey[50],
-                              child: Column(
+                              child: Stack(
                                 children: [
-                                  // Header
-                                  Container(
-                                    height: 50,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blueAccent,
-                                      borderRadius: BorderRadius.circular(0),
-                                    ),
-                                    child: const Text(
-                                      'Bereit für Einfahrversuch',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                                  Column(
+                                    children: [
+                                      // Header
+                                      Container(
+                                        height: 50,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: Colors.blueAccent,
+                                          borderRadius:
+                                              BorderRadius.circular(0),
+                                        ),
+                                        child: const Text(
+                                          'Bereit für Einfahrversuch',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      // DragTarget Box
+                                      Expanded(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.green[100],
+                                            borderRadius:
+                                                BorderRadius.circular(0),
+                                            border:
+                                                Border.all(color: Colors.green),
+                                          ),
+                                          child: DragTarget<FahrversuchItem>(
+                                            builder: (context, candidateData,
+                                                rejectedData) {
+                                              final items = schedule.entries
+                                                  .expand(
+                                                      (entry) => entry.value[5])
+                                                  .toList(); // Tryout index 5
+                                              return items.isNotEmpty
+                                                  ? ListView.builder(
+                                                      itemCount: items.length,
+                                                      itemBuilder:
+                                                          (context, index) {
+                                                        final item =
+                                                            items[index];
+                                                        return _buildDraggableItem(
+                                                            item);
+                                                      },
+                                                    )
+                                                  : const Center(
+                                                      child: Text(
+                                                          'Keine Einträge'),
+                                                    );
+                                            },
+                                            onWillAccept: (data) =>
+                                                _editModeEnabled,
+                                            onAccept: (item) {
+                                              if (_editModeEnabled) {
+                                                _moveItemToTryout(
+                                                    item, 5); // TryoutIndex 5
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  // DragTarget Box
-                                  Expanded(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[100],
-                                        borderRadius: BorderRadius.circular(0),
-                                        border: Border.all(color: Colors.green),
-                                      ),
-                                      child: DragTarget<FahrversuchItem>(
-                                        builder: (context, candidateData,
-                                            rejectedData) {
-                                          final items = schedule.entries
-                                              .expand((entry) => entry.value[5])
-                                              .toList(); // Tryout index 5
-                                          return items.isNotEmpty
-                                              ? ListView.builder(
-                                                  itemCount: items.length,
-                                                  itemBuilder:
-                                                      (context, index) {
-                                                    final item = items[index];
-                                                    return _buildDraggableItem(
-                                                        item);
-                                                  },
-                                                )
-                                              : const Center(
-                                                  child: Text('Keine Einträge'),
-                                                );
-                                        },
-                                        onWillAccept: (data) =>
-                                            _editModeEnabled,
-                                        onAccept: (item) {
-                                          if (_editModeEnabled) {
-                                            _moveItemToTryout(
-                                                item, 5); // TryoutIndex 5
-                                          }
-                                        },
+                                  // Add Button Positioned at Bottom Right
+                                  if (_editModeEnabled)
+                                    Positioned(
+                                      right: 8,
+                                      bottom: 8,
+                                      child: FloatingActionButton(
+                                        mini: true,
+                                        backgroundColor: Colors.green,
+                                        tooltip: 'Neues Projekt hinzufügen',
+                                        onPressed: () => _addToSeparateBox(5),
+                                        child: const Icon(Icons.add,
+                                            color:
+                                                Colors.white), // TryoutIndex 5
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
