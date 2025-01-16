@@ -34,6 +34,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     'Fahrversuch #2',
     'Fahrversuch #3',
     'Fahrversuch #4',
+    'Fahrversuch #5',
   ];
 
   final List<int> weekNumbers = List.generate(53, (i) => i + 1);
@@ -105,6 +106,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
+  /// === New Method: Add to Separate Box ===
   Future<void> _addToSeparateBox(int tryoutIndex) async {
     // Define a default day
     const String defaultDay =
@@ -343,11 +345,29 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   }
 
   /// === New Method: Handle Drag End to Cancel Auto-Scroll ===
-  void _handleDragEnd(DragEndDetails details) {
+  void _handleDraggableDragEnd(DraggableDetails details) {
+    // Cancel auto-scroll timers
     _autoScrollVerticalTimer?.cancel();
     _autoScrollHorizontalTimer?.cancel();
     _autoScrollVerticalTimer = null;
     _autoScrollHorizontalTimer = null;
+
+    if (kDebugMode) {
+      print('++ _handleDraggableDragEnd: Drag ended for item.');
+    }
+  }
+
+  /// === New Method: Handle Gesture Drag End to Cancel Auto-Scroll ===
+  void _handleGestureDragEnd(DragEndDetails details) {
+    // Cancel auto-scroll timers
+    _autoScrollVerticalTimer?.cancel();
+    _autoScrollHorizontalTimer?.cancel();
+    _autoScrollVerticalTimer = null;
+    _autoScrollHorizontalTimer = null;
+
+    if (kDebugMode) {
+      print('++ _handleGestureDragEnd: Pan drag ended.');
+    }
   }
 
   /// === New Method: Prompt for PIN ===
@@ -563,9 +583,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         (_) => <FahrversuchItem>[],
       );
 
-      // Add extra slots for independent drop boxes (tryoutIndex 4 and 5)
-      schedule[day]!.add([]); // For tryout index 4
-      schedule[day]!.add([]); // For tryout index 5
+      // Add extra slots for independent drop boxes (tryoutIndex 5 and 6)
+      schedule[day]!.add([]); // For tryout index 5: Werkzeuge in Änderung
+      schedule[day]!.add([]); // For tryout index 6: Bereit für Einfahrversuch
 
       if (kDebugMode) {
         print('++ schedule[$day].length = ${schedule[day]!.length}');
@@ -1432,7 +1452,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   ? _handleDragUpdate
                   : null, // Only handle drag updates in edit mode
               onPanEnd: _editModeEnabled
-                  ? _handleDragEnd
+                  ? _handleGestureDragEnd // Use the correct handler
                   : null, // Only handle drag end in edit mode
               child: SingleChildScrollView(
                 controller:
@@ -1454,7 +1474,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                       ),
                     ),
 
-                    const SizedBox(width: 14), // Some horizontal spacing
+                    const SizedBox(width: 7), // Some horizontal spacing
 
                     // === RIGHT: Side-by-side boxes ===
                     Column(
@@ -1505,8 +1525,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                                 rejectedData) {
                                               final items = schedule.entries
                                                   .expand(
-                                                      (entry) => entry.value[4])
-                                                  .toList(); // Tryout index 4
+                                                      (entry) => entry.value[5])
+                                                  .toList(); // Tryout index 5
                                               return items.isNotEmpty
                                                   ? ListView.builder(
                                                       itemCount: items.length,
@@ -1528,7 +1548,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                             onAccept: (item) {
                                               if (_editModeEnabled) {
                                                 _moveItemToTryout(
-                                                    item, 4); // TryoutIndex 4
+                                                    item, 5); // TryoutIndex 5
                                               }
                                             },
                                           ),
@@ -1539,24 +1559,22 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                   // Add Button Positioned at Bottom Right
                                   if (_editModeEnabled)
                                     Positioned(
-                                      right: 8,
-                                      bottom: 8,
+                                      top: 4,
+                                      left: 8,
                                       child: FloatingActionButton(
                                         mini: true,
                                         backgroundColor: Colors.green,
                                         tooltip: 'Neues Projekt hinzufügen',
-                                        onPressed: () => _addToSeparateBox(4),
+                                        onPressed: () => _addToSeparateBox(5),
                                         child: const Icon(Icons.add,
-                                            color:
-                                                Colors.white), // TryoutIndex 4
+                                            color: Colors.white),
                                       ),
                                     ),
                                 ],
                               ),
                             ),
 
-                            const SizedBox(
-                                width: 14), // Some horizontal spacing
+                            const SizedBox(width: 7), // Some horizontal spacing
 
                             // Box 2: Bereit für Einfahrversuch
                             Container(
@@ -1602,8 +1620,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                                 rejectedData) {
                                               final items = schedule.entries
                                                   .expand(
-                                                      (entry) => entry.value[5])
-                                                  .toList(); // Tryout index 5
+                                                      (entry) => entry.value[6])
+                                                  .toList(); // Tryout index 6
                                               return items.isNotEmpty
                                                   ? ListView.builder(
                                                       itemCount: items.length,
@@ -1625,7 +1643,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                             onAccept: (item) {
                                               if (_editModeEnabled) {
                                                 _moveItemToTryout(
-                                                    item, 5); // TryoutIndex 5
+                                                    item, 6); // TryoutIndex 6
                                               }
                                             },
                                           ),
@@ -1636,16 +1654,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                   // Add Button Positioned at Bottom Right
                                   if (_editModeEnabled)
                                     Positioned(
-                                      right: 8,
-                                      bottom: 8,
+                                      top: 4,
+                                      left: 8,
                                       child: FloatingActionButton(
                                         mini: true,
                                         backgroundColor: Colors.green,
                                         tooltip: 'Neues Projekt hinzufügen',
-                                        onPressed: () => _addToSeparateBox(5),
+                                        onPressed: () => _addToSeparateBox(6),
                                         child: const Icon(Icons.add,
-                                            color:
-                                                Colors.white), // TryoutIndex 5
+                                            color: Colors.white),
                                       ),
                                     ),
                                 ],
@@ -1790,7 +1807,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       data: item,
       // === New Callbacks for Auto-Scroll ===
       onDragUpdate: (details) => _handleDragUpdate(details),
-      onDragEnd: (details) => _handleDragEnd(details as DragEndDetails),
+      onDragEnd: (details) =>
+          _handleDraggableDragEnd(details), // Correct handler
       feedback: Material(
         elevation: 4,
         child: Container(
