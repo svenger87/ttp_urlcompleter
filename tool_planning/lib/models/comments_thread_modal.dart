@@ -250,7 +250,8 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
       }
 
       // Use ApiService to download the file directly
-      File downloadedFile = await ApiService.downloadFile(updatedUrl, fileName);
+      File? downloadedFile =
+          await ApiService.downloadFile(updatedUrl, fileName);
 
       // Dismiss loading indicator
       Navigator.pop(context);
@@ -259,7 +260,7 @@ class _CommentsThreadModalState extends State<CommentsThreadModal> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PDFViewerScreen(filePath: downloadedFile.path),
+          builder: (context) => PDFViewerScreen(filePath: downloadedFile!.path),
         ),
       );
     } catch (e) {

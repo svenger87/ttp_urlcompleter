@@ -637,13 +637,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     for (var day in days) {
       // Initialize grid tryouts (0 to tryouts.length - 1)
       schedule[day] = List.generate(
-        tryouts.length,
+        tryouts.length + 2, // +2 for the extra drop boxes
         (_) => <FahrversuchItem>[],
       );
-
-      // Add extra slots for independent drop boxes (tryoutIndex 5 and 6)
-      schedule[day]!.add([]); // For tryout index 5: Werkzeuge in Änderung
-      schedule[day]!.add([]); // For tryout index 6: Bereit für Einfahrversuch
 
       if (kDebugMode) {
         print('++ schedule[$day].length = ${schedule[day]!.length}');
@@ -766,6 +762,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         }
 
         schedule[validDay]![validTryIndex].add(item);
+
+        // After adding to schedule, attempt to load the image
+        if (item.imageUri != null) {
+          _downloadItemImage(item);
+        }
       }
 
       if (kDebugMode) {
@@ -801,7 +802,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       print('++ schedule[$oldDay].length = ${schedule[oldDay]?.length}');
     }
 
-    if (newTryIndex >= tryouts.length || newTryIndex < 0) {
+    if (newTryIndex >= tryouts.length + 2 || newTryIndex < 0) {
       if (kDebugMode) {
         print(
             '!! _moveItem: Invalid newTryIndex $newTryIndex for tryouts.length ${tryouts.length}');
@@ -1264,6 +1265,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         print(
             '++ _moveToNextWeek: Successfully copied to week $finalNewWeek, year $newYear');
       }
+
+      // Download image for the new item
+      if (newItem.imageUri != null) {
+        _downloadItemImage(newItem);
+      }
     } catch (err) {
       if (kDebugMode) {
         print('!! _moveToNextWeek: Error copying to next week: $err');
@@ -1375,7 +1381,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       });
       if (kDebugMode) {
         print(
-            '++ _selectToolForCell: Added $projectName locally => day=$day, col=$tryIndex');
+            '++ _selectToolForCell: Added $projectName locally => day=$day, tryoutIndex=$tryIndex');
+      }
+
+      // Download image for the new item
+      if (newItem.imageUri != null) {
+        _downloadItemImage(newItem);
       }
     } catch (err) {
       if (kDebugMode) {
@@ -1406,20 +1417,39 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
 
     try {
-      final file = await ApiService.downloadIkofficeFile(uri);
-      if (file != null) {
+      // Check if the image already exists
+      final imagePath = await item.getUniqueImagePath();
+      final imageFile = File(imagePath);
+      if (await imageFile.exists()) {
         if (kDebugMode) {
           print(
-              '++ _downloadItemImage: Download succeeded for ${item.projectName}, local path: ${file.path}');
+              '++ _downloadItemImage: Image already exists locally for ${item.projectName}');
         }
-        setState(() => item.localImagePath = file.path);
+        setState(() {
+          item.localImagePath = imagePath;
+        });
+        return imageFile;
+      }
+
+      // Download the image using the modified ApiService method
+      final downloadedFile =
+          await ApiService.downloadIkofficeFile(uri, imagePath);
+
+      if (downloadedFile != null) {
+        if (kDebugMode) {
+          print(
+              '++ _downloadItemImage: Download succeeded for ${item.projectName}, local path: ${downloadedFile.path}');
+        }
+        setState(() {
+          item.localImagePath = downloadedFile.path;
+        });
       } else {
         if (kDebugMode) {
           print(
               '!! _downloadItemImage: Download failed or returned null for ${item.projectName}.');
         }
       }
-      return file;
+      return downloadedFile;
     } catch (e) {
       if (kDebugMode) {
         print(
@@ -1548,13 +1578,24 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<int>(
               value: _selectedYear,
-              dropdownColor: Colors.blueGrey[50],
+              dropdownColor: Colors.black, // Dark background for contrast
+              style: const TextStyle(
+                color: Colors.white, // Set default text color to white
+                fontSize: 16, // Optional: Adjust font size as needed
+              ),
+              iconEnabledColor:
+                  Colors.white, // Set dropdown arrow icon color to white
               items:
                   List.generate(5, (index) => DateTime.now().year - 2 + index)
                       .map((year) {
                 return DropdownMenuItem<int>(
                   value: year,
-                  child: Text('Jahr $year'),
+                  child: Text(
+                    'Jahr $year',
+                    style: const TextStyle(
+                      color: Colors.white, // Ensure each item's text is white
+                    ),
+                  ),
                 );
               }).toList(),
               onChanged: (value) {
@@ -1568,7 +1609,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   print('Selected Year: $_selectedYear');
                 }
               },
-              hint: const Text('Wähle ein Jahr'),
+              hint: const Text(
+                'Wähle ein Jahr',
+                style: TextStyle(
+                  color: Colors.white, // Set hint text color to white
+                  fontSize: 16, // Optional: Adjust font size as needed
+                ),
+              ),
             ),
           ),
 
@@ -1577,11 +1624,22 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<int>(
               value: _selectedWeek,
-              dropdownColor: Colors.blueGrey[50],
+              dropdownColor: Colors.black, // Dark background for contrast
+              style: const TextStyle(
+                color: Colors.white, // Set default text color to white
+                fontSize: 16, // Optional: Adjust font size as needed
+              ),
+              iconEnabledColor:
+                  Colors.white, // Set dropdown icon color to white
               items: weekNumbers.map((w) {
                 return DropdownMenuItem<int>(
                   value: w,
-                  child: Text('KW $w'),
+                  child: Text(
+                    'KW $w',
+                    style: const TextStyle(
+                      color: Colors.white, // Ensure each item's text is white
+                    ),
+                  ),
                 );
               }).toList(),
               onChanged: (value) {
@@ -1829,7 +1887,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                             backgroundColor: Colors.green,
                                             tooltip: 'Neues Projekt hinzufügen',
                                             onPressed: () =>
-                                                _addToSeparateBox(5),
+                                                _addToSeparateBox(6),
                                             child: const Icon(Icons.add,
                                                 color: Colors.white, size: 16),
                                           ),
@@ -2048,6 +2106,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   ),
                 ),
               )
+            else if (item.imageUri != null)
+              Container(
+                height: 40,
+                margin: const EdgeInsets.only(top: 4),
+                alignment: Alignment.center,
+                child:
+                    const CircularProgressIndicator(), // Show loading indicator
+              )
             else
               Container(
                 height: 40,
@@ -2068,16 +2134,18 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                 Text(
                   item.projectName,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2, // Prevent overflow
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  'Tool: ${item.toolNumber}',
-                  style: const TextStyle(color: Colors.white),
+                  'Werkzeug: ${item.toolNumber}',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 // Display machine number if available
@@ -2085,7 +2153,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   Text(
                     'Maschine: ${item.machineNumber}',
                     style: const TextStyle(
-                      color: Colors.yellow, // Highlight for visibility
+                      color: Colors.yellowAccent, // Highlight for visibility
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
@@ -2094,13 +2162,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   const Text(
                     'Maschine: Unbekannt', // Placeholder for missing machine numbers
                     style: TextStyle(
-                      color: Colors.grey, // Grey color for placeholder
+                      color: Colors.black, // Grey color for placeholder
                     ),
                     textAlign: TextAlign.center,
                   ),
                 Text(
                   'Status: ${item.status}',
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.black),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -2185,6 +2253,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           if (kDebugMode) {
             print(
                 '++ _undoLastAction: Undid delete by undeleting ${lastAction.item.projectName}');
+          }
+
+          // Also re-download the image if needed
+          if (lastAction.item.imageUri != null) {
+            _downloadItemImage(lastAction.item);
           }
         } catch (err) {
           if (kDebugMode) {

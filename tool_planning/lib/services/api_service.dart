@@ -366,7 +366,7 @@ class ApiService {
   }
 
   // General function to download any file
-  static Future<File> downloadFile(String downloadUrl, String fileName) async {
+  static Future<File?> downloadFile(String downloadUrl, String fileName) async {
     try {
       if (kDebugMode) {
         print('Starting download from URL: $downloadUrl');
@@ -579,16 +579,17 @@ class ApiService {
   static const int TENANT_ID = 3;
 
   /// This method downloads a file from the docustore,
-  /// building a final URL like:
-  ///   http://ikoffice.sip.local:8080/ikoffice/api/docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png
+  /// saving it to the specified [savePath].
   ///
   /// [imagePath] should be something like:
   ///   "docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png"
-  /// We return a [File] in the temp directory, or null if it fails.
-  static Future<File?> downloadIkofficeFile(String imagePath) async {
+  /// [savePath] is the full path where the file should be saved.
+  /// Returns a [File] if successful, or null if it fails.
+  static Future<File?> downloadIkofficeFile(
+      String imagePath, String savePath) async {
     try {
       // Build full URL
-      // e.g. IKOFFICE_BASE + "/docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png"
+      // e.g., IKOFFICE_BASE + "/docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png"
       final url = Uri.parse('$IKOFFICE_BASE/$imagePath');
 
       // Create the GET request
@@ -607,11 +608,8 @@ class ApiService {
         // On success, read the bytes
         final bytes = await streamedResponse.stream.toBytes();
 
-        // Create a new file in temp directory
-        final tempDir = await getTemporaryDirectory();
-        final filePath =
-            '${tempDir.path}/ikoffice_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final file = File(filePath);
+        // Create a new file at the specified savePath
+        final file = File(savePath);
 
         // Write the bytes
         await file.writeAsBytes(bytes, flush: true);

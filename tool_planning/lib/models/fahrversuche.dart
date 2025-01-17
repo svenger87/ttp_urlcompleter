@@ -1,6 +1,8 @@
 // lib/models/fahrversuche.dart
 
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class FahrversuchItem {
   final int id;
@@ -84,5 +86,17 @@ class FahrversuchItem {
       'machine_number': machineNumber,
       'is_deleted': isDeleted ? 1 : 0,
     };
+  }
+
+  /// Generates a unique local image path based on the item's ID.
+  Future<String> getUniqueImagePath() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return '${directory.path}/ikoffice_$id.jpg'; // Assuming JPEG images
+  }
+
+  /// Checks if the image exists locally.
+  Future<bool> hasLocalImage() async {
+    final path = await getUniqueImagePath();
+    return File(path).exists();
   }
 }
