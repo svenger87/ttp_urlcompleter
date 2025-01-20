@@ -1774,8 +1774,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                                     )
                                                   : const Center(
                                                       child: Text(
-                                                          'Keine Einträge'),
-                                                    );
+                                                      '  Keine Einträge',
+                                                      style: TextStyle(
+                                                        color: Colors.black,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ));
                                             },
                                             onWillAccept: (data) =>
                                                 _editModeEnabled,
@@ -1888,8 +1893,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                                     )
                                                   : const Center(
                                                       child: Text(
-                                                          'Keine Einträge'),
-                                                    );
+                                                      '    Keine Einträge',
+                                                      style: TextStyle(
+                                                        color: Colors.black,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ));
                                             },
                                             onWillAccept: (data) =>
                                                 _editModeEnabled,
