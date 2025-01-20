@@ -2005,7 +2005,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       width: 180,
       height: 170,
       margin: const EdgeInsets.only(left: 2, top: 2),
-      color: Colors.grey.shade100,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        border: Border.all(
+          color: Colors.black, // Always black
+          width: 0.2, // Border thickness
+        ),
+      ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
