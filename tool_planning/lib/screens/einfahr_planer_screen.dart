@@ -1774,11 +1774,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                                     )
                                                   : const Center(
                                                       child: Text(
-                                                      '  Keine Einträge',
+                                                      'Keine Einträge',
                                                       style: TextStyle(
                                                         color: Colors.black,
-                                                        fontWeight:
-                                                            FontWeight.bold,
                                                       ),
                                                     ));
                                             },
@@ -1893,11 +1891,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                                     )
                                                   : const Center(
                                                       child: Text(
-                                                      '    Keine Einträge',
+                                                      'Keine Einträge',
                                                       style: TextStyle(
                                                         color: Colors.black,
-                                                        fontWeight:
-                                                            FontWeight.bold,
                                                       ),
                                                     ));
                                             },
@@ -2043,7 +2039,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                           return _buildDraggableItem(item);
                         },
                       )
-                    : const Center(child: Text('Keine Einträge')),
+                    : const Center(
+                        child: Text(
+                        'Keine Einträge',
+                        style: TextStyle(color: Colors.black, fontSize: 12),
+                      )),
               );
             },
           ),
