@@ -1692,7 +1692,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                       ),
                     ),
 
-                    const SizedBox(width: 3), // Some horizontal spacing
+                    const SizedBox(
+                      width: 2,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(color: Colors.black),
+                      ),
+                    ),
 
                     // === RIGHT: Side-by-side boxes ===
                     Column(
@@ -1713,12 +1718,17 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                     children: [
                                       // Header
                                       Container(
-                                        height: 35,
+                                        height: 37,
                                         alignment: Alignment.center,
-                                        decoration: BoxDecoration(
+                                        decoration: const BoxDecoration(
                                           color: Colors.blueAccent,
-                                          borderRadius:
-                                              BorderRadius.circular(0),
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: Colors.black, // Black line
+                                              width:
+                                                  2.0, // Thickness of the line
+                                            ),
+                                          ),
                                         ),
                                         child: const Text(
                                           '    Werkzeuge in Änderung',
@@ -1728,7 +1738,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+
+                                      const SizedBox(
+                                        width: 1,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                              color: Colors.black),
+                                        ),
+                                      ),
                                       // DragTarget Box
                                       Expanded(
                                         child: Container(
@@ -1736,8 +1753,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                             color: Colors.red[100],
                                             borderRadius:
                                                 BorderRadius.circular(0),
-                                            border:
-                                                Border.all(color: Colors.red),
                                           ),
                                           child: DragTarget<FahrversuchItem>(
                                             builder: (context, candidateData,
@@ -1797,7 +1812,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                               ),
                             ),
 
-                            const SizedBox(width: 3), // Some horizontal spacing
+                            const SizedBox(
+                              width: 2,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(color: Colors.black),
+                              ),
+                            ),
 
                             // Box 2: Bereit für Einfahrversuch
                             Container(
@@ -1812,12 +1832,17 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                     children: [
                                       // Header
                                       Container(
-                                        height: 35,
+                                        height: 37,
                                         alignment: Alignment.center,
-                                        decoration: BoxDecoration(
+                                        decoration: const BoxDecoration(
                                           color: Colors.blueAccent,
-                                          borderRadius:
-                                              BorderRadius.circular(0),
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: Colors.black, // Black line
+                                              width:
+                                                  2.0, // Thickness of the line
+                                            ),
+                                          ),
                                         ),
                                         child: const Text(
                                           '    Bereit für Einfahrversuch',
@@ -1827,7 +1852,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+
+                                      const SizedBox(
+                                        width: 1,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                              color: Colors.black),
+                                        ),
+                                      ),
                                       // DragTarget Box
                                       Expanded(
                                         child: Container(
@@ -1835,8 +1867,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                             color: Colors.green[100],
                                             borderRadius:
                                                 BorderRadius.circular(0),
-                                            border:
-                                                Border.all(color: Colors.green),
                                           ),
                                           child: DragTarget<FahrversuchItem>(
                                             builder: (context, candidateData,
