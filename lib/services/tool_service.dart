@@ -35,6 +35,141 @@ class ToolService {
     }
   }
 
+  // -------------------------------------------------------------------------
+  // (A) New helper: fetchAllToolsAsMap() -> returns a map of tool_number to
+  //     { 'provided': bool, 'freestatus_id': int? } from local API
+  // -------------------------------------------------------------------------
+  Future<Map<String, Map<String, dynamic>>> fetchAllToolsAsMap() async {
+    final response = await http.get(Uri.parse(localApiUrl));
+
+    if (response.statusCode == 200) {
+      final body = json.decode(response.body);
+      // Merge arrays has_storage + has_no_storage
+      List<dynamic> allTools = [
+        ...body['has_storage'],
+        ...body['has_no_storage']
+      ];
+
+      // Key = tool_number, Value = { 'provided': bool, 'freestatus_id': int? }
+      Map<String, Map<String, dynamic>> toolInfoMap = {};
+
+      for (var item in allTools) {
+        final String toolNumber = item['tool_number'] as String;
+        // Convert `provided` to a bool
+        final bool providedStatus =
+            (item['provided'] == true || item['provided'] == '1');
+
+        // Convert `freestatus_id` to int? if present
+        final dynamic rawFreeId = item['freestatus_id'];
+        int? freeStatusId;
+        if (rawFreeId != null) {
+          freeStatusId = int.tryParse(rawFreeId.toString());
+        }
+
+        toolInfoMap[toolNumber] = {
+          'provided': providedStatus,
+          'freestatus_id': freeStatusId,
+        };
+      }
+
+      return toolInfoMap;
+    } else {
+      throw Exception('Failed to load tools from local API');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // (B) Merge forecast data with local tools data
+  // -------------------------------------------------------------------------
+  Future<Map<String, dynamic>> fetchToolForecast() async {
+    // 1) Grab the forecast from /tool-forecast
+    final forecastResponse = await http.get(Uri.parse(toolForecastApiUrl));
+    if (forecastResponse.statusCode != 200) {
+      throw Exception('Failed to load tool forecast from API');
+    }
+
+    // Parse forecast data
+    Map<String, dynamic> responseBody = json.decode(forecastResponse.body);
+    List<dynamic> forecastBody = responseBody['data'];
+    String lastUpdated = responseBody['lastUpdated'] ?? '';
+
+    // 2) Get local tool info -> map of { tool_number: { provided, freestatus_id } }
+    final localToolsMap = await fetchAllToolsAsMap();
+
+    // 3) Filter forecast items (Fertigungssteuerer == '1' & Prioritaet <= 2) as before
+    final filteredList = forecastBody.where((item) {
+      final workingPlan = item['workingPlan'] ?? {};
+
+      final fertigungssteuererIsOne = (item['Fertigungssteuerer'] == '1') ||
+          (workingPlan['Fertigungssteuerer'] == '1');
+
+      final prioritaetStr =
+          (item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? '')
+              .toString()
+              .trim();
+      final int? prioritaet = int.tryParse(prioritaetStr);
+
+      final bool shouldInclude = (prioritaet == null || prioritaet <= 2);
+      if (kDebugMode) {
+        print("Processing ${item['Equipment']}: "
+            "Fertigungssteuerer=$fertigungssteuererIsOne, "
+            "Prioritaet=$prioritaet, Should Include=$shouldInclude");
+      }
+      return fertigungssteuererIsOne && shouldInclude;
+    }).map((item) {
+      // Debug log
+      if (kDebugMode) {
+        print("Including in forecast: ${item['Equipment']}");
+      }
+
+      // 4) Extract any relevant fields
+      final workingPlan = item['workingPlan'] ?? {};
+      final projectData = item['projectData'] ?? {};
+
+      String lengthcuttoolgroup =
+          projectData['lengthcuttoolgroup']?.toString() ?? 'Ohne';
+      String internalstatus =
+          projectData['internalstatus']?.toString() ?? 'unbekannt';
+      String packagingtoolgroup =
+          projectData['packagingtoolgroup']?.toString() ?? 'Ohne';
+
+      // 5) Identify the tool number from forecast, match it in local map
+      String? equipmentNumber =
+          (workingPlan['Equipment'] ?? item['Equipment'])?.toString().trim();
+
+      // This is the local record for that tool (if any)
+      final localRecord = localToolsMap[equipmentNumber] ?? {};
+      final bool providedStatus = localRecord['provided'] ?? false;
+      final int? freeStatusId = localRecord['freestatus_id'] as int?;
+
+      // 6) Build the final merged map
+      return {
+        'PlanStartDatum':
+            item['PlanStartDatum'] ?? item['Eckstarttermin'] ?? 'N/A',
+        'Hauptartikel': item['Hauptartikel'] ?? 'N/A',
+        'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
+        'Arbeitsplatz':
+            workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
+        'lengthcuttoolgroup': lengthcuttoolgroup,
+        'packagingtoolgroup': packagingtoolgroup,
+        'internalstatus': internalstatus,
+
+        // From local map
+        'provided': providedStatus,
+        'freestatus_id': freeStatusId,
+      };
+    }).toList();
+
+    return {
+      'data': filteredList,
+      'lastUpdated': lastUpdated,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Other existing methods
+  // -------------------------------------------------------------------------
+
   // Update an existing tool with proper date formatting
   Future<void> updateTool({
     required String toolNumber,
@@ -49,7 +184,6 @@ class ToolService {
     required String returnedById,
     required bool providedStatus,
   }) async {
-    // Format the dates as 'YYYY-MM-DD HH:mm:ss'
     final String formattedProvidedDate =
         DateFormat('yyyy-MM-dd HH:mm:ss').format(providedDate);
     final String formattedReturnedDate =
@@ -61,15 +195,11 @@ class ToolService {
       'used_space_pitch_one': usedSpacePitchOne,
       'used_space_pitch_two': usedSpacePitchTwo,
       'storage_status': storageStatus,
-      'provided_date': providedStatus
-          ? formattedProvidedDate
-          : null, // Only send if "Ausgelagert"
-      'returned_date': !providedStatus
-          ? formattedReturnedDate
-          : null, // Only send if "Eingelagert"
+      'provided_date': providedStatus ? formattedProvidedDate : null,
+      'returned_date': !providedStatus ? formattedReturnedDate : null,
       'provideddby_id': providedById,
       'returnedby_id': returnedById,
-      'provided': providedStatus // Boolean for provided status
+      'provided': providedStatus
     });
 
     final response = await http.put(
@@ -86,7 +216,6 @@ class ToolService {
   // Fetch free storages from API
   Future<List<String>> fetchFreeStorages() async {
     final response = await http.get(Uri.parse(freeStoragesApiUrl));
-
     if (response.statusCode == 200) {
       List<dynamic> body = json.decode(response.body);
       return body.map((dynamic item) => item as String).toList();
@@ -98,7 +227,6 @@ class ToolService {
   // Fetch storage utilization data from API
   Future<Map<String, dynamic>> fetchStorageUtilization() async {
     final response = await http.get(Uri.parse(storageUtilizationApiUrl));
-
     if (response.statusCode == 200) {
       return json.decode(response.body);
     } else {
@@ -109,7 +237,6 @@ class ToolService {
   // Add a method to fetch users
   Future<List<Map<String, dynamic>>> fetchUsers() async {
     final response = await http.get(Uri.parse(users));
-
     if (response.statusCode == 200) {
       List<dynamic> body = json.decode(response.body);
       return body.map((dynamic user) {
@@ -127,7 +254,6 @@ class ToolService {
 
   Future<String?> getUserIdFromEmployeenumber(String? employeenumber) async {
     if (employeenumber == null) return null;
-
     final response = await http.get(Uri.parse('$users/$employeenumber'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -137,102 +263,17 @@ class ToolService {
     }
   }
 
-  // Method to fetch tool forecast and lastUpdated
-  Future<Map<String, dynamic>> fetchToolForecast() async {
-    final forecastResponse = await http.get(Uri.parse(toolForecastApiUrl));
-
-    if (forecastResponse.statusCode == 200) {
-      // Parse the body to extract forecast data and lastUpdated timestamp
-      Map<String, dynamic> responseBody = json.decode(forecastResponse.body);
-      List<dynamic> forecastBody = responseBody['data'];
-      String lastUpdated = responseBody['lastUpdated'] ?? '';
-
-      // Fetch tools and create a map of tool numbers to provided status
-      Map<String, bool> toolProvidedMap = await fetchAllToolsAsMap();
-
-      final filteredList = forecastBody.where((item) {
-        final workingPlan = item['workingPlan'] ?? {};
-
-        // Check Fertigungssteuerer in both main node and subnode
-        final fertigungssteuererIsOne = (item['Fertigungssteuerer'] == '1') ||
-            (workingPlan['Fertigungssteuerer'] == '1');
-
-        // Extract Prioritaet and parse it, allowing empty values by default
-        final prioritaetStr =
-            (item['Prioritaet'] ?? workingPlan['Prioritaet'] ?? '')
-                .toString()
-                .trim();
-        final int? prioritaet = int.tryParse(prioritaetStr);
-
-        // Only exclude items if Prioritaet is defined and greater than 2
-        final bool shouldInclude = prioritaet == null || prioritaet <= 2;
-
-        // Log filtering criteria
-        if (kDebugMode) {
-          print(
-              "Processing ${item['Equipment']}: Fertigungssteuerer=$fertigungssteuererIsOne, Prioritaet=$prioritaet, Should Include=$shouldInclude");
-        }
-
-        // Include tools where Fertigungssteuerer is "1" and priority <= 2 or is empty
-        return fertigungssteuererIsOne && shouldInclude;
-      }).map((item) {
-        if (kDebugMode) {
-          print("Including in forecast: ${item['Equipment']}");
-        }
-        final workingPlan = item['workingPlan'] ?? {};
-
-        // Extract projectData fields
-        final projectData = item['projectData'] ?? {};
-        String lengthcuttoolgroup =
-            projectData['lengthcuttoolgroup']?.toString() ?? 'Ohne';
-        String internalstatus =
-            projectData['internalstatus']?.toString() ?? 'unbekannt';
-        String packagingtoolgroup =
-            projectData['packagingtoolgroup']?.toString() ?? 'Ohne';
-
-        // Include the provided status in the returned map
-        String? equipmentNumber =
-            (workingPlan['Equipment'] ?? item['Equipment'])?.toString().trim();
-        bool providedStatus = toolProvidedMap[equipmentNumber] ?? false;
-
-        return {
-          'PlanStartDatum':
-              item['PlanStartDatum'] ?? item['Eckstarttermin'] ?? 'N/A',
-          'Hauptartikel': item['Hauptartikel'] ?? 'N/A',
-          'Equipment': workingPlan['Equipment'] ?? item['Equipment'] ?? 'N/A',
-          'Arbeitsplatz':
-              workingPlan['Arbeitsplatz'] ?? item['Arbeitsplatz'] ?? 'N/A',
-          'lengthcuttoolgroup': lengthcuttoolgroup,
-          'packagingtoolgroup': packagingtoolgroup,
-          'internalstatus': internalstatus,
-          'provided': providedStatus
-        };
-      }).toList();
-
-      // Return both filteredList and lastUpdated timestamp
-      return {'data': filteredList, 'lastUpdated': lastUpdated};
-    } else {
-      throw Exception('Failed to load tool forecast from API');
-    }
-  }
-
   // Method to fetch tool by number
   Future<Tool?> fetchToolByNumber(String toolNumber) async {
     try {
-      // Make a GET request to fetch tool data by tool number
       final response = await http.get(Uri.parse('$localApiUrl/$toolNumber'));
-
-      // Log the response status and body for debugging
       if (kDebugMode) {
         print('Response status: ${response.statusCode}');
-      }
-      if (kDebugMode) {
         print('Response body: ${response.body}');
       }
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> toolData = json.decode(response.body);
-        return Tool.fromJson(toolData); // Convert response data to Tool model
+        return Tool.fromJson(toolData);
       } else if (response.statusCode == 404) {
         throw Exception('Tool not found');
       } else {
@@ -242,33 +283,7 @@ class ToolService {
       if (kDebugMode) {
         print('Error fetching tool by number: $e');
       }
-      return null; // Handle error
-    }
-  }
-
-  // Add this method to ToolService
-  Future<Map<String, bool>> fetchAllToolsAsMap() async {
-    final response = await http.get(Uri.parse(localApiUrl));
-
-    if (response.statusCode == 200) {
-      final body = json.decode(response.body);
-      List<dynamic> allTools = [
-        ...body['has_storage'],
-        ...body['has_no_storage']
-      ];
-
-      // Create a map of tool numbers to provided status
-      Map<String, bool> toolProvidedMap = {};
-      for (var item in allTools) {
-        String toolNumber = item['tool_number'];
-        bool providedStatus =
-            item['provided'] == true || item['provided'] == '1';
-        toolProvidedMap[toolNumber] = providedStatus;
-      }
-
-      return toolProvidedMap;
-    } else {
-      throw Exception('Failed to load tools from local API');
+      return null;
     }
   }
 }

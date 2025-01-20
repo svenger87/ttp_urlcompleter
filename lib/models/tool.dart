@@ -9,6 +9,7 @@ class Tool {
   final bool provided;
   final String internalStatus;
   final String packagingtoolgroup;
+  final int? freestatusId;
 
   Tool({
     required this.toolNumber,
@@ -21,23 +22,22 @@ class Tool {
     required this.provided,
     required this.internalStatus,
     required this.packagingtoolgroup,
+    this.freestatusId,
   });
 
   factory Tool.fromJson(Map<String, dynamic> json) {
     return Tool(
       toolNumber: json['tool_number'] ?? 'Unknown Tool Number',
       name: json['name'] ?? 'Unknown Name',
-      storageLocationOne: json['storage_location_one'] as String?, // Nullable
-      storageLocationTwo: json['storage_location_two'] as String?, // Nullable
-      usedSpacePitchOne: json['used_space_pitch_one']?.toString() ??
-          '', // Ensure non-null string
-      usedSpacePitchTwo: json['used_space_pitch_two']?.toString() ??
-          '', // Ensure non-null string
+      storageLocationOne: json['storage_location_one'] as String?,
+      storageLocationTwo: json['storage_location_two'] as String?,
+      usedSpacePitchOne: json['used_space_pitch_one']?.toString() ?? '',
+      usedSpacePitchTwo: json['used_space_pitch_two']?.toString() ?? '',
       storageStatus: json['storage_status'] ?? 'Out of stock',
       provided: json['provided'] ?? false,
-      internalStatus: json['internalstatus'] ??
-          'unbekannt', // Parse the internalstatus from the JSON
+      internalStatus: json['internalstatus'] ?? 'unbekannt',
       packagingtoolgroup: json['packagingtoolgroup'] ?? 'Ohne',
+      freestatusId: json['freestatus_id'] as int?,
     );
   }
 
@@ -52,6 +52,8 @@ class Tool {
       'storage_status': storageStatus,
       'provided': provided,
       'internalstatus': internalStatus,
+      'packagingtoolgroup': packagingtoolgroup,
+      'freestatus_id': freestatusId,
     };
   }
 }

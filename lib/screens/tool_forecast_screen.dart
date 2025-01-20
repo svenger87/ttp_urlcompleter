@@ -38,8 +38,8 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         backgroundColor: const Color(0xFF104382),
         titleTextStyle: const TextStyle(
           color: Colors.white, // Set the text color to white
-          fontSize: 20, // Optionally adjust the font size
-          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
       ),
       body: SingleChildScrollView(
@@ -58,7 +58,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     final providedData =
         widget.forecastData.where((tool) => tool['provided'] == true).toList();
 
-    // Debug log to see if WKZNP0190W02 is in the provided list
     if (kDebugMode) {
       print(
           "Provided Data includes: ${providedData.map((tool) => tool['Equipment']).toList()}");
@@ -106,7 +105,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     final forecastData =
         widget.forecastData.where((tool) => tool['provided'] != true).toList();
 
-    // Debug log to see if WKZNP0190W02 is in the forecast list
     if (kDebugMode) {
       print(
           "Forecast Data includes: ${forecastData.map((tool) => tool['Equipment']).toList()}");
@@ -233,47 +231,97 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     ]);
   }
 
-  DataRow _buildPulsatingRow(Map<String, dynamic> tool, bool highlightRow,
-      bool isInactive, List<DataCell> cells) {
-    if (!isInactive) {
-      return DataRow(
-        color: MaterialStateProperty.resolveWith<Color?>(
-            (Set<MaterialState> states) {
-          if (highlightRow) {
-            return Colors.orange.withOpacity(0.3); // Highlight in orange
-          }
-          return null;
-        }),
-        cells: cells,
+  /// Updated method to handle the blueAccent case (freestatus_id == 37).
+  DataRow _buildPulsatingRow(
+    Map<String, dynamic> tool,
+    bool highlightRow,
+    bool isInactive,
+    List<DataCell> cells,
+  ) {
+    // Always print something when the method is called, so we know it's invoked.
+    if (kDebugMode) {
+      print(
+        '[DEBUG] _buildPulsatingRow called. '
+        'Equipment: ${tool['Equipment']} | '
+        'freestatus_id: ${tool['freestatus_id']} | '
+        'isInactive: $isInactive | '
+        'highlightRow: $highlightRow',
       );
     }
 
-    return DataRow(
-      cells: cells.map((cell) {
-        return DataCell(
-          TweenAnimationBuilder(
-            tween: Tween<double>(begin: 0.5, end: 1.0),
-            duration: const Duration(seconds: 1),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: cell.child,
-              );
-            },
-            onEnd: () {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                _verticalController.jumpTo(_verticalController.offset);
-              });
-            },
-          ),
-          onTap: cell.onTap,
-        );
-      }).toList(),
-      color: MaterialStateProperty.resolveWith<Color?>(
+    final bool isFreeStatusBlue =
+        (tool['freestatus_id'] == 37 || tool['freestatus_id'] == 133);
+
+    // If the tool is inactive, return a red pulsating row.
+    if (isInactive) {
+      if (kDebugMode) {
+        print('[DEBUG] --> Using RED pulsating row (tool is inactive).');
+      }
+      return DataRow(
+        cells: cells.map((cell) {
+          return DataCell(
+            TweenAnimationBuilder(
+              tween: Tween<double>(begin: 0.5, end: 1.0),
+              duration: const Duration(seconds: 1),
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: cell.child,
+                );
+              },
+              onEnd: () {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  _verticalController.jumpTo(_verticalController.offset);
+                });
+              },
+            ),
+            onTap: cell.onTap,
+          );
+        }).toList(),
+        color: MaterialStateProperty.resolveWith<Color?>(
           (Set<MaterialState> states) {
-        return Colors.red.withOpacity(0.3); // Highlight in red for inactive
-      }),
-    );
+            return Colors.red.withOpacity(0.3); // Highlight in red for inactive
+          },
+        ),
+      );
+    }
+    // Else if freestatus_id = 37 or 133, highlight in blueAccent.
+    else if (isFreeStatusBlue) {
+      if (kDebugMode) {
+        print('[DEBUG] --> Using BLUE accent row (freestatus_id = 37 or 133).');
+      }
+      return DataRow(
+        color: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
+            return Colors.blueAccent.withOpacity(0.3); // Highlight in blue
+          },
+        ),
+        cells: cells,
+      );
+    }
+    // Else if "highlightRow" is true, highlight in orange.
+    else if (highlightRow) {
+      if (kDebugMode) {
+        print('[DEBUG] --> Using ORANGE highlight row (highlightRow=true).');
+      }
+      return DataRow(
+        color: MaterialStateProperty.resolveWith<Color?>(
+          (Set<MaterialState> states) {
+            return Colors.orange.withOpacity(0.3);
+          },
+        ),
+        cells: cells,
+      );
+    }
+    // Otherwise, no special highlight.
+    else {
+      if (kDebugMode) {
+        print('[DEBUG] --> Using NO special highlight.');
+      }
+      return DataRow(
+        cells: cells,
+      );
+    }
   }
 
   String _formatDate(String? dateString) {

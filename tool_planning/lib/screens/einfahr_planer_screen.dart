@@ -1332,7 +1332,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             color: Colors.blueAccent, // Background color
             border: Border(
               bottom: BorderSide(
-                color: Colors.black, // Line color
+                color: Colors.blueAccent, // Line color
               ),
             ),
           ),
