@@ -1,5 +1,3 @@
-// lib/screens/einfahr_planer_screen.dart
-
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'dart:async';
@@ -56,7 +54,7 @@ class EinfahrPlanerScreen extends StatefulWidget {
 }
 
 class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
-  // === Existing State Variables ===
+  // === Days, Tryouts, and Week-Year handling ===
   final List<String> days = [
     'Montag',
     'Dienstag',
@@ -66,7 +64,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     'Samstag',
     'Sonntag'
   ];
-
   final List<String> tryouts = [
     'Fahrversuch #1',
     'Fahrversuch #2',
@@ -74,41 +71,34 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     'Fahrversuch #4',
     'Fahrversuch #5',
   ];
-
   final List<int> weekNumbers = List.generate(53, (i) => i + 1);
 
   late int _selectedWeek;
+  late int _selectedYear;
   bool isLoading = true;
 
-  late int _selectedYear;
-
-  final Map<int, String> _machineNumberMap = {};
+  // === Schedule data ===
+  /// The schedule map: schedule[day][tryoutIndex] => List<FahrversuchItem>
   Map<String, List<List<FahrversuchItem>>> schedule = {};
 
+  // === Maps for secondary projects and machines ===
+  final Map<int, String> _machineNumberMap = {};
   final Map<String, Map<String, dynamic>> _secondaryProjectsMap = {};
 
-  // Existing horizontal ScrollController
+  // === Scroll controllers & timers for auto-scroll ===
   final ScrollController _horizontalScrollCtrl = ScrollController();
-
-  // === New ScrollController for Vertical Scrolling ===
   final ScrollController _verticalScrollCtrl = ScrollController();
 
-  // === Timers for Auto-Scrolling ===
   Timer? _autoScrollVerticalTimer;
   Timer? _autoScrollHorizontalTimer;
+  final double _autoScrollThreshold = 75.0; // Distance from edge
+  final double _autoScrollSpeed = 80.0; // Speed in pixels per tick
 
-  // === Auto-Scroll Configuration ===
-  final double _autoScrollThreshold =
-      75.0; // Distance from edge to trigger scroll
-  final double _autoScrollSpeed = 80.0; // Pixels per scroll interval
-
-  // === New State Variable for Edit Mode ===
+  // === Edit mode and PIN ===
   bool _editModeEnabled = false;
-
-  // === PIN Configuration ===
   final String _correctPIN = '3006'; // Replace with your desired PIN
 
-  // === Action History for Undo ===
+  // === Action history for undo ===
   final List<ScheduleAction> _actionHistory = [];
 
   @override
@@ -117,7 +107,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     _loadUserPreferences();
   }
 
-  /// === New Method: Load User Preferences ===
+  // --------------------------------------------
+  //        PREFERENCES / INIT LOADING
+  // --------------------------------------------
   Future<void> _loadUserPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -127,14 +119,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         _selectedYear = prefs.getInt('selectedYear') ?? DateTime.now().year;
       });
 
-      if (kDebugMode) {
-        print(
-            '++ initState: Loaded preferences - Week: $_selectedWeek, Year: $_selectedYear');
-      }
-
       _initializeEmptySchedule();
-
-      // Ensure _fetchAndBuildMaps is awaited before proceeding
       await _fetchAndBuildMaps();
       await _fetchDataForWeek(_selectedWeek, _selectedYear);
     } catch (e) {
@@ -147,141 +132,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  /// === New Method: Add to Separate Box ===
-  Future<void> _addToSeparateBox(int tryoutIndex) async {
-    // Define a default day
-    const String defaultDay =
-        'Montag'; // You can change this to any day you prefer
-
-    // Proceed to select and add the tool without prompting for a day
-    await _selectToolForSeparateBox(defaultDay, tryoutIndex);
-  }
-
-  /// === New Method: Select Tool for Separate Box ===
-  Future<void> _selectToolForSeparateBox(String day, int tryoutIndex) async {
-    setState(() => isLoading = true);
-    if (kDebugMode) {
-      print(
-          '++ _selectToolForSeparateBox: Loading secondary projects for day=$day, tryoutIndex=$tryoutIndex');
-    }
-
-    List<Map<String, dynamic>> allTools = [];
-    try {
-      allTools = await ApiService.fetchSecondaryProjects();
-      if (kDebugMode) {
-        print(
-            '++ _selectToolForSeparateBox: Received ${allTools.length} tools from secondary API');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('!! _selectToolForSeparateBox: Error fetching secondary: $e');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Laden der Tools: $e')),
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
-
-    if (allTools.isEmpty) return;
-
-    final selectedTool = await _showToolSelectionDialog(context, allTools);
-    if (selectedTool == null) {
-      if (kDebugMode) {
-        print('++ _selectToolForSeparateBox: User canceled picking a tool');
-      }
-      return;
-    }
-
-    final projectName = selectedTool['name'] ?? 'Unbenannt';
-    final toolNumber = selectedTool['number'] ?? '';
-    // Convert the "ikoffice:/docustore..." to "docustore/download/...":
-    final finalImageUri =
-        _parseIkOfficeUri(selectedTool['imageuri'] as String?);
-
-    if (kDebugMode) {
-      print(
-          '++ _selectToolForSeparateBox: Creating new item => name:$projectName, number:$toolNumber, imageUri:$finalImageUri');
-    }
-
-    setState(() => isLoading = true);
-    try {
-      final response = await ApiService.updateEinfahrPlan(
-        id: null,
-        projectName: projectName,
-        toolNumber: toolNumber,
-        dayName: day, // Set to default day
-        tryoutIndex: tryoutIndex,
-        status: 'In Arbeit',
-        weekNumber: _selectedWeek,
-        year: _selectedYear, // Include year
-        hasBeenMoved: false,
-        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
-      );
-
-      final newId = response['newId'];
-      if (newId == null) {
-        throw Exception('No newId returned from server.');
-      }
-      if (kDebugMode) {
-        print(
-            '++ _selectToolForSeparateBox: Server assigned ID $newId to new item $projectName');
-      }
-
-      final newItem = FahrversuchItem(
-        id: newId,
-        projectName: projectName,
-        toolNumber: toolNumber,
-        dayName: day, // Set to default day
-        tryoutIndex: tryoutIndex,
-        status: 'In Arbeit',
-        weekNumber: _selectedWeek,
-        year: _selectedYear, // Include year
-        imageUri: finalImageUri,
-        hasBeenMoved: false,
-        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
-        machineNumber:
-            _secondaryProjectsMap[toolNumber]?['extrudermain_id'] != null
-                ? _machineNumberMap[
-                    _secondaryProjectsMap[toolNumber]!['extrudermain_id']]
-                : null,
-      );
-
-      setState(() {
-        schedule[day]![tryoutIndex].add(newItem);
-        // === Push Add Action to History ===
-        _actionHistory.add(ScheduleAction.add(
-          item: newItem,
-          toDay: day,
-          toIndex: tryoutIndex,
-        ));
-      });
-      if (kDebugMode) {
-        print(
-            '++ _selectToolForSeparateBox: Added $projectName locally => day=$day, tryoutIndex=$tryoutIndex');
-      }
-    } catch (err) {
-      if (kDebugMode) {
-        print('!! _selectToolForSeparateBox: Error adding new item: $err');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Hinzufügen: $err')),
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  /// === New Method: Save User Preferences ===
   Future<void> _saveUserPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('selectedWeek', _selectedWeek);
       await prefs.setInt('selectedYear', _selectedYear);
-      if (kDebugMode) {
-        print(
-            '++ _saveUserPreferences: Preferences saved - Week: $_selectedWeek, Year: $_selectedYear');
-      }
     } catch (e) {
       if (kDebugMode) {
         print('!! _saveUserPreferences: Error saving preferences: $e');
@@ -292,297 +147,44 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  /// === New Method: Handle Drag Updates for Auto-Scroll ===
-  void _handleDragUpdate(DragUpdateDetails details) {
-    final position = details.globalPosition;
-    final size = MediaQuery.of(context).size;
-
-    // Define the edges threshold
-    final double edgeMargin = _autoScrollThreshold;
-
-    // === Vertical Auto-Scroll ===
-    if (position.dy < edgeMargin) {
-      // Near top, scroll up
-      if (_autoScrollVerticalTimer == null ||
-          !_autoScrollVerticalTimer!.isActive) {
-        _autoScrollVerticalTimer =
-            Timer.periodic(const Duration(milliseconds: 100), (timer) {
-          if (_verticalScrollCtrl.hasClients) {
-            final newOffset = _verticalScrollCtrl.offset - _autoScrollSpeed;
-            _verticalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _verticalScrollCtrl.position.minScrollExtent,
-                _verticalScrollCtrl.position.maxScrollExtent,
-              ),
-              duration: const Duration(milliseconds: 100),
-              curve: Curves.linear,
-            );
-          }
-        });
-      }
-    } else if (position.dy > size.height - edgeMargin) {
-      // Near bottom, scroll down
-      if (_autoScrollVerticalTimer == null ||
-          !_autoScrollVerticalTimer!.isActive) {
-        _autoScrollVerticalTimer =
-            Timer.periodic(const Duration(milliseconds: 100), (timer) {
-          if (_verticalScrollCtrl.hasClients) {
-            final newOffset = _verticalScrollCtrl.offset + _autoScrollSpeed;
-            _verticalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _verticalScrollCtrl.position.minScrollExtent,
-                _verticalScrollCtrl.position.maxScrollExtent,
-              ),
-              duration: const Duration(milliseconds: 100),
-              curve: Curves.linear,
-            );
-          }
-        });
-      }
-    } else {
-      // Not near vertical edges, cancel vertical scrolling
-      _autoScrollVerticalTimer?.cancel();
-      _autoScrollVerticalTimer = null;
-    }
-
-    // === Horizontal Auto-Scroll ===
-    if (position.dx < edgeMargin) {
-      // Near left, scroll left
-      if (_autoScrollHorizontalTimer == null ||
-          !_autoScrollHorizontalTimer!.isActive) {
-        _autoScrollHorizontalTimer =
-            Timer.periodic(const Duration(milliseconds: 100), (timer) {
-          if (_horizontalScrollCtrl.hasClients) {
-            final newOffset = _horizontalScrollCtrl.offset - _autoScrollSpeed;
-            _horizontalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _horizontalScrollCtrl.position.minScrollExtent,
-                _horizontalScrollCtrl.position.maxScrollExtent,
-              ),
-              duration: const Duration(milliseconds: 100),
-              curve: Curves.linear,
-            );
-          }
-        });
-      }
-    } else if (position.dx > size.width - edgeMargin) {
-      // Near right, scroll right
-      if (_autoScrollHorizontalTimer == null ||
-          !_autoScrollHorizontalTimer!.isActive) {
-        _autoScrollHorizontalTimer =
-            Timer.periodic(const Duration(milliseconds: 100), (timer) {
-          if (_horizontalScrollCtrl.hasClients) {
-            final newOffset = _horizontalScrollCtrl.offset + _autoScrollSpeed;
-            _horizontalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _horizontalScrollCtrl.position.minScrollExtent,
-                _horizontalScrollCtrl.position.maxScrollExtent,
-              ),
-              duration: const Duration(milliseconds: 100),
-              curve: Curves.linear,
-            );
-          }
-        });
-      }
-    } else {
-      // Not near horizontal edges, cancel horizontal scrolling
-      _autoScrollHorizontalTimer?.cancel();
-      _autoScrollHorizontalTimer = null;
-    }
-  }
-
-  /// === New Method: Handle Drag End to Cancel Auto-Scroll ===
-  void _handleDraggableDragEnd(DraggableDetails details) {
-    // Cancel auto-scroll timers
-    _autoScrollVerticalTimer?.cancel();
-    _autoScrollHorizontalTimer?.cancel();
-    _autoScrollVerticalTimer = null;
-    _autoScrollHorizontalTimer = null;
-
-    if (kDebugMode) {
-      print('++ _handleDraggableDragEnd: Drag ended for item.');
-    }
-  }
-
-  /// === New Method: Handle Gesture Drag End to Cancel Auto-Scroll ===
-  void _handleGestureDragEnd(DragEndDetails details) {
-    // Cancel auto-scroll timers
-    _autoScrollVerticalTimer?.cancel();
-    _autoScrollHorizontalTimer?.cancel();
-    _autoScrollVerticalTimer = null;
-    _autoScrollHorizontalTimer = null;
-
-    if (kDebugMode) {
-      print('++ _handleGestureDragEnd: Pan drag ended.');
-    }
-  }
-
-  /// === New Method: Prompt for PIN ===
-  Future<void> _promptForPIN() async {
-    String enteredPIN = '';
-    bool isError = false;
-
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false, // User must enter PIN
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('PIN eingeben'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    obscureText: true,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done, // Show 'Done' button
-                    decoration: const InputDecoration(
-                      labelText: 'PIN',
-                      prefixIcon: Icon(Icons.lock),
-                    ),
-                    onChanged: (value) {
-                      setStateDialog(() {
-                        enteredPIN = value;
-                        isError = false; // Reset error state on input change
-                      });
-                    },
-                    onSubmitted: (value) {
-                      // Trigger the same as pressing 'Entsperren'
-                      if (value == _correctPIN) {
-                        Navigator.of(context).pop(true);
-                      } else {
-                        setStateDialog(() {
-                          isError = true;
-                        });
-                      }
-                    },
-                  ),
-                  if (isError)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        'Falscher PIN. Bitte versuchen Sie es erneut.',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Abbrechen'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (enteredPIN == _correctPIN) {
-                      Navigator.of(context).pop(true);
-                    } else {
-                      setStateDialog(() {
-                        isError = true;
-                      });
-                    }
-                  },
-                  child: const Text('Entsperren'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (result == true) {
-      setState(() {
-        _editModeEnabled = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Editiermodus aktiviert')),
-      );
-    }
-  }
-
-  /// === Existing Methods ===
-
-  /// Fetch both secondary projects and machines, building their respective maps
+  // --------------------------------------------
+  //        FETCH & PREP MAPS
+  // --------------------------------------------
   Future<void> _fetchAndBuildMaps() async {
     try {
       setState(() => isLoading = true);
 
       // Fetch secondary projects
       final allTools = await ApiService.fetchSecondaryProjects();
-      if (kDebugMode) {
-        print(
-            '++ _fetchAndBuildMaps: Fetched ${allTools.length} secondary projects.');
-      }
-
       _secondaryProjectsMap.clear();
       for (var tool in allTools) {
         final number = tool['number'];
-        final extrudermainIdRaw = tool['extrudermain_id'];
         int? extrudermainId;
-
-        // Ensure extrudermain_id is an integer
-        if (extrudermainIdRaw is int) {
-          extrudermainId = extrudermainIdRaw;
-        } else if (extrudermainIdRaw is String) {
-          extrudermainId = int.tryParse(extrudermainIdRaw);
-        } else {
-          extrudermainId = null;
+        if (tool['extrudermain_id'] is int) {
+          extrudermainId = tool['extrudermain_id'];
+        } else if (tool['extrudermain_id'] is String) {
+          extrudermainId = int.tryParse(tool['extrudermain_id']);
         }
-
         if (number != null && extrudermainId != null) {
           _secondaryProjectsMap[number] = Map<String, dynamic>.from(tool);
           _secondaryProjectsMap[number]!['extrudermain_id'] = extrudermainId;
-        } else {
-          if (kDebugMode) {
-            print(
-                '!! _fetchAndBuildMaps: Tool missing number or extrudermain_id: $tool');
-          }
         }
       }
 
       // Fetch machines
       final machines = await ApiService.fetchMachines();
-      if (kDebugMode) {
-        print('++ _fetchAndBuildMaps: Fetched ${machines.length} machines.');
-      }
-
       _machineNumberMap.clear();
       for (var machine in machines) {
-        final idRaw = machine['id'];
-        final number = machine['salamandermachinepitch'];
-
         int? id;
-        if (idRaw is int) {
-          id = idRaw;
-        } else if (idRaw is String) {
-          id = int.tryParse(idRaw);
-        } else {
-          id = null;
+        if (machine['id'] is int) {
+          id = machine['id'];
+        } else if (machine['id'] is String) {
+          id = int.tryParse(machine['id']);
         }
-
+        final number = machine['salamandermachinepitch'];
         if (id != null && number != null) {
-          if (_machineNumberMap.containsKey(id)) {
-            if (kDebugMode) {
-              print(
-                  '!! _fetchAndBuildMaps: Duplicate machine id detected: $id. Overwriting previous entry.');
-            }
-          }
           _machineNumberMap[id] = number;
-        } else {
-          if (kDebugMode) {
-            print(
-                '!! _fetchAndBuildMaps: Machine missing id or number: $machine');
-          }
         }
-      }
-
-      if (kDebugMode) {
-        print(
-            '++ _fetchAndBuildMaps: _machineNumberMap populated with ${_machineNumberMap.length} entries.');
-        print(
-            '++ _secondaryProjectsMap populated with ${_secondaryProjectsMap.length} entries.');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -597,128 +199,31 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  /// Checks if a given year has 53 weeks based on ISO-8601 standards.
-  bool _has53Weeks(int year) {
-    // ISO week date system: a year has 53 weeks if:
-    // - January 1st is a Thursday, or
-    // - It's a leap year and January 1st is a Wednesday
-    final jan1 = DateTime(year, 1, 1);
-    final thursday = jan1.weekday == DateTime.thursday;
-    final wednesday = jan1.weekday == DateTime.wednesday;
-    final leapYear = _isLeapYear(year);
-
-    return thursday || (leapYear && wednesday);
-  }
-
-  /// Determines if a given year is a leap year.
-  bool _isLeapYear(int year) {
-    if (year % 4 != 0) return false;
-    if (year % 100 != 0) return true;
-    if (year % 400 != 0) return false;
-    return true;
-  }
-
-  /// Returns the ISO-8601 week number (1..53).
-  int _isoWeekNumber(DateTime date) {
-    // Move date to the Thursday of the same week
-    final thursday = date.add(Duration(days: 4 - (date.weekday % 7)));
-    // Find the first Thursday of that year
-    DateTime firstThursday = DateTime(thursday.year, 1, 1);
-    while (firstThursday.weekday != DateTime.thursday) {
-      firstThursday = firstThursday.add(const Duration(days: 1));
-    }
-    // The difference in days / 7 => week
-    final diff = thursday.difference(firstThursday).inDays;
-    return (diff ~/ 7) + 1;
-  }
-
-  void _initializeEmptySchedule() {
-    schedule.clear();
-    for (var day in days) {
-      // Initialize grid tryouts (0 to tryouts.length - 1)
-      schedule[day] = List.generate(
-        tryouts.length + 2, // +2 for the extra drop boxes
-        (_) => <FahrversuchItem>[],
-      );
-
-      if (kDebugMode) {
-        print('++ schedule[$day].length = ${schedule[day]!.length}');
-      }
-    }
-    if (kDebugMode) {
-      print(
-          '++ _initializeEmptySchedule: Cleared and created empty lists for each day.');
-    }
-  }
-
-  /// Convert "ikoffice:/docustore/3/Project/17514/..." to "docustore/download/Project/17514/..."
-  String? _parseIkOfficeUri(String? raw) {
-    if (raw == null || raw.isEmpty) return null;
-
-    // Example raw: "ikoffice:/docustore/3/Project/17514/Bild%20aus%20Zwischenablage.png"
-    const prefix = 'ikoffice:/docustore/3/';
-    if (!raw.startsWith(prefix)) {
-      // If format isn't as expected, either return null or handle differently
-      if (kDebugMode) {
-        print(
-            '!! _parseIkOfficeUri: URI does not start with expected prefix: $raw');
-      }
-      return null;
-    }
-    // everything after "ikoffice:/docustore/3/" -> "Project/17514/Bild%20aus%20Zwischenablage.png"
-    final partial = raw.substring(prefix.length);
-
-    // final path -> "docustore/download/Project/17514/Bild%20aus%20Zwischenablage.png"
-    return 'docustore/download/$partial';
-  }
-
+  // --------------------------------------------
+  //        FETCH SCHEDULE FOR WEEK/YEAR
+  // --------------------------------------------
   Future<void> _fetchDataForWeek(int weekNumber, int year) async {
     setState(() => isLoading = true);
-    if (kDebugMode) {
-      print(
-          '++ _fetchDataForWeek: Fetching data for week=$weekNumber, year=$year...');
-    }
-
     try {
       final result =
           await ApiService.fetchEinfahrPlan(week: weekNumber, year: year);
-      if (kDebugMode) {
-        print('++ _fetchDataForWeek: Received ${result.length} items from API');
-      }
-
       _initializeEmptySchedule();
 
       for (var row in result) {
-        if (kDebugMode) {
-          print('++ _fetchDataForWeek: Row data: $row');
-        }
-
-        // Extract or lookup extrudermain_id
         int? extrudermainId = row['extrudermain_id'];
         final toolNumber = row['tool_number'];
-
         if (extrudermainId == null && toolNumber != null) {
           extrudermainId =
               _secondaryProjectsMap[toolNumber]?['extrudermain_id'];
-          if (kDebugMode) {
-            print(
-                '++ _fetchDataForWeek: Fetched extrudermain_id=$extrudermainId for tool=$toolNumber');
-          }
         }
 
-        // Lookup machineNumber
+        // Machine
         String? machineNumber;
         if (extrudermainId != null) {
           machineNumber = _machineNumberMap[extrudermainId];
-          if (machineNumber == null && kDebugMode) {
-            if (kDebugMode) {
-              print(
-                  '!! _fetchDataForWeek: extrudermain_id $extrudermainId not found in _machineNumberMap');
-            }
-          }
         }
 
-        // Process image URI
+        // Image
         String? rowImageUri = row['imageuri'] as String?;
         if ((rowImageUri == null || rowImageUri.isEmpty) &&
             toolNumber != null) {
@@ -726,18 +231,17 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         }
         final finalImageUri = _parseIkOfficeUri(rowImageUri);
 
-        // Build FahrversuchItem
         final item = FahrversuchItem(
           id: row['id'],
           projectName: row['project_name'],
-          toolNumber: row['tool_number'],
+          toolNumber: toolNumber,
           dayName: row['day_name'] ?? 'Montag',
           tryoutIndex: row['tryout_index'] ?? 0,
           status: row['status'] ?? 'In Arbeit',
           weekNumber: row['week_number'] ?? weekNumber,
-          year: row['year'] is int
+          year: (row['year'] is int)
               ? row['year']
-              : int.tryParse(row['year'].toString()) ?? year, // Ensure integer
+              : int.tryParse('${row['year']}') ?? year,
           imageUri: finalImageUri,
           hasBeenMoved: row['has_been_moved'] == 1,
           extrudermainId: extrudermainId,
@@ -753,25 +257,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             ? item.tryoutIndex
             : 0;
 
-        if (extrudermainId != null && machineNumber == null) {
-          if (kDebugMode) {
-            print(
-                '!! _fetchDataForWeek: extrudermain_id $extrudermainId has no corresponding machineNumber.');
-          }
-          // Optionally, handle this case by assigning a default machine number or flagging the item
-        }
-
         schedule[validDay]![validTryIndex].add(item);
 
-        // After adding to schedule, attempt to load the image
+        // Download image if present
         if (item.imageUri != null) {
           _downloadItemImage(item);
         }
-      }
-
-      if (kDebugMode) {
-        print(
-            '++ _fetchDataForWeek: Placed all items in schedule for week=$weekNumber, year=$year');
       }
     } catch (err) {
       if (kDebugMode) {
@@ -785,41 +276,28 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  // Move item within the same week (drag-and-drop)
+  void _initializeEmptySchedule() {
+    schedule.clear();
+    for (var day in days) {
+      // +2 to accommodate the two special boxes if storing in same structure
+      schedule[day] =
+          List.generate(tryouts.length + 2, (_) => <FahrversuchItem>[]);
+    }
+  }
+
+  // --------------------------------------------
+  //        ITEM ACTIONS: MOVE / ADD / DELETE
+  // --------------------------------------------
   Future<void> _moveItem(
-    FahrversuchItem item,
-    String newDay,
-    int newTryIndex,
-  ) async {
+      FahrversuchItem item, String newDay, int newTryIndex) async {
     final oldDay = item.dayName;
     final oldTryIndex = item.tryoutIndex;
-    final oldWeek = item.weekNumber;
-    final oldYear = item.year;
-
-    if (kDebugMode) {
-      print(
-          '++ _moveItem: Moving ${item.projectName} from $oldDay/$oldTryIndex to $newDay/$newTryIndex');
-      print('++ schedule[$oldDay].length = ${schedule[oldDay]?.length}');
-    }
-
-    if (newTryIndex >= tryouts.length + 2 || newTryIndex < 0) {
-      if (kDebugMode) {
-        print(
-            '!! _moveItem: Invalid newTryIndex $newTryIndex for tryouts.length ${tryouts.length}');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ungültiger Versuch-Index: $newTryIndex')),
-      );
-      return;
-    }
-
     setState(() {
       schedule[oldDay]![oldTryIndex].remove(item);
       item.dayName = newDay;
       item.tryoutIndex = newTryIndex;
       schedule[newDay]![newTryIndex].add(item);
 
-      // === Push Move Action to History ===
       _actionHistory.add(ScheduleAction.move(
         item: item,
         fromDay: oldDay,
@@ -837,26 +315,18 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         dayName: item.dayName,
         tryoutIndex: item.tryoutIndex,
         status: item.status,
-        weekNumber: oldWeek,
-        year: oldYear, // Include year
+        weekNumber: item.weekNumber,
+        year: item.year,
         hasBeenMoved: false,
-        extrudermainId: item.extrudermainId, // Pass extrudermainId
+        extrudermainId: item.extrudermainId,
       );
-
-      if (kDebugMode) {
-        print('++ _moveItem: Update success on server for ${item.projectName}');
-      }
     } catch (err) {
-      if (kDebugMode) {
-        print('!! _moveItem: Error updating: $err. Reverting local state.');
-      }
+      // Revert on error
       setState(() {
         schedule[newDay]![newTryIndex].remove(item);
         item.dayName = oldDay;
         item.tryoutIndex = oldTryIndex;
         schedule[oldDay]![oldTryIndex].add(item);
-
-        // Remove the last action as it failed
         _actionHistory.removeLast();
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -865,50 +335,22 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  // Move item to a specific tryout index (for the new drop targets)
   Future<void> _moveItemToTryout(
       FahrversuchItem item, int targetTryoutIndex) async {
-    final oldDay = item.dayName;
-    final oldTryIndex = item.tryoutIndex;
-
-    if (kDebugMode) {
-      print(
-          '++ _moveItemToTryout: Moving ${item.projectName} from $oldDay/$oldTryIndex to tryoutIndex $targetTryoutIndex');
-      print('++ schedule[$oldDay].length = ${schedule[oldDay]?.length}');
-    }
-
-    // Check if the target index is valid in the schedule
-    if (targetTryoutIndex >= schedule[oldDay]!.length ||
-        targetTryoutIndex < 0) {
-      if (kDebugMode) {
-        print(
-            '!! _moveItemToTryout: Invalid targetTryoutIndex $targetTryoutIndex for schedule[$oldDay].length ${schedule[oldDay]!.length}');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Ungültiger Zielversuch-Index: $targetTryoutIndex')),
-      );
-      return;
-    }
-
+    final day = item.dayName;
+    final oldIndex = item.tryoutIndex;
     setState(() {
-      // Remove item from its old location
-      schedule[oldDay]![oldTryIndex].remove(item);
-      // Update item's index
+      schedule[day]![oldIndex].remove(item);
       item.tryoutIndex = targetTryoutIndex;
-      // Add item to the new location
-      schedule[oldDay]![targetTryoutIndex].add(item);
-
-      // === Push Move Action to History ===
+      schedule[day]![targetTryoutIndex].add(item);
       _actionHistory.add(ScheduleAction.move(
         item: item,
-        fromDay: oldDay,
-        fromIndex: oldTryIndex,
-        toDay: oldDay, // Assuming same day; adjust if different
+        fromDay: day,
+        fromIndex: oldIndex,
+        toDay: day,
         toIndex: targetTryoutIndex,
       ));
     });
-
     try {
       await ApiService.updateEinfahrPlan(
         id: item.id,
@@ -920,24 +362,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         weekNumber: item.weekNumber,
         year: item.year,
         hasBeenMoved: false,
-        extrudermainId: item.extrudermainId, // Pass extrudermainId
+        extrudermainId: item.extrudermainId,
       );
-      if (kDebugMode) {
-        print(
-            '++ _moveItemToTryout: Update success on server for ${item.projectName}');
-      }
     } catch (err) {
-      if (kDebugMode) {
-        print(
-            '!! _moveItemToTryout: Error updating: $err. Reverting local state.');
-      }
+      // revert
       setState(() {
-        // Revert changes if the server update fails
-        schedule[oldDay]![targetTryoutIndex].remove(item);
-        item.tryoutIndex = oldTryIndex;
-        schedule[oldDay]![oldTryIndex].add(item);
-
-        // Remove the last action as it failed
+        schedule[day]![targetTryoutIndex].remove(item);
+        item.tryoutIndex = oldIndex;
+        schedule[day]![oldIndex].add(item);
         _actionHistory.removeLast();
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -946,13 +378,87 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  // Show the edit dialog: status or shift item to next KW
-  Future<void> _editItemDialog(FahrversuchItem item) async {
-    if (kDebugMode) {
-      print(
-          '++ _editItemDialog: Editing item ${item.projectName} with status=${item.status}');
-    }
+  /// Insert new item from secondaryProjects directly into a day cell
+  Future<void> _selectToolForCell(String day, int tryIndex) async {
+    setState(() => isLoading = true);
+    try {
+      final allTools = await ApiService.fetchSecondaryProjects();
+      if (allTools.isEmpty) return;
 
+      final selectedTool = await _showToolSelectionDialog(context, allTools);
+      if (selectedTool == null) return;
+
+      final projectName = selectedTool['name'] ?? 'Unbenannt';
+      final toolNumber = selectedTool['number'] ?? '';
+      final finalImageUri =
+          _parseIkOfficeUri(selectedTool['imageuri'] as String?);
+
+      final response = await ApiService.updateEinfahrPlan(
+        id: null,
+        projectName: projectName,
+        toolNumber: toolNumber,
+        dayName: day,
+        tryoutIndex: tryIndex,
+        status: 'In Arbeit',
+        weekNumber: _selectedWeek,
+        year: _selectedYear,
+        hasBeenMoved: false,
+        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
+      );
+      final newId = response['newId'];
+      if (newId == null) throw Exception('No newId returned from server.');
+
+      final newItem = FahrversuchItem(
+        id: newId,
+        projectName: projectName,
+        toolNumber: toolNumber,
+        dayName: day,
+        tryoutIndex: tryIndex,
+        status: 'In Arbeit',
+        weekNumber: _selectedWeek,
+        year: _selectedYear,
+        imageUri: finalImageUri,
+        hasBeenMoved: false,
+        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
+        machineNumber:
+            _secondaryProjectsMap[toolNumber]?['extrudermain_id'] != null
+                ? _machineNumberMap[
+                    _secondaryProjectsMap[toolNumber]!['extrudermain_id']]
+                : null,
+      );
+
+      setState(() {
+        schedule[day]![tryIndex].add(newItem);
+        _actionHistory.add(ScheduleAction.add(
+          item: newItem,
+          toDay: day,
+          toIndex: tryIndex,
+        ));
+      });
+
+      if (newItem.imageUri != null) {
+        _downloadItemImage(newItem);
+      }
+    } catch (err) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Hinzufügen: $err')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  /// Same logic as `_selectToolForCell` but used for the "boxes" on the right
+  Future<void> _addToSeparateBox(int tryoutIndex) async {
+    // We'll just store them in e.g. "Montag" at that index
+    const day = 'Montag';
+    await _selectToolForCell(day, tryoutIndex);
+  }
+
+  // --------------------------------------------
+  //        EDIT (STATUS DIALOG, MOVE WEEK, ETC)
+  // --------------------------------------------
+  Future<void> _editItemDialog(FahrversuchItem item) async {
     final oldStatus = item.status;
     final statuses = ["In Arbeit", "In Änderung", "Erledigt"];
     String selectedStatus = oldStatus;
@@ -962,48 +468,42 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       builder: (context) {
         return AlertDialog(
           title: Text('${item.projectName} bearbeiten'),
-          content: StatefulBuilder(
-            builder: (context, setStateDialog) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Radio statuses
-                  for (var st in statuses)
-                    RadioListTile<String>(
-                      title: Text(st),
-                      value: st,
-                      groupValue: selectedStatus,
-                      onChanged: (val) {
-                        if (val != null) {
-                          setStateDialog(() => selectedStatus = val);
-                        }
-                      },
-                    ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Schiebe in nächste Kalenderwoche'),
-                    onPressed: () => Navigator.pop(context, 'nextWeek'),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.close),
-                    label: const Text('Fahrversuch nicht durchgeführt'),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueGrey),
-                    onPressed: () => Navigator.pop(context, 'notConducted'),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.delete),
-                    label: const Text('Löschen'),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent),
-                    onPressed: () => Navigator.pop(context, 'delete'),
-                  ),
-                ],
-              );
-            },
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var st in statuses)
+                RadioListTile<String>(
+                  title: Text(st),
+                  value: st,
+                  groupValue: selectedStatus,
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => selectedStatus = val);
+                    }
+                  },
+                ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.arrow_forward),
+                label: const Text('Schiebe in nächste Kalenderwoche'),
+                onPressed: () => Navigator.pop(context, 'nextWeek'),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.close),
+                label: const Text('Fahrversuch nicht durchgeführt'),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+                onPressed: () => Navigator.pop(context, 'notConducted'),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.delete),
+                label: const Text('Löschen'),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                onPressed: () => Navigator.pop(context, 'delete'),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -1019,25 +519,18 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       },
     );
 
-    if (result == null) {
-      if (kDebugMode) {
-        print('++ _editItemDialog: User canceled for ${item.projectName}');
-      }
-      return;
-    }
+    if (result == null) return;
 
     if (result == 'delete') {
-      await _confirmDeleteItem(item); // Use confirmation dialog
+      await _confirmDeleteItem(item);
       return;
     }
-
     if (result == 'nextWeek') {
       await _moveToNextWeek(item);
       return;
     }
-
     if (result == 'notConducted') {
-      // Mark as not conducted by setting hasBeenMoved to true and status accordingly
+      final oldHasBeenMoved = item.hasBeenMoved;
       setState(() {
         item.hasBeenMoved = true;
         item.status = 'Nicht durchgeführt';
@@ -1052,15 +545,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           status: item.status,
           weekNumber: item.weekNumber,
           year: item.year,
-          hasBeenMoved: true, // Mark as moved to indicate it's been handled
+          hasBeenMoved: true,
           extrudermainId: item.extrudermainId,
         );
-        if (kDebugMode) {
-          print(
-              '++ _editItemDialog: Marked as not conducted on server for ${item.projectName}');
-        }
-
-        // === Push Move Action to History ===
         _actionHistory.add(ScheduleAction.move(
           item: item,
           fromDay: item.dayName,
@@ -1069,13 +556,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           toIndex: item.tryoutIndex,
         ));
       } catch (err) {
-        if (kDebugMode) {
-          print(
-              '!! _editItemDialog: Error marking as not conducted for ${item.projectName}: $err');
-        }
         setState(() {
-          // Revert changes if the server update fails
-          item.hasBeenMoved = false;
+          item.hasBeenMoved = oldHasBeenMoved;
           item.status = oldStatus;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1085,7 +567,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       return;
     }
 
-    // Update the status if changed
+    // If user changed status
     if (result != oldStatus) {
       setState(() => item.status = result);
       try {
@@ -1101,12 +583,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           hasBeenMoved: false,
           extrudermainId: item.extrudermainId,
         );
-        if (kDebugMode) {
-          print(
-              '++ _editItemDialog: Status updated on server for ${item.projectName}');
-        }
-
-        // === Push Move Action to History ===
         _actionHistory.add(ScheduleAction.move(
           item: item,
           fromDay: item.dayName,
@@ -1115,10 +591,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           toIndex: item.tryoutIndex,
         ));
       } catch (err) {
-        if (kDebugMode) {
-          print(
-              '!! _editItemDialog: Error setting newStatus for ${item.projectName}: $err');
-        }
         setState(() => item.status = oldStatus);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Fehler beim Setzen von $result: $err')),
@@ -1127,7 +599,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  /// === New Method: Confirm Delete Item ===
   Future<void> _confirmDeleteItem(FahrversuchItem item) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -1148,7 +619,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         );
       },
     );
-
     if (confirm == true) {
       await _deleteItem(item);
     }
@@ -1156,28 +626,16 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
   Future<void> _deleteItem(FahrversuchItem item) async {
     try {
-      // Call the backend to mark the item as deleted
       await ApiService.deleteEinfahrPlan(item.id);
-
-      // Remove the item from the local schedule
       setState(() {
         schedule[item.dayName]![item.tryoutIndex].remove(item);
-        // === Push Delete Action to History ===
         _actionHistory.add(ScheduleAction.delete(
           item: item,
           fromDay: item.dayName,
           fromIndex: item.tryoutIndex,
         ));
       });
-
-      if (kDebugMode) {
-        print(
-            '++ _deleteItem: Successfully marked as deleted ${item.projectName}');
-      }
     } catch (err) {
-      if (kDebugMode) {
-        print('!! _deleteItem: Error marking item as deleted: $err');
-      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Fehler beim Löschen: $err')),
       );
@@ -1188,13 +646,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     final oldWeek = item.weekNumber;
     final oldYear = item.year;
     final newWeek = oldWeek + 1;
-    final has53Weeks = _has53Weeks(oldYear);
-    final maxWeeks = has53Weeks ? 53 : 52;
-    final newYear = (newWeek > maxWeeks) ? oldYear + 1 : oldYear;
+    final has53 = _has53Weeks(oldYear);
+    final maxWeeks = has53 ? 53 : 52;
+    final maybeNewYear = (newWeek > maxWeeks) ? oldYear + 1 : oldYear;
     final finalNewWeek = (newWeek > maxWeeks) ? 1 : newWeek;
 
     try {
-      // Step 1: Update the old item to mark it as moved on the server
+      // 1) Mark old item as moved
       await ApiService.updateEinfahrPlan(
         id: item.id,
         projectName: item.projectName,
@@ -1202,18 +660,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         dayName: item.dayName,
         tryoutIndex: item.tryoutIndex,
         status: item.status,
-        weekNumber: oldWeek,
-        year: oldYear, // Include year
-        hasBeenMoved: true, // Set the flag to true
-        extrudermainId: item.extrudermainId, // Pass extrudermainId
+        weekNumber: item.weekNumber,
+        year: item.year,
+        hasBeenMoved: true,
+        extrudermainId: item.extrudermainId,
       );
-
-      // Step 2: Update the local item's hasBeenMoved flag
-      setState(() {
-        item.hasBeenMoved = true;
-      });
-
-      // === Push Move Action to History ===
+      setState(() => item.hasBeenMoved = true);
       _actionHistory.add(ScheduleAction.move(
         item: item,
         fromDay: item.dayName,
@@ -1222,26 +674,22 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         toIndex: item.tryoutIndex,
       ));
 
-      // Step 3: Insert a new copy in the database for the next week
+      // 2) Insert a new copy for the next week
       final response = await ApiService.updateEinfahrPlan(
-        id: null, // Correct: No id to trigger insert
+        id: null,
         projectName: item.projectName,
         toolNumber: item.toolNumber,
         dayName: item.dayName,
         tryoutIndex: item.tryoutIndex,
         status: item.status,
-        weekNumber: finalNewWeek, // Correct: New week
-        year: newYear, // Correct: New year
+        weekNumber: finalNewWeek,
+        year: maybeNewYear,
         hasBeenMoved: false,
         extrudermainId: item.extrudermainId,
       );
-
       final newId = response['newId'];
-      if (newId == null) {
-        throw Exception('No newId returned from server.');
-      }
+      if (newId == null) throw Exception('No newId returned from server.');
 
-      // Step 4: Create and add the new item locally
       final newItem = FahrversuchItem(
         id: newId,
         projectName: item.projectName,
@@ -1250,23 +698,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         tryoutIndex: item.tryoutIndex,
         status: item.status,
         weekNumber: finalNewWeek,
-        year: newYear, // New year
+        year: maybeNewYear,
         imageUri: item.imageUri,
         hasBeenMoved: false,
         extrudermainId: item.extrudermainId,
         machineNumber: item.machineNumber,
       );
-
       setState(() {
         schedule[item.dayName]![item.tryoutIndex].add(newItem);
       });
-
-      if (kDebugMode) {
-        print(
-            '++ _moveToNextWeek: Successfully copied to week $finalNewWeek, year $newYear');
-      }
-
-      // Download image for the new item
       if (newItem.imageUri != null) {
         _downloadItemImage(newItem);
       }
@@ -1280,183 +720,69 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
   }
 
-  // Insert new item from secondaryProjects
-  Future<void> _selectToolForCell(String day, int tryIndex) async {
-    setState(() => isLoading = true);
-    if (kDebugMode) {
-      print(
-          '++ _selectToolForCell: Loading secondary projects for day=$day, tryIndex=$tryIndex');
-    }
-
-    List<Map<String, dynamic>> allTools = [];
-    try {
-      allTools = await ApiService.fetchSecondaryProjects();
-      if (kDebugMode) {
-        print(
-            '++ _selectToolForCell: Received ${allTools.length} tools from secondary API');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('!! _selectToolForCell: Error fetching secondary: $e');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Laden der Tools: $e')),
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
-
-    if (allTools.isEmpty) return;
-
-    final selectedTool = await _showToolSelectionDialog(context, allTools);
-    if (selectedTool == null) {
-      if (kDebugMode) {
-        print('++ _selectToolForCell: User canceled picking a tool');
-      }
-      return;
-    }
-
-    final projectName = selectedTool['name'] ?? 'Unbenannt';
-    final toolNumber = selectedTool['number'] ?? '';
-    // Convert the "ikoffice:/docustore..." to "docustore/download/...":
-    final finalImageUri =
-        _parseIkOfficeUri(selectedTool['imageuri'] as String?);
-
-    if (kDebugMode) {
-      print(
-          '++ _selectToolForCell: Creating new item => name:$projectName, number:$toolNumber, imageUri:$finalImageUri');
-    }
-
-    setState(() => isLoading = true);
-    try {
-      final response = await ApiService.updateEinfahrPlan(
-        id: null,
-        projectName: projectName,
-        toolNumber: toolNumber,
-        dayName: day,
-        tryoutIndex: tryIndex,
-        status: 'In Arbeit',
-        weekNumber: _selectedWeek,
-        year: _selectedYear, // Include year
-        hasBeenMoved: false,
-        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
-      );
-
-      final newId = response['newId'];
-      if (newId == null) {
-        throw Exception('No newId returned from server.');
-      }
-      if (kDebugMode) {
-        print(
-            '++ _selectToolForCell: Server assigned ID $newId to new item $projectName');
-      }
-
-      final newItem = FahrversuchItem(
-        id: newId,
-        projectName: projectName,
-        toolNumber: toolNumber,
-        dayName: day,
-        tryoutIndex: tryIndex,
-        status: 'In Arbeit',
-        weekNumber: _selectedWeek,
-        year: _selectedYear, // Include year
-        imageUri: finalImageUri,
-        hasBeenMoved: false,
-        extrudermainId: _secondaryProjectsMap[toolNumber]?['extrudermain_id'],
-        machineNumber:
-            _secondaryProjectsMap[toolNumber]?['extrudermain_id'] != null
-                ? _machineNumberMap[
-                    _secondaryProjectsMap[toolNumber]!['extrudermain_id']]
-                : null,
-      );
-
-      setState(() {
-        schedule[day]![tryIndex].add(newItem);
-        // === Push Add Action to History ===
-        _actionHistory.add(ScheduleAction.add(
-          item: newItem,
-          toDay: day,
-          toIndex: tryIndex,
-        ));
-      });
-      if (kDebugMode) {
-        print(
-            '++ _selectToolForCell: Added $projectName locally => day=$day, tryoutIndex=$tryIndex');
-      }
-
-      // Download image for the new item
-      if (newItem.imageUri != null) {
-        _downloadItemImage(newItem);
-      }
-    } catch (err) {
-      if (kDebugMode) {
-        print('!! _selectToolForCell: Error adding new item: $err');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Hinzufügen: $err')),
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
+  // --------------------------------------------
+  //        UTILITY METHODS
+  // --------------------------------------------
+  bool _isLeapYear(int year) {
+    if (year % 4 != 0) return false;
+    if (year % 100 != 0) return true;
+    if (year % 400 != 0) return false;
+    return true;
   }
 
-  /// Download image from docustore
-  Future<File?> _downloadItemImage(FahrversuchItem item) async {
-    final uri = item.imageUri;
-    if (uri == null || uri.isEmpty) {
-      if (kDebugMode) {
-        print(
-            '!! _downloadItemImage: No imageUri for ${item.projectName}, skipping...');
-      }
+  bool _has53Weeks(int year) {
+    final jan1 = DateTime(year, 1, 1);
+    final thursday = jan1.weekday == DateTime.thursday;
+    final wednesday = jan1.weekday == DateTime.wednesday;
+    final leapYear = _isLeapYear(year);
+    return thursday || (leapYear && wednesday);
+  }
+
+  int _isoWeekNumber(DateTime date) {
+    // move to the thursday of this week
+    final thursday = date.add(Duration(days: 4 - (date.weekday % 7)));
+    // find first thursday of that year
+    DateTime firstThursday = DateTime(thursday.year, 1, 1);
+    while (firstThursday.weekday != DateTime.thursday) {
+      firstThursday = firstThursday.add(const Duration(days: 1));
+    }
+    final diff = thursday.difference(firstThursday).inDays;
+    return (diff ~/ 7) + 1;
+  }
+
+  /// Convert "ikoffice:/docustore/3/Project/1234/..." to "docustore/download/Project/1234/..."
+  String? _parseIkOfficeUri(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    const prefix = 'ikoffice:/docustore/3/';
+    if (!raw.startsWith(prefix)) {
       return null;
     }
+    final partial = raw.substring(prefix.length);
+    return 'docustore/download/$partial';
+  }
 
-    if (kDebugMode) {
-      print(
-          '++ _downloadItemImage: Attempting to download for ${item.projectName}, path="$uri"');
-    }
-
+  Future<File?> _downloadItemImage(FahrversuchItem item) async {
+    final uri = item.imageUri;
+    if (uri == null || uri.isEmpty) return null;
     try {
-      // Check if the image already exists
       final imagePath = await item.getUniqueImagePath();
       final imageFile = File(imagePath);
       if (await imageFile.exists()) {
-        if (kDebugMode) {
-          print(
-              '++ _downloadItemImage: Image already exists locally for ${item.projectName}');
-        }
-        setState(() {
-          item.localImagePath = imagePath;
-        });
+        setState(() => item.localImagePath = imagePath);
         return imageFile;
       }
-
-      // Download the image using the modified ApiService method
       final downloadedFile =
           await ApiService.downloadIkofficeFile(uri, imagePath);
-
       if (downloadedFile != null) {
-        if (kDebugMode) {
-          print(
-              '++ _downloadItemImage: Download succeeded for ${item.projectName}, local path: ${downloadedFile.path}');
-        }
-        setState(() {
-          item.localImagePath = downloadedFile.path;
-        });
-      } else {
-        if (kDebugMode) {
-          print(
-              '!! _downloadItemImage: Download failed or returned null for ${item.projectName}.');
-        }
+        setState(() => item.localImagePath = downloadedFile.path);
+        return downloadedFile;
       }
-      return downloadedFile;
     } catch (e) {
       if (kDebugMode) {
-        print(
-            '!! _downloadItemImage: Error downloading image for ${item.projectName}: $e');
+        print('!! _downloadItemImage: Error downloading image: $e');
       }
-      return null;
     }
+    return null;
   }
 
   Future<Map<String, dynamic>?> _showToolSelectionDialog(
@@ -1486,15 +812,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                       ),
                       onChanged: (value) {
                         setStateDialog(() {
-                          filteredTools = allTools
-                              .where((tool) =>
-                                  (tool['name'] ?? '')
-                                      .toLowerCase()
-                                      .contains(value.toLowerCase()) ||
-                                  (tool['number'] ?? '')
-                                      .toLowerCase()
-                                      .contains(value.toLowerCase()))
-                              .toList();
+                          filteredTools = allTools.where((tool) {
+                            final name = (tool['name'] ?? '').toLowerCase();
+                            final number = (tool['number'] ?? '').toLowerCase();
+                            final query = value.toLowerCase();
+                            return name.contains(query) ||
+                                number.contains(query);
+                          }).toList();
                         });
                       },
                     ),
@@ -1502,13 +826,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                     Expanded(
                       child: filteredTools.isNotEmpty
                           ? ListView.builder(
-                              shrinkWrap: true,
                               itemCount: filteredTools.length,
                               itemBuilder: (context, index) {
                                 final tool = filteredTools[index];
                                 final toolTitle = tool['number'] ?? 'Unbenannt';
                                 final toolSubtitle = tool['name'] ?? 'N/A';
-
                                 return ListTile(
                                   title: Text(toolTitle),
                                   subtitle: Text(toolSubtitle),
@@ -1530,798 +852,246 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (kDebugMode) {
-      print(
-          '++ build: isLoading=$isLoading, _selectedWeek=$_selectedWeek, _editModeEnabled=$_editModeEnabled');
+  // --------------------------------------------
+  //        AUTO-SCROLL METHODS
+  // --------------------------------------------
+  void _handleDragUpdate(DragUpdateDetails details) {
+    final position = details.globalPosition;
+    final size = MediaQuery.of(context).size;
+    final edgeMargin = _autoScrollThreshold;
+
+    // Vertical
+    if (position.dy < edgeMargin) {
+      if (_autoScrollVerticalTimer == null ||
+          !_autoScrollVerticalTimer!.isActive) {
+        _autoScrollVerticalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_verticalScrollCtrl.hasClients) {
+            final newOffset = _verticalScrollCtrl.offset - _autoScrollSpeed;
+            _verticalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _verticalScrollCtrl.position.minScrollExtent,
+                _verticalScrollCtrl.position.maxScrollExtent,
+              ),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else if (position.dy > size.height - edgeMargin) {
+      if (_autoScrollVerticalTimer == null ||
+          !_autoScrollVerticalTimer!.isActive) {
+        _autoScrollVerticalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_verticalScrollCtrl.hasClients) {
+            final newOffset = _verticalScrollCtrl.offset + _autoScrollSpeed;
+            _verticalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _verticalScrollCtrl.position.minScrollExtent,
+                _verticalScrollCtrl.position.maxScrollExtent,
+              ),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else {
+      _autoScrollVerticalTimer?.cancel();
+      _autoScrollVerticalTimer = null;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Einfahr Planer'),
-        actions: [
-          // === Undo Button ===
-          IconButton(
-            icon: const Icon(Icons.undo),
-            tooltip: 'Rückgängig',
-            onPressed: _actionHistory.isNotEmpty ? _undoLastAction : null,
-            color: _actionHistory.isNotEmpty ? Colors.white : Colors.grey,
-          ),
-
-          // === Existing IconButton for Unlocking Edit Mode ===
-          IconButton(
-            icon: Icon(
-              _editModeEnabled ? Icons.lock_open : Icons.lock,
-              color: _editModeEnabled ? Colors.greenAccent : Colors.white,
-            ),
-            tooltip: _editModeEnabled
-                ? 'Editiermodus aktiv'
-                : 'Editiermodus entsperren',
-            onPressed: () {
-              if (!_editModeEnabled) {
-                _promptForPIN();
-              } else {
-                // Optionally, allow locking again
-                setState(() {
-                  _editModeEnabled = false;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Editiermodus deaktiviert')),
-                );
-              }
-            },
-          ),
-
-          // Dropdown for Year Selection
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<int>(
-              value: _selectedYear,
-              dropdownColor: Colors.black, // Dark background for contrast
-              style: const TextStyle(
-                color: Colors.white, // Set default text color to white
-                fontSize: 16, // Optional: Adjust font size as needed
+    // Horizontal
+    if (position.dx < edgeMargin) {
+      if (_autoScrollHorizontalTimer == null ||
+          !_autoScrollHorizontalTimer!.isActive) {
+        _autoScrollHorizontalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_horizontalScrollCtrl.hasClients) {
+            final newOffset = _horizontalScrollCtrl.offset - _autoScrollSpeed;
+            _horizontalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _horizontalScrollCtrl.position.minScrollExtent,
+                _horizontalScrollCtrl.position.maxScrollExtent,
               ),
-              iconEnabledColor:
-                  Colors.white, // Set dropdown arrow icon color to white
-              items:
-                  List.generate(5, (index) => DateTime.now().year - 2 + index)
-                      .map((year) {
-                return DropdownMenuItem<int>(
-                  value: year,
-                  child: Text(
-                    'Jahr $year',
-                    style: const TextStyle(
-                      color: Colors.white, // Ensure each item's text is white
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  _selectedYear = value;
-                });
-                _saveUserPreferences(); // Save preference
-                _fetchDataForWeek(_selectedWeek, _selectedYear);
-                if (kDebugMode) {
-                  print('Selected Year: $_selectedYear');
-                }
-              },
-              hint: const Text(
-                'Wähle ein Jahr',
-                style: TextStyle(
-                  color: Colors.white, // Set hint text color to white
-                  fontSize: 16, // Optional: Adjust font size as needed
-                ),
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else if (position.dx > size.width - edgeMargin) {
+      if (_autoScrollHorizontalTimer == null ||
+          !_autoScrollHorizontalTimer!.isActive) {
+        _autoScrollHorizontalTimer =
+            Timer.periodic(const Duration(milliseconds: 100), (timer) {
+          if (_horizontalScrollCtrl.hasClients) {
+            final newOffset = _horizontalScrollCtrl.offset + _autoScrollSpeed;
+            _horizontalScrollCtrl.animateTo(
+              newOffset.clamp(
+                _horizontalScrollCtrl.position.minScrollExtent,
+                _horizontalScrollCtrl.position.maxScrollExtent,
               ),
-            ),
-          ),
-
-          // Dropdown for Week Selection
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<int>(
-              value: _selectedWeek,
-              dropdownColor: Colors.black, // Dark background for contrast
-              style: const TextStyle(
-                color: Colors.white, // Set default text color to white
-                fontSize: 16, // Optional: Adjust font size as needed
-              ),
-              iconEnabledColor:
-                  Colors.white, // Set dropdown icon color to white
-              items: weekNumbers.map((w) {
-                return DropdownMenuItem<int>(
-                  value: w,
-                  child: Text(
-                    'KW $w',
-                    style: const TextStyle(
-                      color: Colors.white, // Ensure each item's text is white
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  _selectedWeek = value;
-                });
-                _saveUserPreferences(); // Save preference
-                _fetchDataForWeek(_selectedWeek, _selectedYear); // Pass `year`
-                if (kDebugMode) {
-                  print('Selected Week: $_selectedWeek');
-                }
-              },
-              hint: const Text('Wähle eine KW'),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                _fetchDataForWeek(_selectedWeek, _selectedYear), // Pass `year`
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : GestureDetector(
-              onPanUpdate: _editModeEnabled
-                  ? _handleDragUpdate
-                  : null, // Only handle drag updates in edit mode
-              onPanEnd: _editModeEnabled
-                  ? _handleGestureDragEnd // Use the correct handler
-                  : null, // Only handle drag end in edit mode
-              child: SingleChildScrollView(
-                controller:
-                    _horizontalScrollCtrl, // Horizontal ScrollController
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // === LEFT: Main Grid ===
-                    SingleChildScrollView(
-                      controller:
-                          _verticalScrollCtrl, // Assigned Vertical ScrollController
-                      scrollDirection: Axis.vertical,
-                      child: Column(
-                        children: [
-                          _buildTryoutsHeader(),
-                          _buildDaysRows(),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(
-                      width: 2,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(color: Colors.black),
-                      ),
-                    ),
-
-                    // === RIGHT: Side-by-side boxes ===
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            // Box 1: Werkzeuge in Änderung
-                            Container(
-                              width: 210, // Adjust width as needed
-                              height: (days.length * 172).toDouble() +
-                                  35, // Grid height
-                              padding: const EdgeInsets.all(0),
-                              color: Colors.blueGrey[50],
-                              child: Stack(
-                                children: [
-                                  Column(
-                                    children: [
-                                      // Header
-                                      Container(
-                                        height: 37,
-                                        alignment: Alignment.center,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.blueAccent,
-                                          border: Border(
-                                            bottom: BorderSide(
-                                              color: Colors.black, // Black line
-                                              width:
-                                                  2.0, // Thickness of the line
-                                            ),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          '    Werkzeuge in Änderung',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-
-                                      const SizedBox(
-                                        width: 1,
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                              color: Colors.black),
-                                        ),
-                                      ),
-                                      // DragTarget Box
-                                      Expanded(
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.red[100],
-                                            borderRadius:
-                                                BorderRadius.circular(0),
-                                          ),
-                                          child: DragTarget<FahrversuchItem>(
-                                            builder: (context, candidateData,
-                                                rejectedData) {
-                                              final items = schedule.entries
-                                                  .expand(
-                                                      (entry) => entry.value[5])
-                                                  .toList(); // Tryout index 5
-                                              return items.isNotEmpty
-                                                  ? ListView.builder(
-                                                      itemCount: items.length,
-                                                      itemBuilder:
-                                                          (context, index) {
-                                                        final item =
-                                                            items[index];
-                                                        return _buildDraggableItem(
-                                                            item);
-                                                      },
-                                                    )
-                                                  : const Center(
-                                                      child: Text(
-                                                      'Keine Einträge',
-                                                      style: TextStyle(
-                                                        color: Colors.black,
-                                                      ),
-                                                    ));
-                                            },
-                                            onWillAccept: (data) =>
-                                                _editModeEnabled,
-                                            onAccept: (item) {
-                                              if (_editModeEnabled) {
-                                                _moveItemToTryout(
-                                                    item, 5); // TryoutIndex 5
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // Add Button Positioned at Bottom Left
-                                  if (_editModeEnabled)
-                                    Positioned(
-                                        top: 5,
-                                        left: 2,
-                                        child: SizedBox(
-                                          width: 24, // Adjust button width
-                                          height: 24, // Adjust button height
-                                          child: FloatingActionButton(
-                                            mini: true, // Smaller size
-                                            backgroundColor: Colors.green,
-                                            tooltip: 'Neues Projekt hinzufügen',
-                                            onPressed: () =>
-                                                _addToSeparateBox(5),
-                                            child: const Icon(Icons.add,
-                                                color: Colors.white, size: 16),
-                                          ),
-                                        )),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(
-                              width: 2,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(color: Colors.black),
-                              ),
-                            ),
-
-                            // Box 2: Bereit für Einfahrversuch
-                            Container(
-                              width: 210, // Adjust width as needed
-                              height: (days.length * 172).toDouble() +
-                                  35, // Grid height
-                              padding: const EdgeInsets.all(0),
-                              color: Colors.blueGrey[50],
-                              child: Stack(
-                                children: [
-                                  Column(
-                                    children: [
-                                      // Header
-                                      Container(
-                                        height: 37,
-                                        alignment: Alignment.center,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.blueAccent,
-                                          border: Border(
-                                            bottom: BorderSide(
-                                              color: Colors.black, // Black line
-                                              width:
-                                                  2.0, // Thickness of the line
-                                            ),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          '    Bereit für Einfahrversuch',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-
-                                      const SizedBox(
-                                        width: 1,
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                              color: Colors.black),
-                                        ),
-                                      ),
-                                      // DragTarget Box
-                                      Expanded(
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.green[100],
-                                            borderRadius:
-                                                BorderRadius.circular(0),
-                                          ),
-                                          child: DragTarget<FahrversuchItem>(
-                                            builder: (context, candidateData,
-                                                rejectedData) {
-                                              final items = schedule.entries
-                                                  .expand(
-                                                      (entry) => entry.value[6])
-                                                  .toList(); // Tryout index 6
-                                              return items.isNotEmpty
-                                                  ? ListView.builder(
-                                                      itemCount: items.length,
-                                                      itemBuilder:
-                                                          (context, index) {
-                                                        final item =
-                                                            items[index];
-                                                        return _buildDraggableItem(
-                                                            item);
-                                                      },
-                                                    )
-                                                  : const Center(
-                                                      child: Text(
-                                                      'Keine Einträge',
-                                                      style: TextStyle(
-                                                        color: Colors.black,
-                                                      ),
-                                                    ));
-                                            },
-                                            onWillAccept: (data) =>
-                                                _editModeEnabled,
-                                            onAccept: (item) {
-                                              if (_editModeEnabled) {
-                                                _moveItemToTryout(
-                                                    item, 6); // TryoutIndex 6
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // Add Button Positioned at Bottom Left
-                                  if (_editModeEnabled)
-                                    Positioned(
-                                        top: 5,
-                                        left: 2,
-                                        child: SizedBox(
-                                          width: 24, // Adjust button width
-                                          height: 24, // Adjust button height
-                                          child: FloatingActionButton(
-                                            mini: true, // Smaller size
-                                            backgroundColor: Colors.green,
-                                            tooltip: 'Neues Projekt hinzufügen',
-                                            onPressed: () =>
-                                                _addToSeparateBox(6),
-                                            child: const Icon(Icons.add,
-                                                color: Colors.white, size: 16),
-                                          ),
-                                        )),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-    );
-  }
-
-  /// === Helper Methods ===
-
-  Widget _buildTryoutsHeader() {
-    return Row(
-      children: [
-        Container(
-          width: 100,
-          height: 35,
-          color: Colors.blueAccent,
-          alignment: Alignment.center,
-          child: const Text(
-            'Tage\\Tryouts',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        for (int i = 0; i < tryouts.length; i++)
-          Container(
-            width: 180,
-            height: 35,
-            margin: const EdgeInsets.only(left: 2),
-            alignment: Alignment.center,
-            color: Colors.blueAccent,
-            child: Text(
-              tryouts[i],
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildDaysRows() {
-    return Column(
-      children: days.map((day) {
-        return Row(
-          children: [
-            Container(
-              width: 100,
-              height: 170,
-              margin: const EdgeInsets.only(top: 2),
-              color: Colors.blueAccent,
-              alignment: Alignment.center,
-              child: Text(
-                day,
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-            for (int colIndex = 0; colIndex < tryouts.length; colIndex++)
-              _buildGridCell(day, colIndex),
-          ],
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildGridCell(String day, int colIndex) {
-    final items = schedule[day]![colIndex];
-    return Container(
-      width: 180,
-      height: 170,
-      margin: const EdgeInsets.only(left: 2, top: 2),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        border: Border.all(
-          color: Colors.black, // Always black
-          width: 0.2, // Border thickness
-        ),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          DragTarget<FahrversuchItem>(
-            onWillAccept: (data) => _editModeEnabled,
-            onAccept: (data) {
-              if (_editModeEnabled) {
-                _moveItem(data, day, colIndex);
-              }
-            },
-            builder: (context, candidateData, rejectedData) {
-              final isHovering = candidateData.isNotEmpty && _editModeEnabled;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 100),
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: isHovering
-                      ? Colors.blueAccent.withOpacity(0.1)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: isHovering ? Colors.blue : Colors.grey.shade300,
-                    width: isHovering ? 3 : 1,
-                  ),
-                ),
-                child: items.isNotEmpty
-                    ? ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          return _buildDraggableItem(item);
-                        },
-                      )
-                    : const Center(
-                        child: Text(
-                        'Keine Einträge',
-                        style: TextStyle(color: Colors.black, fontSize: 12),
-                      )),
-              );
-            },
-          ),
-          // === Conditionally Show Add Button ===
-          if (_editModeEnabled)
-            Positioned(
-              right: 140,
-              bottom: -4,
-              child: IconButton(
-                icon:
-                    const Icon(Icons.add_circle, color: Colors.green, size: 28),
-                tooltip: 'Neues Projekt hinzufügen',
-                onPressed: () => _selectToolForCell(day, colIndex),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDraggableItem(FahrversuchItem item) {
-    // Trigger download if needed
-    if (item.imageUri != null && item.localImagePath == null) {
-      _downloadItemImage(item);
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.linear,
+            );
+          }
+        });
+      }
+    } else {
+      _autoScrollHorizontalTimer?.cancel();
+      _autoScrollHorizontalTimer = null;
     }
-
-    return LongPressDraggable<FahrversuchItem>(
-      data: item,
-      // === New Callbacks for Auto-Scroll ===
-      onDragUpdate: (details) => _handleDragUpdate(details),
-      onDragEnd: (details) =>
-          _handleDraggableDragEnd(details), // Correct handler
-      feedback: Material(
-        elevation: 4,
-        child: Container(
-          width: 180,
-          padding: const EdgeInsets.all(8),
-          color: item.color, // Use item.color
-          child: Text('${item.projectName} (${item.toolNumber})',
-              style: const TextStyle(color: Colors.white)),
-        ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.5,
-        child: Card(
-          color: item.color, // Use item.color
-          margin: const EdgeInsets.only(bottom: 4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: SizedBox(
-            height: 160,
-            width: 180,
-            child: _buildCardContent(item),
-          ),
-        ),
-      ),
-      child: Card(
-        color: item.color, // Use item.color
-        margin: const EdgeInsets.only(bottom: 4),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: SizedBox(
-          height: 160,
-          width: 220,
-          child: _buildCardContent(item),
-        ),
-      ),
-    );
   }
 
-  Widget _buildCardContent(FahrversuchItem item) {
-    if (kDebugMode) {
-      print('++ _buildCardContent: Building card for ${item.projectName}');
-      print(
-          '    Properties - imageUri: ${item.imageUri}, machineNumber: ${item.machineNumber}, hasBeenMoved: ${item.hasBeenMoved}');
-    }
-
-    return Stack(
-      alignment: Alignment.center, // Center the main content
-      children: [
-        Column(
-          mainAxisSize: MainAxisSize.min, // Wrap content vertically
-          crossAxisAlignment:
-              CrossAxisAlignment.center, // Center children horizontally
-          mainAxisAlignment:
-              MainAxisAlignment.center, // Center children vertically
-          children: [
-            // Image container with restricted height
-            if (item.localImagePath != null)
-              Container(
-                height: 40, // Restrict image height
-                margin: const EdgeInsets.only(top: 8),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Image.file(
-                    File(item.localImagePath!),
-                    fit: BoxFit
-                        .contain, // Ensure the image fits within the container
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.broken_image, color: Colors.red);
-                    },
-                  ),
-                ),
-              )
-            else if (item.imageUri != null)
-              Container(
-                height: 40,
-                margin: const EdgeInsets.only(top: 4),
-                alignment: Alignment.center,
-                child:
-                    const CircularProgressIndicator(), // Show loading indicator
-              )
-            else
-              Container(
-                height: 40,
-                margin: const EdgeInsets.only(top: 4),
-                alignment: Alignment.center,
-                child:
-                    const Icon(Icons.image_not_supported, color: Colors.grey),
-              ),
-
-            // Spacing
-            const SizedBox(height: 2),
-
-            // Project/Tool info
-            Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.center, // Center text horizontally
-              children: [
-                Text(
-                  item.projectName,
-                  style: const TextStyle(
-                    color: Colors.black,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2, // Prevent overflow
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'Werkzeug: ${item.toolNumber}',
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                // Display machine number if available
-                if (item.machineNumber != null)
-                  Text(
-                    'Maschine: ${item.machineNumber}',
-                    style: const TextStyle(
-                      color: Colors.yellowAccent, // Highlight for visibility
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  )
-                else
-                  const Text(
-                    'Maschine: Unbekannt', // Placeholder for missing machine numbers
-                    style: TextStyle(
-                      color: Colors.black, // Grey color for placeholder
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                Text(
-                  'Status: ${item.status}',
-                  style: const TextStyle(color: Colors.black),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ],
-        ),
-
-        // === Conditionally Show Edit Button ===
-        if (_editModeEnabled)
-          Positioned(
-            bottom: 4, // Position at the bottom right
-            right: 4,
-            child: IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white),
-              tooltip: 'Status/Mehr',
-              onPressed: () => _editItemDialog(item),
-            ),
-          ),
-
-        // Cross icon for moved items
-        if (item.hasBeenMoved)
-          Positioned(
-            top: 0, // Adjusted position to prevent overlap
-            right: 10,
-            child: Icon(
-              Icons.close,
-              color: Colors.redAccent.withOpacity(0.8),
-              size: 140, // Reduced size for better aesthetics
-            ),
-          ),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    // === Dispose Controllers and Timers ===
+  void _handleDraggableDragEnd(DraggableDetails details) {
     _autoScrollVerticalTimer?.cancel();
     _autoScrollHorizontalTimer?.cancel();
-    _horizontalScrollCtrl.dispose();
-    _verticalScrollCtrl.dispose();
-    super.dispose();
+    _autoScrollVerticalTimer = null;
+    _autoScrollHorizontalTimer = null;
   }
 
-  /// === New Method: Undo Last Action ===
+  void _handleGestureDragEnd(DragEndDetails details) {
+    _autoScrollVerticalTimer?.cancel();
+    _autoScrollHorizontalTimer?.cancel();
+    _autoScrollVerticalTimer = null;
+    _autoScrollHorizontalTimer = null;
+  }
+
+  // --------------------------------------------
+  //        PIN / EDIT MODE
+  // --------------------------------------------
+  Future<void> _promptForPIN() async {
+    String enteredPIN = '';
+    bool isError = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('PIN eingeben'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      labelText: 'PIN',
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        enteredPIN = value;
+                        isError = false;
+                      });
+                    },
+                    onSubmitted: (value) {
+                      if (value == _correctPIN) {
+                        Navigator.of(context).pop(true);
+                      } else {
+                        setStateDialog(() {
+                          isError = true;
+                        });
+                      }
+                    },
+                  ),
+                  if (isError)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        'Falscher PIN. Bitte versuchen Sie es erneut.',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Abbrechen'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (enteredPIN == _correctPIN) {
+                      Navigator.of(context).pop(true);
+                    } else {
+                      setStateDialog(() => isError = true);
+                    }
+                  },
+                  child: const Text('Entsperren'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true) {
+      setState(() {
+        _editModeEnabled = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Editiermodus aktiviert')),
+      );
+    }
+  }
+
+  // --------------------------------------------
+  //        UNDO LAST ACTION
+  // --------------------------------------------
   Future<void> _undoLastAction() async {
     if (_actionHistory.isEmpty) return;
-
     final lastAction = _actionHistory.removeLast();
 
     switch (lastAction.type) {
       case ActionType.add:
-        // Undo Add: Remove the item
+        // Undo Add -> remove item + call delete
         setState(() {
           schedule[lastAction.toDay]![lastAction.toIndex]
               .remove(lastAction.item);
         });
         try {
           await ApiService.deleteEinfahrPlan(lastAction.item.id);
-          if (kDebugMode) {
-            print(
-                '++ _undoLastAction: Undid add by deleting ${lastAction.item.projectName}');
-          }
         } catch (err) {
           if (kDebugMode) {
-            print('!! _undoLastAction: Error undoing add: $err');
+            print('!! _undoLastAction: error undoing add: $err');
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Rückgängig machen: $err')),
-          );
+          // Can't do much more if that fails
         }
         break;
 
       case ActionType.delete:
-        // Undo Delete: Re-add the item by calling undeleteEinfahrPlan
+        // Undo Delete -> re-insert item + undelete on server
         setState(() {
           schedule[lastAction.fromDay]![lastAction.fromIndex]
               .add(lastAction.item);
         });
         try {
           await ApiService.undeleteEinfahrPlan(lastAction.item.id);
-          if (kDebugMode) {
-            print(
-                '++ _undoLastAction: Undid delete by undeleting ${lastAction.item.projectName}');
-          }
-
-          // Also re-download the image if needed
           if (lastAction.item.imageUri != null) {
             _downloadItemImage(lastAction.item);
           }
         } catch (err) {
           if (kDebugMode) {
-            print('!! _undoLastAction: Error undoing delete: $err');
+            print('!! _undoLastAction: error undoing delete: $err');
           }
-          // Revert local state if API call fails
+          // revert local
           setState(() {
             schedule[lastAction.fromDay]![lastAction.fromIndex]
                 .remove(lastAction.item);
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Rückgängig machen: $err')),
-          );
         }
         break;
 
       case ActionType.move:
-        // Undo Move: Move the item back to its original position
+        // Undo Move -> move the item back
         setState(() {
           schedule[lastAction.toDay]![lastAction.toIndex]
               .remove(lastAction.item);
@@ -2343,15 +1113,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             hasBeenMoved: false,
             extrudermainId: lastAction.item.extrudermainId,
           );
-          if (kDebugMode) {
-            print(
-                '++ _undoLastAction: Undid move by moving ${lastAction.item.projectName} back');
-          }
         } catch (err) {
           if (kDebugMode) {
-            print('!! _undoLastAction: Error undoing move: $err');
+            print('!! _undoLastAction: error undoing move: $err');
           }
-          // Revert changes if the server update fails
+          // revert local
           setState(() {
             schedule[lastAction.fromDay]![lastAction.fromIndex]
                 .remove(lastAction.item);
@@ -2360,11 +1126,505 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             lastAction.item.dayName = lastAction.toDay;
             lastAction.item.tryoutIndex = lastAction.toIndex;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Rückgängig machen: $err')),
-          );
         }
         break;
     }
+  }
+
+  // --------------------------------------------
+  //        BUILD
+  // --------------------------------------------
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Einfahr Planer'),
+        actions: [
+          // Undo button
+          IconButton(
+            icon: const Icon(Icons.undo),
+            tooltip: 'Rückgängig',
+            onPressed: _actionHistory.isNotEmpty ? _undoLastAction : null,
+            color: _actionHistory.isNotEmpty ? Colors.white : Colors.grey,
+          ),
+          // Lock/unlock
+          IconButton(
+            icon: Icon(
+              _editModeEnabled ? Icons.lock_open : Icons.lock,
+              color: _editModeEnabled ? Colors.greenAccent : Colors.white,
+            ),
+            tooltip: _editModeEnabled
+                ? 'Editiermodus aktiv'
+                : 'Editiermodus entsperren',
+            onPressed: () {
+              if (!_editModeEnabled) {
+                _promptForPIN();
+              } else {
+                setState(() => _editModeEnabled = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Editiermodus deaktiviert')),
+                );
+              }
+            },
+          ),
+          // Year dropdown
+          DropdownButton<int>(
+            value: _selectedYear,
+            dropdownColor: Colors.black,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            iconEnabledColor: Colors.white,
+            items: List.generate(5, (index) => DateTime.now().year - 2 + index)
+                .map((year) => DropdownMenuItem<int>(
+                      value: year,
+                      child: Text('Jahr $year',
+                          style: const TextStyle(color: Colors.white)),
+                    ))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedYear = value);
+                _saveUserPreferences();
+                _fetchDataForWeek(_selectedWeek, _selectedYear);
+              }
+            },
+          ),
+          // Week dropdown
+          DropdownButton<int>(
+            value: _selectedWeek,
+            dropdownColor: Colors.black,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            iconEnabledColor: Colors.white,
+            items: weekNumbers.map((w) {
+              return DropdownMenuItem<int>(
+                value: w,
+                child:
+                    Text('KW $w', style: const TextStyle(color: Colors.white)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedWeek = value);
+                _saveUserPreferences();
+                _fetchDataForWeek(_selectedWeek, _selectedYear);
+              }
+            },
+          ),
+          // Refresh
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _fetchDataForWeek(_selectedWeek, _selectedYear),
+          ),
+        ],
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : GestureDetector(
+              onPanUpdate: _editModeEnabled ? _handleDragUpdate : null,
+              onPanEnd: _editModeEnabled ? _handleGestureDragEnd : null,
+              child: SingleChildScrollView(
+                controller: _horizontalScrollCtrl,
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // === Left: The main grid ===
+                    SingleChildScrollView(
+                      controller: _verticalScrollCtrl,
+                      scrollDirection: Axis.vertical,
+                      child: Column(
+                        children: [
+                          _buildTryoutsHeader(),
+                          // Each row: one day
+                          for (var day in days)
+                            Row(
+                              children: [
+                                // Day label
+                                Container(
+                                  width: 90,
+                                  height: 170,
+                                  margin: const EdgeInsets.only(top: 2),
+                                  color: Colors.blueAccent,
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    day,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                // Build each tryout cell for that day
+                                for (int colIndex = 0;
+                                    colIndex < tryouts.length;
+                                    colIndex++)
+                                  _buildTryoutCell(
+                                    dayName: day,
+                                    tryoutIndex: colIndex,
+                                    width: 170,
+                                    height: 170,
+                                    bgColor: Colors.grey.shade100,
+                                    title:
+                                        null, // No special title for normal cells
+                                    onAdd: _editModeEnabled
+                                        ? () =>
+                                            _selectToolForCell(day, colIndex)
+                                        : null,
+                                    itemsSupplier:
+                                        null, // We'll pull from schedule[day][colIndex]
+                                    moveItemHandler: (item) =>
+                                        _moveItem(item, day, colIndex),
+                                  ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // === Right: Box 1 "Werkzeuge in Änderung" ===
+                    _buildTryoutCell(
+                      dayName: null, // indicates "no specific day"
+                      tryoutIndex: 5, // We'll store them in schedule[anyDay][5]
+                      width: 210,
+                      height: (days.length * 172).toDouble() + 35,
+                      bgColor: Colors.red[100],
+                      title: 'Werkzeuge in Änderung',
+                      onAdd:
+                          _editModeEnabled ? () => _addToSeparateBox(5) : null,
+                      // Flatten across all days at index=5
+                      itemsSupplier: () => schedule.entries
+                          .expand((entry) => entry.value[5])
+                          .toList(),
+                      moveItemHandler: (item) => _moveItemToTryout(item, 5),
+                    ),
+
+                    // === Right: Box 2 "Bereit für Einfahrversuch" ===
+                    _buildTryoutCell(
+                      dayName: null,
+                      tryoutIndex: 6,
+                      width: 210,
+                      height: (days.length * 172).toDouble() + 35,
+                      bgColor: Colors.green[100],
+                      title: 'Bereit für Einfahrversuch',
+                      onAdd:
+                          _editModeEnabled ? () => _addToSeparateBox(6) : null,
+                      itemsSupplier: () => schedule.entries
+                          .expand((entry) => entry.value[6])
+                          .toList(),
+                      moveItemHandler: (item) => _moveItemToTryout(item, 6),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  // --------------------------------------------
+  //        HEADER ROW
+  // --------------------------------------------
+  Widget _buildTryoutsHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 90, // Matches the day column width in the grid
+          height: 35,
+          decoration: const BoxDecoration(
+            color: Colors.blueAccent, // Background color
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.black, // Line color
+              ),
+            ),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            '',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+        for (int i = 0; i < tryouts.length; i++)
+          Container(
+            width: 170, // Matches the tryout column width in the grid
+            height: 35,
+            margin: const EdgeInsets.only(left: 2),
+            decoration: const BoxDecoration(
+              color: Colors.blueAccent, // Background color
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.black, // Line color
+                ),
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              tryouts[i],
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // --------------------------------------------
+  //        REUSABLE CELL WIDGET
+  // --------------------------------------------
+  Widget _buildTryoutCell({
+    required int tryoutIndex,
+    required double width,
+    required double height,
+    required Function(FahrversuchItem) moveItemHandler,
+    Color? bgColor,
+    String? dayName,
+    String? title,
+    VoidCallback? onAdd,
+    List<FahrversuchItem> Function()? itemsSupplier,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      margin: const EdgeInsets.only(left: 2),
+      color: Colors.blueGrey[50],
+      child: Stack(
+        children: [
+          Column(
+            children: [
+              // Optional title/header (for the separate boxes)
+              if (title != null)
+                Container(
+                  height: 37,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Colors.blueAccent,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.black, width: 2.0),
+                    ),
+                  ),
+                  child: Text(
+                    '    $title',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: bgColor ?? Colors.grey[100],
+                    borderRadius: BorderRadius.circular(0),
+                  ),
+                  child: DragTarget<FahrversuchItem>(
+                    builder: (context, candidateData, rejectedData) {
+                      final items = (itemsSupplier != null)
+                          ? itemsSupplier()
+                          : (dayName != null
+                              ? schedule[dayName]![tryoutIndex]
+                              : <FahrversuchItem>[]);
+
+                      if (items.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'Keine Einträge',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        );
+                      }
+                      return ListView.builder(
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return _buildDraggableItem(item);
+                        },
+                      );
+                    },
+                    onWillAccept: (data) => _editModeEnabled,
+                    onAccept: (item) {
+                      if (_editModeEnabled) {
+                        moveItemHandler(item);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // "Add" button if edit mode
+          if (_editModeEnabled && onAdd != null)
+            Positioned(
+              top: 4,
+              left: 4,
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: FloatingActionButton(
+                  mini: true,
+                  backgroundColor: Colors.green,
+                  tooltip: 'Neues Projekt hinzufügen',
+                  onPressed: onAdd,
+                  child: const Icon(Icons.add, color: Colors.white, size: 16),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------
+  //        DRAGGABLE ITEM CARD
+  // --------------------------------------------
+  Widget _buildDraggableItem(FahrversuchItem item) {
+    if (item.imageUri != null && item.localImagePath == null) {
+      // Trigger async download if not yet done
+      _downloadItemImage(item);
+    }
+
+    return LongPressDraggable<FahrversuchItem>(
+      data: item,
+      onDragUpdate: (details) => _handleDragUpdate(details),
+      onDragEnd: (details) => _handleDraggableDragEnd(details),
+      feedback: Material(
+        elevation: 4,
+        child: Container(
+          width: 180,
+          padding: const EdgeInsets.all(8),
+          color: item.color,
+          child: Text(
+            '${item.projectName} (${item.toolNumber})',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: Card(
+          color: item.color,
+          margin: const EdgeInsets.only(bottom: 4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: SizedBox(
+            width: 180,
+            height: 168,
+            child: _buildCardContent(item),
+          ),
+        ),
+      ),
+      child: Card(
+        color: item.color,
+        margin: const EdgeInsets.only(bottom: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: SizedBox(
+          width: 180,
+          height: 168,
+          child: _buildCardContent(item),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardContent(FahrversuchItem item) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Image
+            if (item.localImagePath != null)
+              Container(
+                height: 40,
+                margin: const EdgeInsets.only(top: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.file(
+                    File(item.localImagePath!),
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.broken_image, color: Colors.red),
+                  ),
+                ),
+              )
+            else if (item.imageUri != null)
+              Container(
+                height: 40,
+                margin: const EdgeInsets.only(top: 4),
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(),
+              )
+            else
+              Container(
+                height: 40,
+                margin: const EdgeInsets.only(top: 4),
+                alignment: Alignment.center,
+                child:
+                    const Icon(Icons.image_not_supported, color: Colors.grey),
+              ),
+            const SizedBox(height: 2),
+            // Project info
+            Text(
+              item.projectName,
+              style: const TextStyle(color: Colors.black),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              'Werkzeug: ${item.toolNumber}',
+              style: const TextStyle(
+                  color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+            if (item.machineNumber != null)
+              Text(
+                'Maschine: ${item.machineNumber}',
+                style: const TextStyle(
+                    color: Colors.yellowAccent, fontWeight: FontWeight.bold),
+              )
+            else
+              const Text(
+                'Maschine: Unbekannt',
+                style: TextStyle(color: Colors.black),
+              ),
+            Text('Status: ${item.status}',
+                style: const TextStyle(color: Colors.black)),
+          ],
+        ),
+
+        // Edit button if in edit mode
+        if (_editModeEnabled)
+          Positioned(
+            bottom: 4,
+            right: 4,
+            child: IconButton(
+              icon: const Icon(Icons.edit, color: Colors.white),
+              onPressed: () => _editItemDialog(item),
+            ),
+          ),
+
+        // Cross-out if item hasBeenMoved
+        if (item.hasBeenMoved)
+          Positioned(
+            top: 0,
+            right: 10,
+            child: Icon(
+              Icons.close,
+              color: Colors.redAccent.withOpacity(0.8),
+              size: 140,
+            ),
+          ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _autoScrollVerticalTimer?.cancel();
+    _autoScrollHorizontalTimer?.cancel();
+    _horizontalScrollCtrl.dispose();
+    _verticalScrollCtrl.dispose();
+    super.dispose();
   }
 }
