@@ -202,7 +202,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   // --------------------------------------------
   //        FETCH SCHEDULE FOR WEEK/YEAR
   // --------------------------------------------
-  Future<void> _fetchDataForWeek(int weekNumber, int year) async {
+  Future<void> _fetchDataForWeek(int weekNumber, int year,
+      {bool forceRedownload = false}) async {
     setState(() => isLoading = true);
     try {
       final result =
@@ -261,7 +262,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
         // Download image if present
         if (item.imageUri != null) {
-          _downloadItemImage(item);
+          _downloadItemImage(item, forceRedownload: forceRedownload);
         }
       }
     } catch (err) {
@@ -761,16 +762,26 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     return 'docustore/download/$partial';
   }
 
-  Future<File?> _downloadItemImage(FahrversuchItem item) async {
+  Future<File?> _downloadItemImage(FahrversuchItem item,
+      {bool forceRedownload = false}) async {
     final uri = item.imageUri;
     if (uri == null || uri.isEmpty) return null;
     try {
       final imagePath = await item.getUniqueImagePath();
       final imageFile = File(imagePath);
-      if (await imageFile.exists()) {
+
+      // If we do NOT want to force a new download, and we already have the file, just use it.
+      if (!forceRedownload && await imageFile.exists()) {
         setState(() => item.localImagePath = imagePath);
         return imageFile;
       }
+
+      // Optionally: If forcing a re-download, you may want to delete the old file:
+      if (forceRedownload && await imageFile.exists()) {
+        await imageFile.delete();
+      }
+
+      // Attempt the download from the API service
       final downloadedFile =
           await ApiService.downloadIkofficeFile(uri, imagePath);
       if (downloadedFile != null) {
@@ -1212,7 +1223,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           // Refresh
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => _fetchDataForWeek(_selectedWeek, _selectedYear),
+            onPressed: () => _fetchDataForWeek(_selectedWeek, _selectedYear,
+                forceRedownload: true),
           ),
         ],
       ),
