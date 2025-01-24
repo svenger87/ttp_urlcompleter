@@ -89,8 +89,10 @@ class FahrversuchItem {
   }
 
   /// Generates a unique local image path based on the item's ID.
+  /// **Updated to use temporary directory**
   Future<String> getUniqueImagePath() async {
-    final directory = await getApplicationDocumentsDirectory();
+    final directory =
+        await getTemporaryDirectory(); // Changed from getApplicationDocumentsDirectory()
     return '${directory.path}/ikoffice_$id.jpg'; // Assuming JPEG images
   }
 
