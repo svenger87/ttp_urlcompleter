@@ -7,18 +7,21 @@ import 'dart:io';
 import 'package:flutter/foundation.dart'; // for kDebugMode
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For persisting preferences
+import 'package:window_manager/window_manager.dart'; // Import window_manager
 import '../models/schedule_action.dart';
 import '../models/fahrversuche.dart'; // Contains FahrversuchItem class
 import '../services/api_service.dart';
 
 class EinfahrPlanerScreen extends StatefulWidget {
-  const EinfahrPlanerScreen({super.key});
+  const EinfahrPlanerScreen(
+      {super.key, required bool isStandalone, required bool isFullscreen});
 
   @override
   State<EinfahrPlanerScreen> createState() => _EinfahrPlanerScreenState();
 }
 
-class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
+class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
+    with WindowListener {
   // === Days, Tryouts, and Week-Year handling ===
   final List<String> days = [
     'Montag',
@@ -66,10 +69,69 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   // === Action history for undo ===
   final List<ScheduleAction> _actionHistory = [];
 
+  // === Fullscreen and Standalone Flags ===
+  bool _isFullscreen = false;
+  bool _isStandalone = false;
+
   @override
   void initState() {
     super.initState();
     _loadUserPreferences();
+    _checkWindowState();
+    windowManager.addListener(this);
+  }
+
+  @override
+  void dispose() {
+    _autoScrollVerticalTimer?.cancel();
+    _autoScrollHorizontalTimer?.cancel();
+    _horizontalScrollCtrl.dispose();
+    _verticalScrollCtrl.dispose();
+    windowManager.removeListener(this);
+    super.dispose();
+  }
+
+  /// Checks if the application is in fullscreen and standalone mode
+  Future<void> _checkWindowState() async {
+    bool isFullscreen = await windowManager.isFullScreen();
+    bool isStandalone =
+        !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+    if (kDebugMode) {
+      print(
+          'Check Window State - Fullscreen: $isFullscreen, Standalone: $isStandalone');
+    }
+    setState(() {
+      _isFullscreen = isFullscreen;
+      _isStandalone = isStandalone;
+    });
+  }
+
+  /// Listens to window events to update fullscreen status
+  @override
+  void onWindowEvent(String eventName) async {
+    if (kDebugMode) {
+      print('Window event: $eventName');
+    }
+
+    // Update fullscreen state
+    if (eventName == 'enter-full-screen' || eventName == 'fullscreen') {
+      setState(() {
+        _isFullscreen = true;
+      });
+    } else if (eventName == 'leave-full-screen') {
+      setState(() {
+        _isFullscreen = false;
+      });
+    }
+
+    // Ensure standalone state is always accurate
+    bool isStandalone =
+        !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+    if (_isStandalone != isStandalone) {
+      setState(() {
+        _isStandalone = isStandalone;
+      });
+    }
   }
 
   // --------------------------------------------
@@ -338,7 +400,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         extrudermainId: item.extrudermainId,
       );
     } catch (err) {
-      // revert
+      // Revert on error
       setState(() {
         schedule[day]![targetTryoutIndex].remove(item);
         item.tryoutIndex = oldIndex;
@@ -821,8 +883,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
               title: const Text('Werkzeug auswählen'),
               content: SizedBox(
                 width: double.maxFinite,
+                height: 400, // Adjust height as needed
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: searchController,
@@ -1105,10 +1167,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             print('Undo Delete: Item ${lastAction.item.id} undeleted.');
           }
         } catch (err) {
-          if (kDebugMode) {
-            print('!! _undoLastAction: error undoing delete: $err');
-          }
-          // Revert local changes
           setState(() {
             schedule[lastAction.fromDay]![lastAction.fromIndex]
                 .remove(lastAction.item);
@@ -1143,10 +1201,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             print('Undo Move: Item ${lastAction.item.id} moved back.');
           }
         } catch (err) {
-          if (kDebugMode) {
-            print('!! _undoLastAction: error undoing move: $err');
-          }
-          // Revert local changes
           setState(() {
             schedule[lastAction.fromDay]![lastAction.fromIndex]
                 .remove(lastAction.item);
@@ -1175,7 +1229,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             toolNumber: item.toolNumber,
             dayName: item.dayName,
             tryoutIndex: item.tryoutIndex,
-            status: oldStatus, // Now non-nullable
+            status: oldStatus,
             weekNumber: item.weekNumber,
             year: item.year,
             hasBeenMoved: item.hasBeenMoved,
@@ -1206,6 +1260,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   // --------------------------------------------
   @override
   Widget build(BuildContext context) {
+    if (kDebugMode) {
+      print('Fullscreen: $_isFullscreen, Standalone: $_isStandalone');
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einfahr Planer'),
@@ -1285,6 +1342,26 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             onPressed: () => _fetchDataForWeek(_selectedWeek, _selectedYear,
                 forceRedownload: true),
           ),
+          // === Power Button Integration ===
+          // The following button appears only when the app is in fullscreen and standalone mode
+          if (_isFullscreen && _isStandalone)
+            IconButton(
+              icon: const Icon(Icons.power_settings_new),
+              tooltip: 'Beenden',
+              onPressed: () async {
+                bool shouldQuit = await _confirmExit();
+                if (shouldQuit) {
+                  if (Platform.isWindows ||
+                      Platform.isMacOS ||
+                      Platform.isLinux) {
+                    await windowManager.close(); // Close gracefully
+                  } else {
+                    Navigator.of(context).pop(); // Exit for other platforms
+                  }
+                }
+              },
+              color: Colors.white,
+            ),
         ],
       ),
       body: isLoading
@@ -1329,19 +1406,19 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                                     colIndex < tryouts.length;
                                     colIndex++)
                                   _buildTryoutCell(
-                                    dayName: day,
                                     tryoutIndex: colIndex,
                                     width: 170,
                                     height: 170,
                                     bgColor: Colors.grey.shade100,
+                                    dayName: day,
                                     title:
                                         null, // No special title for normal cells
                                     onAdd: _editModeEnabled
                                         ? () =>
                                             _selectToolForCell(day, colIndex)
                                         : null,
-                                    itemsSupplier:
-                                        null, // We'll pull from schedule[day][colIndex]
+                                    itemsSupplier: () =>
+                                        schedule[day]![colIndex],
                                     moveItemHandler: (item) =>
                                         _moveItem(item, day, colIndex),
                                   ),
@@ -1353,15 +1430,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
                     // === Right: Box 1 "Werkzeuge in Änderung" ===
                     _buildTryoutCell(
-                      dayName: null, // indicates "no specific day"
-                      tryoutIndex: 5, // We'll store them in schedule[anyDay][5]
+                      tryoutIndex: 5, // Index for "Werkzeuge in Änderung"
                       width: 210,
                       height: (days.length * 172).toDouble() + 35,
                       bgColor: Colors.red[100],
+                      dayName: null, // indicates "no specific day"
                       title: '     Werkzeuge in Änderung',
                       onAdd:
                           _editModeEnabled ? () => _addToSeparateBox(5) : null,
-                      // Flatten across all days at index=5
                       itemsSupplier: () => schedule.entries
                           .expand((entry) => entry.value[5])
                           .toList(),
@@ -1370,11 +1446,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
                     // === Right: Box 2 "Bereit für Einfahrversuch" ===
                     _buildTryoutCell(
-                      dayName: null,
-                      tryoutIndex: 6,
+                      tryoutIndex: 6, // Index for "Bereit für Einfahrversuch"
                       width: 210,
                       height: (days.length * 172).toDouble() + 35,
                       bgColor: Colors.green[100],
+                      dayName: null,
                       title: '     Bereit für Einfahrversuch',
                       onAdd:
                           _editModeEnabled ? () => _addToSeparateBox(6) : null,
@@ -1513,9 +1589,10 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                       );
                     },
                     onWillAcceptWithDetails: (data) => _editModeEnabled,
-                    onAcceptWithDetails: (item) {
+                    onAcceptWithDetails: (details) {
                       if (_editModeEnabled) {
-                        moveItemHandler(item as FahrversuchItem);
+                        final item = details.data;
+                        moveItemHandler(item);
                       }
                     },
                   ),
@@ -1693,12 +1770,30 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _autoScrollVerticalTimer?.cancel();
-    _autoScrollHorizontalTimer?.cancel();
-    _horizontalScrollCtrl.dispose();
-    _verticalScrollCtrl.dispose();
-    super.dispose();
+  // --------------------------------------------
+  //        CONFIRM EXIT DIALOG
+  // --------------------------------------------
+  // Ensure this method is defined only once
+  Future<bool> _confirmExit() async {
+    return (await showDialog<bool>(
+          context: context,
+          barrierDismissible: false, // Prevent dismissing by tapping outside
+          builder: (context) => AlertDialog(
+            title: const Text('Beenden bestätigen'),
+            content: const Text('Möchten Sie die Anwendung wirklich beenden?'),
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(false), // Return false
+                child: const Text('Abbrechen'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true), // Return true
+                child: const Text('Beenden'),
+              ),
+            ],
+          ),
+        )) ??
+        false; // Default to false if dialog is dismissed unexpectedly
   }
 }

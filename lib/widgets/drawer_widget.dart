@@ -12,6 +12,8 @@ import 'package:hangerstations_dashboard_module/screens/hangerstations_dashboard
 import 'package:tool_planning/screens/tool_planning_screen.dart';
 import 'package:packaging_module/screens/production_orders_screen.dart';
 import 'package:tryout_planning/screens/einfahr_planer_screen.dart';
+import 'package:sap2worldship/main.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -184,7 +186,7 @@ class MainDrawer extends StatelessWidget {
           ),
           ExpansionTile(
             leading: Icon(MdiIcons.robotIndustrial),
-            title: const Text('Produktionstools'),
+            title: const Text('Produktion'),
             children: [
               ListTile(
                 leading: Icon(MdiIcons.gantryCrane),
@@ -210,31 +212,37 @@ class MainDrawer extends StatelessWidget {
               const ConverterModule(),
             ],
           ),
-          ListTile(
-            leading: const Icon(Icons.checklist_rounded),
-            title: const Text('Picklisten'),
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const PdfReaderPage(),
-              ));
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.storage),
-            title: const Text('Werkzeuglagerverwaltung'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ToolInventoryScreen(),
-                ),
-              );
-            },
-          ),
           ExpansionTile(
-            leading: const Icon(Icons.handyman),
-            title: const Text('Tools'),
+            leading: Icon(MdiIcons.nut),
+            title: const Text('Werkzeugbau'),
             children: [
+              ListTile(
+                leading: const Icon(Icons.storage),
+                title: const Text('Werkzeuglagerverwaltung'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ToolInventoryScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(MdiIcons.carHatchback),
+                title: const Text('Einfahrplaner'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EinfahrPlanerScreen(
+                        isStandalone: false,
+                        isFullscreen: false,
+                      ),
+                    ),
+                  );
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.view_kanban),
                 title: const Text('Planungstool WZB'),
@@ -247,19 +255,48 @@ class MainDrawer extends StatelessWidget {
                   );
                 },
               ),
+            ],
+          ),
+          ExpansionTile(
+            leading: const Icon(Icons.forklift),
+            title: const Text('Logistik'),
+            children: [
               ListTile(
-                leading: Icon(MdiIcons.carHatchback),
-                title: const Text('Einfahrplaner'),
+                leading: const Icon(Icons.checklist_rounded),
+                title: const Text('Picklisten'),
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => const PdfReaderPage(),
+                  ));
+                },
+              ),
+              ListTile(
+                leading: SvgPicture.asset(
+                  'assets/icon/UPS_icon.svg',
+                  width:
+                      IconTheme.of(context).size, // Matches Material icon size
+                  height: IconTheme.of(context).size,
+                  colorFilter: ColorFilter.mode(
+                    IconTheme.of(context).color ?? Colors.grey,
+                    BlendMode.dstIn,
+                  ),
+                ),
+                title: const Text('SAP2Worldship'),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const EinfahrPlanerScreen(),
+                      builder: (context) => const SAP2WorldShipScreen(),
                     ),
                   );
                 },
               ),
             ],
+          ),
+          ExpansionTile(
+            leading: const Icon(Icons.handyman),
+            title: const Text('Tools'),
+            children: [],
           ),
         ],
       ),
