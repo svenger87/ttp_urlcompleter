@@ -19,6 +19,12 @@ class ApiService {
   // Base URL for the Einfahrplan API
   static const String baseUrl = 'http://wim-solution.sip.local:3004';
 
+  // IKOffice docustore base
+  static const String IKOFFICE_BASE =
+      'http://ikoffice.sip.local:8080/ikoffice/api';
+  static const String API_KEY = '7Clu1FuBh9AkA7LSf1YsB7u76msuQ52esDnmcD9SbB8';
+  static const int TENANT_ID = 3;
+
   // Fetch primary projects with initial data
   static Future<List<Map<String, dynamic>>> fetchPrimaryProjects() async {
     final response = await http.get(Uri.parse(primaryApiUrl));
@@ -282,7 +288,7 @@ class ApiService {
           'file',
           file.readAsBytes().asStream(),
           file.lengthSync(),
-          filename: filePath.split("/").last,
+          filename: path.basename(filePath),
           contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
         ),
       );
@@ -573,19 +579,7 @@ class ApiService {
     }
   }
 
-  // IKOffice docustore base
-  static const String IKOFFICE_BASE =
-      'http://ikoffice.sip.local:8080/ikoffice/api';
-  static const String API_KEY = '7Clu1FuBh9AkA7LSf1YsB7u76msuQ52esDnmcD9SbB8';
-  static const int TENANT_ID = 3;
-
-  /// This method downloads a file from the docustore,
-  /// saving it to the specified [savePath].
-  ///
-  /// [imagePath] should be something like:
-  ///   "docustore/download/Project/70060/Bild%20aus%20Zwischenablage.png"
-  /// [savePath] is the full path where the file should be saved.
-  /// Returns a [File] if successful, or null if it fails.
+  // General function to download any file
   static Future<File?> downloadIkofficeFile(
       String imagePath, String savePath) async {
     try {

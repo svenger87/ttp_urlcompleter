@@ -1,3 +1,5 @@
+// lib/screens/einfahr_planer_screen.dart
+
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'dart:async';
@@ -262,7 +264,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
 
         // Download image if present
         if (item.imageUri != null) {
-          _downloadItemImage(item, forceRedownload: forceRedownload);
+          await _downloadItemImage(item, forceRedownload: forceRedownload);
+        }
+      }
+
+      // Clear image cache after all downloads
+      if (forceRedownload) {
+        PaintingBinding.instance.imageCache.clear();
+        if (kDebugMode) {
+          print('Image cache cleared after force reload.');
         }
       }
     } catch (err) {
@@ -438,7 +448,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       });
 
       if (newItem.imageUri != null) {
-        _downloadItemImage(newItem);
+        await _downloadItemImage(newItem, forceRedownload: true);
       }
     } catch (err) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -709,7 +719,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         schedule[item.dayName]![item.tryoutIndex].add(newItem);
       });
       if (newItem.imageUri != null) {
-        _downloadItemImage(newItem);
+        await _downloadItemImage(newItem, forceRedownload: true);
       }
     } catch (err) {
       if (kDebugMode) {
@@ -766,31 +776,54 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       {bool forceRedownload = false}) async {
     final uri = item.imageUri;
     if (uri == null || uri.isEmpty) return null;
-    try {
-      final imagePath = await item.getUniqueImagePath();
-      final imageFile = File(imagePath);
 
-      // If we do NOT want to force a new download, and we already have the file, just use it.
-      if (!forceRedownload && await imageFile.exists()) {
-        setState(() => item.localImagePath = imagePath);
-        return imageFile;
-      }
+    const int maxRetries = 3;
+    int attempt = 0;
+    File? downloadedFile;
 
-      // Optionally: If forcing a re-download, you may want to delete the old file:
-      if (forceRedownload && await imageFile.exists()) {
-        await imageFile.delete();
-      }
+    while (attempt < maxRetries && downloadedFile == null) {
+      try {
+        final imagePath = await item.getUniqueImagePath();
+        final imageFile = File(imagePath);
 
-      // Attempt the download from the API service
-      final downloadedFile =
-          await ApiService.downloadIkofficeFile(uri, imagePath);
-      if (downloadedFile != null) {
-        setState(() => item.localImagePath = downloadedFile.path);
-        return downloadedFile;
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('!! _downloadItemImage: Error downloading image: $e');
+        // If we do NOT want to force a new download, and we already have the file, just use it.
+        if (!forceRedownload && await imageFile.exists()) {
+          setState(() => item.localImagePath = imagePath);
+          return imageFile;
+        }
+
+        // Optionally: If forcing a re-download, delete the old file:
+        if (forceRedownload && await imageFile.exists()) {
+          await imageFile.delete();
+        }
+
+        // Attempt the download from the API service
+        downloadedFile = await ApiService.downloadIkofficeFile(uri, imagePath);
+        if (downloadedFile != null) {
+          setState(() => item.localImagePath = downloadedFile?.path);
+          return downloadedFile;
+        } else {
+          throw Exception('Downloaded file is null.');
+        }
+      } catch (e) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          if (kDebugMode) {
+            print(
+                '!! _downloadItemImage: Failed to download image after $maxRetries attempts: $e');
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Fehler beim Herunterladen des Bildes für ${item.projectName}: $e')),
+          );
+        } else {
+          if (kDebugMode) {
+            print('!! _downloadItemImage: Attempt $attempt failed: $e');
+          }
+          // Optionally, wait before retrying
+          await Future.delayed(const Duration(seconds: 1));
+        }
       }
     }
     return null;
@@ -1087,7 +1120,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         try {
           await ApiService.undeleteEinfahrPlan(lastAction.item.id);
           if (lastAction.item.imageUri != null) {
-            _downloadItemImage(lastAction.item);
+            await _downloadItemImage(lastAction.item, forceRedownload: true);
           }
         } catch (err) {
           if (kDebugMode) {
@@ -1407,15 +1440,16 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
               if (title != null)
                 Container(
                   height: 37,
-                  alignment: Alignment.center,
+                  alignment: Alignment.centerLeft,
                   decoration: const BoxDecoration(
                     color: Colors.blueAccent,
                     border: Border(
                       bottom: BorderSide(color: Colors.black, width: 2.0),
                     ),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
-                    '    $title',
+                    title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1491,7 +1525,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   Widget _buildDraggableItem(FahrversuchItem item) {
     if (item.imageUri != null && item.localImagePath == null) {
       // Trigger async download if not yet done
-      _downloadItemImage(item);
+      _downloadItemImage(item, forceRedownload: true);
     }
 
     return LongPressDraggable<FahrversuchItem>(
@@ -1554,6 +1588,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                   borderRadius: BorderRadius.circular(6),
                   child: Image.file(
                     File(item.localImagePath!),
+                    key:
+                        ValueKey(File(item.localImagePath!).lastModifiedSync()),
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) =>
                         const Icon(Icons.broken_image, color: Colors.red),
@@ -1640,3 +1676,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     super.dispose();
   }
 }
+
+// --------------------------------------------
+//        Helper Extensions or Methods (if any)
+// --------------------------------------------
+
+// No additional helper extensions or methods are required at this point.
+// Ensure that all helper methods used within the class are defined above.
+
