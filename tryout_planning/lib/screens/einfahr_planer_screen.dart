@@ -1,74 +1,15 @@
 // lib/screens/einfahr_planer_screen.dart
 
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart'; // for kDebugMode
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For persisting preferences
+import '../models/schedule_action.dart';
 import '../models/fahrversuche.dart'; // Contains FahrversuchItem class
 import '../services/api_service.dart';
-// For clearing image cache
-
-enum ActionType { add, delete, move, statusChange }
-
-class ScheduleAction {
-  final ActionType type;
-  final FahrversuchItem item;
-  final String fromDay;
-  final int fromIndex;
-  final String toDay;
-  final int toIndex;
-
-  // For statusChange
-  final String oldStatus;
-  final String newStatus;
-
-  // Constructor for Add Action
-  ScheduleAction.add({
-    required this.item,
-    required this.toDay,
-    required this.toIndex,
-  })  : type = ActionType.add,
-        fromDay = '',
-        fromIndex = -1,
-        oldStatus = '',
-        newStatus = '';
-
-  // Constructor for Delete Action
-  ScheduleAction.delete({
-    required this.item,
-    required this.fromDay,
-    required this.fromIndex,
-  })  : type = ActionType.delete,
-        toDay = '',
-        toIndex = -1,
-        oldStatus = '',
-        newStatus = '';
-
-  // Constructor for Move Action
-  ScheduleAction.move({
-    required this.item,
-    required this.fromDay,
-    required this.fromIndex,
-    required this.toDay,
-    required this.toIndex,
-  })  : type = ActionType.move,
-        oldStatus = '',
-        newStatus = '';
-
-  // Constructor for Status Change Action
-  ScheduleAction.statusChange({
-    required this.item,
-    required this.oldStatus, // Now non-nullable
-    required this.newStatus, // Now non-nullable
-  })  : type = ActionType.statusChange,
-        fromDay = '',
-        fromIndex = -1,
-        toDay = '',
-        toIndex = -1;
-}
 
 class EinfahrPlanerScreen extends StatefulWidget {
   const EinfahrPlanerScreen({super.key});
@@ -1571,10 +1512,10 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                         },
                       );
                     },
-                    onWillAccept: (data) => _editModeEnabled,
-                    onAccept: (item) {
+                    onWillAcceptWithDetails: (data) => _editModeEnabled,
+                    onAcceptWithDetails: (item) {
                       if (_editModeEnabled) {
-                        moveItemHandler(item);
+                        moveItemHandler(item as FahrversuchItem);
                       }
                     },
                   ),

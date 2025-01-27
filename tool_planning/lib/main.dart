@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'screens/tool_planning_screen.dart'; // Your existing ToolPlanning
-import 'screens/einfahr_planer_screen.dart'; // The new EinfahrPlaner
 import 'screens/login_screen.dart'; // If you have a login screen
 import 'shared/theme.dart'; // Your custom themes, if any
 
@@ -24,7 +23,6 @@ class ToolPlanningApp extends StatelessWidget {
       routes: {
         '/': (context) => const HomeScreen(), // The drawer scaffold
         '/tool-planning': (context) => const ToolPlanningScreen(),
-        '/einfahr-planer': (context) => const EinfahrPlanerScreen(),
         '/login': (context) => const LoginScreen(), // If used
       },
       debugShowCheckedModeBanner: false,
