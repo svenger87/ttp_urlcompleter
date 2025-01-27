@@ -9,8 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For persisting preferences
 import '../models/fahrversuche.dart'; // Contains FahrversuchItem class
 import '../services/api_service.dart';
+// For clearing image cache
 
-enum ActionType { add, delete, move }
+enum ActionType { add, delete, move, statusChange }
 
 class ScheduleAction {
   final ActionType type;
@@ -20,6 +21,10 @@ class ScheduleAction {
   final String toDay;
   final int toIndex;
 
+  // For statusChange
+  final String oldStatus;
+  final String newStatus;
+
   // Constructor for Add Action
   ScheduleAction.add({
     required this.item,
@@ -27,7 +32,9 @@ class ScheduleAction {
     required this.toIndex,
   })  : type = ActionType.add,
         fromDay = '',
-        fromIndex = -1;
+        fromIndex = -1,
+        oldStatus = '',
+        newStatus = '';
 
   // Constructor for Delete Action
   ScheduleAction.delete({
@@ -36,7 +43,9 @@ class ScheduleAction {
     required this.fromIndex,
   })  : type = ActionType.delete,
         toDay = '',
-        toIndex = -1;
+        toIndex = -1,
+        oldStatus = '',
+        newStatus = '';
 
   // Constructor for Move Action
   ScheduleAction.move({
@@ -45,7 +54,20 @@ class ScheduleAction {
     required this.fromIndex,
     required this.toDay,
     required this.toIndex,
-  }) : type = ActionType.move;
+  })  : type = ActionType.move,
+        oldStatus = '',
+        newStatus = '';
+
+  // Constructor for Status Change Action
+  ScheduleAction.statusChange({
+    required this.item,
+    required this.oldStatus, // Now non-nullable
+    required this.newStatus, // Now non-nullable
+  })  : type = ActionType.statusChange,
+        fromDay = '',
+        fromIndex = -1,
+        toDay = '',
+        toIndex = -1;
 }
 
 class EinfahrPlanerScreen extends StatefulWidget {
@@ -297,7 +319,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
   }
 
   // --------------------------------------------
-  //        ITEM ACTIONS: MOVE / ADD / DELETE
+  //        ITEM ACTIONS: MOVE / ADD / DELETE / STATUS CHANGE
   // --------------------------------------------
   Future<void> _moveItem(
       FahrversuchItem item, String newDay, int newTryIndex) async {
@@ -308,7 +330,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
       item.dayName = newDay;
       item.tryoutIndex = newTryIndex;
       schedule[newDay]![newTryIndex].add(item);
-
       _actionHistory.add(ScheduleAction.move(
         item: item,
         fromDay: oldDay,
@@ -477,55 +498,59 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('${item.projectName} bearbeiten'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var st in statuses)
-                RadioListTile<String>(
-                  title: Text(st),
-                  value: st,
-                  groupValue: selectedStatus,
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => selectedStatus = val);
-                    }
-                  },
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text('${item.projectName} bearbeiten'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var st in statuses)
+                    RadioListTile<String>(
+                      title: Text(st),
+                      value: st,
+                      groupValue: selectedStatus,
+                      onChanged: (val) {
+                        if (val != null) {
+                          setStateDialog(() => selectedStatus = val);
+                        }
+                      },
+                    ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Schiebe in nächste Kalenderwoche'),
+                    onPressed: () => Navigator.pop(context, 'nextWeek'),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.close),
+                    label: const Text('Fahrversuch nicht durchgeführt'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueGrey),
+                    onPressed: () => Navigator.pop(context, 'notConducted'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Löschen'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent),
+                    onPressed: () => Navigator.pop(context, 'delete'),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Abbrechen'),
                 ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.arrow_forward),
-                label: const Text('Schiebe in nächste Kalenderwoche'),
-                onPressed: () => Navigator.pop(context, 'nextWeek'),
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.close),
-                label: const Text('Fahrversuch nicht durchgeführt'),
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
-                onPressed: () => Navigator.pop(context, 'notConducted'),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.delete),
-                label: const Text('Löschen'),
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                onPressed: () => Navigator.pop(context, 'delete'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: const Text('Abbrechen'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, selectedStatus),
-              child: const Text('Speichern'),
-            ),
-          ],
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, selectedStatus),
+                  child: const Text('Speichern'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -542,6 +567,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     }
     if (result == 'notConducted') {
       final oldHasBeenMoved = item.hasBeenMoved;
+      final oldStatus = item.status; // Preserve old status
       setState(() {
         item.hasBeenMoved = true;
         item.status = 'Nicht durchgeführt';
@@ -559,12 +585,10 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           hasBeenMoved: true,
           extrudermainId: item.extrudermainId,
         );
-        _actionHistory.add(ScheduleAction.move(
+        _actionHistory.add(ScheduleAction.statusChange(
           item: item,
-          fromDay: item.dayName,
-          fromIndex: item.tryoutIndex,
-          toDay: item.dayName,
-          toIndex: item.tryoutIndex,
+          oldStatus: oldStatus,
+          newStatus: item.status,
         ));
       } catch (err) {
         setState(() {
@@ -581,6 +605,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     // If user changed status
     if (result != oldStatus) {
       setState(() => item.status = result);
+      if (kDebugMode) {
+        print('Status changed for item ${item.id} from $oldStatus to $result');
+      }
       try {
         await ApiService.updateEinfahrPlan(
           id: item.id,
@@ -594,15 +621,19 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           hasBeenMoved: false,
           extrudermainId: item.extrudermainId,
         );
-        _actionHistory.add(ScheduleAction.move(
+        _actionHistory.add(ScheduleAction.statusChange(
           item: item,
-          fromDay: item.dayName,
-          fromIndex: item.tryoutIndex,
-          toDay: item.dayName,
-          toIndex: item.tryoutIndex,
+          oldStatus: oldStatus,
+          newStatus: result,
         ));
+        if (kDebugMode) {
+          print('API update successful for status change of item ${item.id}');
+        }
       } catch (err) {
         setState(() => item.status = oldStatus);
+        if (kDebugMode) {
+          print('Error updating status for item ${item.id}: $err');
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Fehler beim Setzen von $result: $err')),
         );
@@ -801,6 +832,10 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         downloadedFile = await ApiService.downloadIkofficeFile(uri, imagePath);
         if (downloadedFile != null) {
           setState(() => item.localImagePath = downloadedFile?.path);
+          if (kDebugMode) {
+            print(
+                'Image downloaded for item ${item.id} at ${downloadedFile.path}');
+          }
           return downloadedFile;
         } else {
           throw Exception('Downloaded file is null.');
@@ -1103,6 +1138,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
         });
         try {
           await ApiService.deleteEinfahrPlan(lastAction.item.id);
+          if (kDebugMode) {
+            print('Undo Add: Item ${lastAction.item.id} deleted.');
+          }
         } catch (err) {
           if (kDebugMode) {
             print('!! _undoLastAction: error undoing add: $err');
@@ -1122,11 +1160,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
           if (lastAction.item.imageUri != null) {
             await _downloadItemImage(lastAction.item, forceRedownload: true);
           }
+          if (kDebugMode) {
+            print('Undo Delete: Item ${lastAction.item.id} undeleted.');
+          }
         } catch (err) {
           if (kDebugMode) {
             print('!! _undoLastAction: error undoing delete: $err');
           }
-          // revert local
+          // Revert local changes
           setState(() {
             schedule[lastAction.fromDay]![lastAction.fromIndex]
                 .remove(lastAction.item);
@@ -1157,11 +1198,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             hasBeenMoved: false,
             extrudermainId: lastAction.item.extrudermainId,
           );
+          if (kDebugMode) {
+            print('Undo Move: Item ${lastAction.item.id} moved back.');
+          }
         } catch (err) {
           if (kDebugMode) {
             print('!! _undoLastAction: error undoing move: $err');
           }
-          // revert local
+          // Revert local changes
           setState(() {
             schedule[lastAction.fromDay]![lastAction.fromIndex]
                 .remove(lastAction.item);
@@ -1170,6 +1214,47 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
             lastAction.item.dayName = lastAction.toDay;
             lastAction.item.tryoutIndex = lastAction.toIndex;
           });
+        }
+        break;
+
+      case ActionType.statusChange:
+        // Undo Status Change -> revert to old status
+        final item = lastAction.item;
+        final oldStatus = lastAction.oldStatus;
+        final newStatus = lastAction.newStatus;
+
+        setState(() {
+          item.status = oldStatus;
+        });
+
+        try {
+          await ApiService.updateEinfahrPlan(
+            id: item.id,
+            projectName: item.projectName,
+            toolNumber: item.toolNumber,
+            dayName: item.dayName,
+            tryoutIndex: item.tryoutIndex,
+            status: oldStatus, // Now non-nullable
+            weekNumber: item.weekNumber,
+            year: item.year,
+            hasBeenMoved: item.hasBeenMoved,
+            extrudermainId: item.extrudermainId,
+          );
+          if (kDebugMode) {
+            print(
+                'Undo Status Change: Item ${item.id} status reverted to $oldStatus.');
+          }
+        } catch (err) {
+          setState(() {
+            item.status = newStatus;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Fehler beim Rückgängigmachen des Status: $err')),
+          );
+          if (kDebugMode) {
+            print('!! _undoLastAction: error undoing status change: $err');
+          }
         }
         break;
     }
@@ -1332,7 +1417,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                       width: 210,
                       height: (days.length * 172).toDouble() + 35,
                       bgColor: Colors.red[100],
-                      title: 'Werkzeuge in Änderung',
+                      title: '     Werkzeuge in Änderung',
                       onAdd:
                           _editModeEnabled ? () => _addToSeparateBox(5) : null,
                       // Flatten across all days at index=5
@@ -1349,7 +1434,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
                       width: 210,
                       height: (days.length * 172).toDouble() + 35,
                       bgColor: Colors.green[100],
-                      title: 'Bereit für Einfahrversuch',
+                      title: '     Bereit für Einfahrversuch',
                       onAdd:
                           _editModeEnabled ? () => _addToSeparateBox(6) : null,
                       itemsSupplier: () => schedule.entries
@@ -1676,11 +1761,3 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen> {
     super.dispose();
   }
 }
-
-// --------------------------------------------
-//        Helper Extensions or Methods (if any)
-// --------------------------------------------
-
-// No additional helper extensions or methods are required at this point.
-// Ensure that all helper methods used within the class are defined above.
-
