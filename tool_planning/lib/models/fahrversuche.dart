@@ -1,8 +1,11 @@
 // lib/models/fahrversuche.dart
 
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path; // Import for path operations
 
 class FahrversuchItem {
   final int id;
@@ -89,11 +92,21 @@ class FahrversuchItem {
   }
 
   /// Generates a unique local image path based on the item's ID.
-  /// **Updated to use temporary directory**
+  /// **Updated to handle multiple image formats**
   Future<String> getUniqueImagePath() async {
     final directory =
-        await getTemporaryDirectory(); // Changed from getApplicationDocumentsDirectory()
-    return '${directory.path}/ikoffice_$id.jpg'; // Assuming JPEG images
+        await getTemporaryDirectory(); // Changed to temporary directory
+    String extension = '.jpg'; // Default extension
+
+    if (imageUri != null && imageUri!.isNotEmpty) {
+      final uriPath = Uri.parse(imageUri!).path;
+      final ext = path.extension(uriPath).toLowerCase();
+      if (ext == '.png' || ext == '.jpg' || ext == '.jpeg') {
+        extension = ext;
+      }
+    }
+
+    return '${directory.path}/ikoffice_$id$extension'; // Use dynamic extension
   }
 
   /// Checks if the image exists locally.

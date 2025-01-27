@@ -1,6 +1,6 @@
 // lib/services/api_service.dart
 
-// ignore_for_file: constant_identifier_names
+// ignore_for_file: constant_identifier_names, depend_on_referenced_packages
 
 import 'dart:io';
 import 'package:flutter/foundation.dart'; // For kDebugMode
@@ -11,6 +11,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class ApiService {
   static const _storage = FlutterSecureStorage();
@@ -605,6 +606,33 @@ class ApiService {
 
       // Check status
       if (streamedResponse.statusCode == 200) {
+        // Determine the file extension
+        String extension = path.extension(url.path).toLowerCase();
+
+        if (extension.isEmpty) {
+          // Fallback to Content-Type
+          final contentType = streamedResponse.headers['content-type'];
+          if (contentType != null) {
+            final mimeType =
+                lookupMimeType('', headerBytes: utf8.encode(contentType));
+            if (mimeType != null) {
+              final mimeParts = mimeType.split('/');
+              if (mimeParts.length == 2) {
+                extension = '.${mimeParts[1]}';
+              }
+            }
+          }
+          // Default to .jpg if extension couldn't be determined
+          if (extension.isEmpty) {
+            extension = '.jpg';
+          }
+        }
+
+        // Append extension to savePath if not already present
+        if (!savePath.toLowerCase().endsWith(extension)) {
+          savePath += extension;
+        }
+
         // On success, read the bytes
         final bytes = await streamedResponse.stream.toBytes();
 
@@ -613,6 +641,10 @@ class ApiService {
 
         // Write the bytes
         await file.writeAsBytes(bytes, flush: true);
+
+        if (kDebugMode) {
+          print('File downloaded and saved to: ${file.path}');
+        }
 
         return file;
       } else {
