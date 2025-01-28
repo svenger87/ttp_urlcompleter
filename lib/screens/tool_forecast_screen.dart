@@ -29,12 +29,40 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
   bool _isProvidedCollapsed = true;
   bool _isForecastCollapsed = false;
 
+  // We store the separated data for Provided and Forecast in state,
+  // so we can sort them as needed.
+  late List<Map<String, dynamic>> _providedData;
+  late List<Map<String, dynamic>> _forecastData;
+
+  // Track which column is sorted and ascending/descending for provided data
+  int _sortColumnIndexProvided = 0; // Default to Starttermin column index
+  bool _sortAscendingProvided = true; // Default ascending
+
+  // Track which column is sorted and ascending/descending for forecast data
+  int _sortColumnIndexForecast = 0; // Default to Starttermin column index
+  bool _sortAscendingForecast = true; // Default ascending
+
+  @override
+  void initState() {
+    super.initState();
+    // Separate providedData and forecastData
+    _providedData =
+        widget.forecastData.where((tool) => tool['provided'] == true).toList();
+    _forecastData =
+        widget.forecastData.where((tool) => tool['provided'] != true).toList();
+
+    // Default sort by Starttermin (column index 0) ascending
+    _sortProvidedData(_sortColumnIndexProvided, _sortAscendingProvided);
+    _sortForecastData(_sortColumnIndexForecast, _sortAscendingForecast);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            'Werkzeugvorschau (Letzte Aktualisierung: ${widget.lastUpdated})'),
+          'Werkzeugvorschau (Letzte Aktualisierung: ${widget.lastUpdated})',
+        ),
         backgroundColor: const Color(0xFF104382),
         titleTextStyle: const TextStyle(
           color: Colors.white, // Set the text color to white
@@ -43,6 +71,7 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         ),
       ),
       body: SingleChildScrollView(
+        controller: _verticalController,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -54,13 +83,13 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     );
   }
 
-  Widget _buildProvidedSection() {
-    final providedData =
-        widget.forecastData.where((tool) => tool['provided'] == true).toList();
+  // -- Provided Section
 
+  Widget _buildProvidedSection() {
     if (kDebugMode) {
       print(
-          "Provided Data includes: ${providedData.map((tool) => tool['Equipment']).toList()}");
+        "Provided Data includes: ${_providedData.map((tool) => tool['Equipment']).toList()}",
+      );
     }
 
     return Padding(
@@ -86,11 +115,15 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
+                  sortColumnIndex: _sortColumnIndexProvided,
+                  sortAscending: _sortAscendingProvided,
                   showCheckboxColumn: false,
                   columnSpacing: 20,
-                  columns: _buildColumns(),
+                  columns: _buildColumns(
+                    isProvidedTable: true,
+                  ),
                   rows:
-                      providedData.map((tool) => _buildDataRow(tool)).toList(),
+                      _providedData.map((tool) => _buildDataRow(tool)).toList(),
                 ),
               ),
             ),
@@ -101,13 +134,13 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     );
   }
 
-  Widget _buildForecastSection() {
-    final forecastData =
-        widget.forecastData.where((tool) => tool['provided'] != true).toList();
+  // -- Forecast Section
 
+  Widget _buildForecastSection() {
     if (kDebugMode) {
       print(
-          "Forecast Data includes: ${forecastData.map((tool) => tool['Equipment']).toList()}");
+        "Forecast Data includes: ${_forecastData.map((tool) => tool['Equipment']).toList()}",
+      );
     }
 
     return Padding(
@@ -133,11 +166,15 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
+                  sortColumnIndex: _sortColumnIndexForecast,
+                  sortAscending: _sortAscendingForecast,
                   showCheckboxColumn: false,
                   columnSpacing: 20,
-                  columns: _buildColumns(),
+                  columns: _buildColumns(
+                    isProvidedTable: false,
+                  ),
                   rows:
-                      forecastData.map((tool) => _buildDataRow(tool)).toList(),
+                      _forecastData.map((tool) => _buildDataRow(tool)).toList(),
                 ),
               ),
             ),
@@ -148,58 +185,238 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     );
   }
 
-  List<DataColumn> _buildColumns() {
-    return const [
+  // -- Build Columns
+
+  /// The only difference between the Provided and Forecast tables is which data
+  /// list they sort. So we use `isProvidedTable` to distinguish in [onSort].
+  List<DataColumn> _buildColumns({required bool isProvidedTable}) {
+    return [
       DataColumn(
-        label: Text(
+        label: const Text(
           'Starttermin',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        // We set the onSort callback for each column
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
       DataColumn(
-        label: Text(
+        label: const Text(
           'Bereitstellung',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
       DataColumn(
-        label: Text(
+        label: const Text(
           'Hauptartikel',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
       DataColumn(
-        label: Text(
+        label: const Text(
           'Werkzeug',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
       DataColumn(
-        label: Text(
+        label: const Text(
           'Arbeitsplatz',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
       DataColumn(
-        label: Text(
+        label: const Text(
           'Längswzgr',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
       DataColumn(
-        label: Text(
+        label: const Text(
           'Verpwzgr',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
       DataColumn(
-        label: Text(
+        label: const Text(
           'Status',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        onSort: (columnIndex, ascending) {
+          if (isProvidedTable) {
+            _sortProvidedData(columnIndex, ascending);
+          } else {
+            _sortForecastData(columnIndex, ascending);
+          }
+        },
       ),
     ];
   }
+
+  // -- Sort Logic
+
+  /// Sort the Provided Data
+  void _sortProvidedData(int columnIndex, bool ascending) {
+    setState(() {
+      _sortColumnIndexProvided = columnIndex;
+      _sortAscendingProvided = ascending;
+
+      _providedData.sort((a, b) => _compareCells(a, b, columnIndex, ascending));
+    });
+  }
+
+  /// Sort the Forecast Data
+  void _sortForecastData(int columnIndex, bool ascending) {
+    setState(() {
+      _sortColumnIndexForecast = columnIndex;
+      _sortAscendingForecast = ascending;
+
+      _forecastData.sort((a, b) => _compareCells(a, b, columnIndex, ascending));
+    });
+  }
+
+  /// A helper method to compare row data based on which column was tapped.
+  int _compareCells(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+    int columnIndex,
+    bool ascending,
+  ) {
+    late int compareResult;
+
+    switch (columnIndex) {
+      // Starttermin
+      case 0:
+        final dateA = _tryParseDate(a['PlanStartDatum']);
+        final dateB = _tryParseDate(b['PlanStartDatum']);
+        compareResult = dateA.compareTo(dateB);
+        break;
+
+      // Bereitstellung
+      case 1:
+        // This is a boolean comparison: 'provided' = true/false
+        final bool valA = (a['provided'] == true);
+        final bool valB = (b['provided'] == true);
+        compareResult = valA == valB
+            ? 0
+            : (valA
+                ? 1
+                : -1); // you could also invert if you prefer false first
+        break;
+
+      // Hauptartikel
+      case 2:
+        final String valA = a['Hauptartikel'] ?? '';
+        final String valB = b['Hauptartikel'] ?? '';
+        compareResult = valA.compareTo(valB);
+        break;
+
+      // Werkzeug (Equipment)
+      case 3:
+        final String valA = a['Equipment'] ?? '';
+        final String valB = b['Equipment'] ?? '';
+        compareResult = valA.compareTo(valB);
+        break;
+
+      // Arbeitsplatz
+      case 4:
+        final String valA = a['Arbeitsplatz'] ?? '';
+        final String valB = b['Arbeitsplatz'] ?? '';
+        compareResult = valA.compareTo(valB);
+        break;
+
+      // Längswzgr
+      case 5:
+        final String valA =
+            (a['lengthcuttoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
+        final String valB =
+            (b['lengthcuttoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
+        compareResult = valA.compareTo(valB);
+        break;
+
+      // Verpwzgr
+      case 6:
+        final String valA =
+            (a['packagingtoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
+        final String valB =
+            (b['packagingtoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
+        compareResult = valA.compareTo(valB);
+        break;
+
+      // Status
+      case 7:
+        final String valA = a['internalstatus'] ?? 'N/A';
+        final String valB = b['internalstatus'] ?? 'N/A';
+        compareResult = valA.compareTo(valB);
+        break;
+
+      default:
+        compareResult = 0;
+    }
+
+    return ascending ? compareResult : -compareResult;
+  }
+
+  DateTime _tryParseDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      // Return a default fallback date
+      return DateTime(1900);
+    }
+    try {
+      return DateTime.parse(dateString);
+    } catch (_) {
+      // Return a default fallback if parse fails
+      return DateTime(1900);
+    }
+  }
+
+  // -- Build Each Data Row
 
   DataRow _buildDataRow(Map<String, dynamic> tool) {
     String lengthcuttoolgroup =
@@ -231,7 +448,7 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     ]);
   }
 
-  /// Updated method to handle the blueAccent case (freestatus_id == 37).
+  /// Updated method to handle the blueAccent case (freestatus_id == 37 or 133).
   DataRow _buildPulsatingRow(
     Map<String, dynamic> tool,
     bool highlightRow,
@@ -323,6 +540,8 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
       );
     }
   }
+
+  // -- Utility Methods
 
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'N/A';
