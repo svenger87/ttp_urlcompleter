@@ -14,6 +14,7 @@ import 'package:packaging_module/screens/production_orders_screen.dart';
 import 'package:tryout_planning/screens/einfahr_planer_screen.dart';
 import 'package:sap2worldship/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:kistenqrcodegenerator/main.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -251,6 +252,18 @@ class MainDrawer extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ToolPlanningScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(MdiIcons.packageVariantClosed),
+                title: const Text('Kisten QR Code Generator'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const QrCodeGeneratorPage(),
                     ),
                   );
                 },

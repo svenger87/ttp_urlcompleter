@@ -19,6 +19,8 @@ dependencies:
     path: ./tryout_planning
   sap2worldship:
     path: ./sap2worldship
+  kistenqrcodegenerator:
+    path: ./kistenqrcodegenerator
   url_launcher: ^6.1.12
   flutter_launcher_icons: ^0.14.1
   qr_code_scanner: ^1.0.1
