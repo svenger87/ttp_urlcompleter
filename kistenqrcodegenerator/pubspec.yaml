@@ -39,6 +39,9 @@ dependencies:
   csv: ^6.0.0
   qr: ^3.0.2
   path: ^1.9.0
+  http: ^1.3.0
+  flutter_dotenv: ^5.2.1
+  flutter_typeahead: ^5.2.0
 
 dev_dependencies:
   flutter_test:

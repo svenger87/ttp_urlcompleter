@@ -4,6 +4,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,7 +18,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:http/io_client.dart' as http;
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class NumberInputPage extends StatefulWidget {
   const NumberInputPage({super.key});
@@ -628,6 +628,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   String? workCardComment;
   String? imagePath;
 
+  // Controllers
   final TextEditingController employeeController = TextEditingController();
   final TextEditingController areaCenterController = TextEditingController();
   final TextEditingController lineController = TextEditingController();
@@ -639,13 +640,12 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   void initState() {
     super.initState();
 
-    if (widget.selectedToolBreakdown != null &&
-        widget.selectedToolBreakdown!.isNotEmpty) {
+    // Pre-fill tool / machine if provided
+    if (widget.selectedToolBreakdown?.isNotEmpty ?? false) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
     }
-    if (widget.selectedMachineBreakdown != null &&
-        widget.selectedMachineBreakdown!.isNotEmpty) {
+    if (widget.selectedMachineBreakdown?.isNotEmpty ?? false) {
       selectedMachineBreakdown = widget.selectedMachineBreakdown;
       machineController.text = selectedMachineBreakdown!;
     }
@@ -666,7 +666,12 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          top: 16,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -676,160 +681,84 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 16),
 
+            // Checkbox for operable
             Row(
               children: [
                 Checkbox(
                   value: operable,
-                  onChanged: (value) {
-                    setState(() {
-                      operable = value!;
-                    });
-                  },
+                  onChanged: (value) =>
+                      setState(() => operable = value ?? true),
                 ),
                 const Text('Betrieb möglich?'),
               ],
             ),
 
-            // Employee selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: employeeController,
-                decoration: const InputDecoration(
-                  labelText: 'Mitarbeiter auswählen',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
-                return widget.employees
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
-                    .toList();
+            // 1) Employee
+            _buildTypeAheadField(
+              labelText: 'Mitarbeiter auswählen',
+              controller: employeeController,
+              items: widget.employees,
+              onItemSelected: (val) {
+                selectedEmployee = val;
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                employeeController.text = suggestion;
-                selectedEmployee = suggestion;
-              },
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte Mitarbeiter auswählen'
-                  : null,
             ),
+            const SizedBox(height: 8),
 
-            // Area Center selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: areaCenterController,
-                decoration: const InputDecoration(
-                  labelText: 'Zuständige Stelle',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
-                return widget.areaCenters
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
-                    .toList();
+            // 2) Area Center
+            _buildTypeAheadField(
+              labelText: 'Zuständige Stelle',
+              controller: areaCenterController,
+              items: widget.areaCenters,
+              onItemSelected: (val) {
+                selectedAreaCenter = val;
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                areaCenterController.text = suggestion;
-                selectedAreaCenter = suggestion;
-              },
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte zuständige Stelle auswählen'
-                  : null,
             ),
+            const SizedBox(height: 8),
 
-            // Line selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: lineController,
-                decoration: const InputDecoration(
-                  labelText: 'Linie',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
-                return widget.lines
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
-                    .toList();
+            // 3) Line
+            _buildTypeAheadField(
+              labelText: 'Linie',
+              controller: lineController,
+              items: widget.lines,
+              onItemSelected: (val) {
+                selectedLine = val;
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                lineController.text = suggestion;
-                selectedLine = suggestion;
-              },
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte Linie auswählen'
-                  : null,
             ),
+            const SizedBox(height: 8),
 
-            // Tool selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: toolController,
-                decoration: const InputDecoration(
-                  labelText: 'Werkzeug',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
-                return widget.tools
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
-                    .toList();
+            // 4) Tool
+            _buildTypeAheadField(
+              labelText: 'Werkzeug',
+              controller: toolController,
+              items: widget.tools,
+              onItemSelected: (val) {
+                selectedToolBreakdown = val;
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                toolController.text = suggestion;
-                selectedToolBreakdown = suggestion;
+            ),
+            const SizedBox(height: 8),
+
+            // 5) Machine
+            _buildTypeAheadField(
+              labelText: 'Maschine / Anlage',
+              controller: machineController,
+              items: widget.machines,
+              onItemSelected: (val) {
+                selectedMachineBreakdown = val;
+              },
+            ),
+            const SizedBox(height: 8),
+
+            // 6) Material
+            _buildTypeAheadField(
+              labelText: 'Material',
+              controller: materialController,
+              items: widget.materials,
+              onItemSelected: (val) {
+                selectedMaterialBreakdown = val;
               },
             ),
 
-            // Machine selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: machineController,
-                decoration: const InputDecoration(
-                  labelText: 'Maschine / Anlage',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
-                return widget.machines
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
-                    .toList();
-              },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                machineController.text = suggestion;
-                selectedMachineBreakdown = suggestion;
-              },
-            ),
-
-            // Material selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: materialController,
-                decoration: const InputDecoration(
-                  labelText: 'Material',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
-                return widget.materials
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
-                    .toList();
-              },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
-                materialController.text = suggestion;
-                selectedMaterialBreakdown = suggestion;
-              },
-            ),
+            const SizedBox(height: 8),
 
             // Work card comment
             TextField(
@@ -840,15 +769,14 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 workCardComment = value;
               },
             ),
-
             const SizedBox(height: 16.0),
+
+            // Pick image
             ElevatedButton(
               onPressed: () async {
                 final pickedImage = await _pickImage();
                 if (pickedImage != null) {
-                  setState(() {
-                    imagePath = pickedImage.path;
-                  });
+                  setState(() => imagePath = pickedImage.path);
                 }
               },
               child: Row(
@@ -856,17 +784,19 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 children: [
                   const Icon(Icons.camera_alt),
                   const SizedBox(width: 8.0),
-                  const Text('Bild auswählen\noder Foto aufnehmen',
-                      textAlign: TextAlign.center),
+                  const Text(
+                    'Bild auswählen\noder Foto aufnehmen',
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16.0),
 
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
-
             const SizedBox(height: 16.0),
 
+            // Action buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -913,6 +843,57 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
           ],
         ),
       ),
+    );
+  }
+
+  /// A helper to build a TypeAheadField with the new API
+  Widget _buildTypeAheadField({
+    required String labelText,
+    required TextEditingController controller,
+    required List<String> items,
+    required ValueChanged<String> onItemSelected,
+  }) {
+    return TypeAheadField<String>(
+      onSelected: (String suggestion) {
+        controller.text = suggestion;
+        onItemSelected(suggestion);
+      },
+
+      // Called each time the user types
+      suggestionsCallback: (pattern) {
+        if (pattern.trim().isEmpty) return [];
+        final lower = pattern.trim().toLowerCase();
+        return items.where((e) => e.toLowerCase().contains(lower)).toList();
+      },
+
+      // How each item is built in the dropdown
+      itemBuilder: (context, String suggestion) {
+        return ListTile(
+          title: Text(suggestion),
+        );
+      },
+
+      // Build the text field itself (replaces old textFieldConfiguration)
+      builder: (context, textEditingController, focusNode) {
+        // Copy the existing controller's text into textEditingController
+        textEditingController.text = controller.text;
+        return TextField(
+          controller: textEditingController,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: labelText,
+          ),
+          onChanged: (val) {
+            // keep local controller in sync
+            controller.text = val;
+          },
+        );
+      },
+
+      // If you want to show a custom “no items” widget,
+      // rename `noItemsFoundBuilder` -> `emptyBuilder`
+      // If you want a custom loading or error UI, you can add them here too
+      // e.g. emptyBuilder: (context) => const ListTile(title: Text('Nichts gefunden')),
     );
   }
 

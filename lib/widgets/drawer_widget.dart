@@ -14,7 +14,7 @@ import 'package:packaging_module/screens/production_orders_screen.dart';
 import 'package:tryout_planning/screens/einfahr_planer_screen.dart';
 import 'package:sap2worldship/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:kistenqrcodegenerator/main.dart';
+import 'package:kistenqrcodegenerator/pages/qrcode_generator_page.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});

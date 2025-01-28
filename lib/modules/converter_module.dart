@@ -1,8 +1,11 @@
+// lib/modules/converter_module.dart
+
 // ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
+// Notice: we still import flutter_typeahead, but we'll use the new API
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -33,6 +36,7 @@ class _ConverterModuleState extends State<ConverterModule> {
         .loadString('assets/anbauteile.json');
     final Map<String, dynamic> jsonData = json.decode(data);
 
+    // Convert JSON map to list of maps
     anbauteileData = jsonData.entries
         .map((entry) => {
               'id': entry.key,
@@ -64,68 +68,94 @@ class _ConverterModuleState extends State<ConverterModule> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Neue Bezeichnung
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Neue Bezeichnung'),
                   TypeAheadField<String>(
-                    textFieldConfiguration: const TextFieldConfiguration(
-                      decoration: InputDecoration(),
-                    ),
-                    suggestionsCallback: (pattern) async {
-                      return anbauteileData
-                          .where((item) =>
-                              item['Neue_Bezeichnung']
-                                  .toLowerCase()
-                                  .contains(pattern.toLowerCase()) &&
-                              item['Neue_Bezeichnung'].isNotEmpty)
-                          .map((item) => item['Neue_Bezeichnung'] as String)
-                          .toList();
-                    },
-                    itemBuilder: (context, suggestion) {
-                      return ListTile(
-                        title: Text(suggestion),
-                      );
-                    },
-                    onSuggestionSelected: (suggestion) {
+                    // REQUIRED in flutter_typeahead >=5.0.0
+                    onSelected: (String suggestion) {
                       setState(() {
                         selectedNeueBezeichnung = suggestion;
                       });
                       _showTranslationResultDialog(
                           context, selectedNeueBezeichnung);
                     },
+
+                    // Replace old textFieldConfiguration with a builder
+                    builder: (context, textEditingController, focusNode) {
+                      return TextField(
+                        controller: textEditingController,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(),
+                      );
+                    },
+
+                    // Called when user types
+                    suggestionsCallback: (pattern) async {
+                      if (pattern.trim().isEmpty) return [];
+                      return anbauteileData
+                          .where((item) =>
+                              item['Neue_Bezeichnung']
+                                  .toLowerCase()
+                                  .contains(pattern.toLowerCase()) &&
+                              (item['Neue_Bezeichnung'] as String).isNotEmpty)
+                          .map((item) => item['Neue_Bezeichnung'] as String)
+                          .toList();
+                    },
+
+                    // How each item in the dropdown is built
+                    itemBuilder: (context, String suggestion) {
+                      return ListTile(
+                        title: Text(suggestion),
+                      );
+                    },
+
+                    // Optionally define emptyBuilder if you want a “no items found” UI
+                    // emptyBuilder: (context) => const ListTile(
+                    //   title: Text('Nichts gefunden'),
+                    // ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+
+              // Alte Bezeichnung
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Alte Bezeichnung'),
                   TypeAheadField<String>(
-                    textFieldConfiguration: const TextFieldConfiguration(
-                      decoration: InputDecoration(),
-                    ),
-                    suggestionsCallback: (pattern) async {
-                      return anbauteileData
-                          .where((item) =>
-                              item['Alte_Bezeichnung']
-                                  .toLowerCase()
-                                  .contains(pattern.toLowerCase()) &&
-                              item['Alte_Bezeichnung'].isNotEmpty)
-                          .map((item) => item['Alte_Bezeichnung'] as String)
-                          .toList();
-                    },
-                    itemBuilder: (context, suggestion) {
-                      return ListTile(
-                        title: Text(suggestion),
-                      );
-                    },
-                    onSuggestionSelected: (suggestion) {
+                    onSelected: (String suggestion) {
                       setState(() {
                         selectedAlteBezeichnung = suggestion;
                       });
                       _showTranslationResultDialog(
                           context, selectedAlteBezeichnung);
+                    },
+                    builder: (context, textEditingController, focusNode) {
+                      return TextField(
+                        controller: textEditingController,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(),
+                      );
+                    },
+                    suggestionsCallback: (pattern) async {
+                      if (pattern.trim().isEmpty) return [];
+                      return anbauteileData
+                          .where((item) =>
+                              item['Alte_Bezeichnung']
+                                  .toLowerCase()
+                                  .contains(pattern.toLowerCase()) &&
+                              (item['Alte_Bezeichnung'] as String).isNotEmpty)
+                          .map((item) => item['Alte_Bezeichnung'] as String)
+                          .toList();
+                    },
+                    itemBuilder: (context, String suggestion) {
+                      return ListTile(
+                        title: Text(suggestion),
+                      );
                     },
                   ),
                 ],
@@ -161,68 +191,63 @@ class _ConverterModuleState extends State<ConverterModule> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Übersetzte Anbauteile'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
+        return AlertDialog(
+          title: const Text('Übersetzte Anbauteile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ausgewähltes Bauteil: $selectedValue',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8.0),
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Ausgewähltes Bauteil: $selectedValue',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  _buildCopyableField(
+                    label: 'Neue Bezeichnung',
+                    value: item['Neue_Bezeichnung'],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildCopyableField(
-                          label: 'Neue Bezeichnung',
-                          value: item['Neue_Bezeichnung'],
-                        ),
-                        _buildCopyableField(
-                          label: 'Alte Bezeichnung',
-                          value: item['Alte_Bezeichnung'],
-                        ),
-                        _buildCopyableField(
-                          label: 'Beschreibung',
-                          value: item['Beschreibung'],
-                        ),
-                        _buildCopyableField(
-                          label: 'Bauteilgruppe',
-                          value: item['Bauteilgruppe'],
-                        ),
-                      ],
-                    ),
+                  _buildCopyableField(
+                    label: 'Alte Bezeichnung',
+                    value: item['Alte_Bezeichnung'],
                   ),
-                  if (pdfExists)
-                    ElevatedButton(
-                      onPressed: () {
-                        _openPDFFile(pdfFileName);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF104382),
-                      ),
-                      child: const Text('PDF Zeichnung öffnen'),
-                    ),
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text(
-                        'Schließen',
-                        style: TextStyle(color: Color(0xFF104382)),
-                      ),
-                    ),
+                  _buildCopyableField(
+                    label: 'Beschreibung',
+                    value: item['Beschreibung'],
+                  ),
+                  _buildCopyableField(
+                    label: 'Bauteilgruppe',
+                    value: item['Bauteilgruppe'],
                   ),
                 ],
               ),
-            );
-          },
+              const SizedBox(height: 8.0),
+              if (pdfExists)
+                ElevatedButton(
+                  onPressed: () {
+                    _openPDFFile(pdfFileName);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF104382),
+                  ),
+                  child: const Text('PDF Zeichnung öffnen'),
+                ),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    'Schließen',
+                    style: TextStyle(color: Color(0xFF104382)),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -250,7 +275,7 @@ class _ConverterModuleState extends State<ConverterModule> {
 
   void _copyToClipboard(String data) {
     Clipboard.setData(ClipboardData(text: data));
-    // You can show a snackbar or toast here to inform the user that the data has been copied.
+    // Show a Snackbar or message if desired
   }
 
   Future<bool> _pdfFileExists(String pdfFileName) async {
@@ -258,7 +283,7 @@ class _ConverterModuleState extends State<ConverterModule> {
       final ByteData data =
           await rootBundle.load('assets/wzabt_pdfs/$pdfFileName');
       // ignore: unnecessary_null_comparison
-      return data != null;
+      return data != null; // If load succeeds, file presumably exists
     } catch (error) {
       return false;
     }
@@ -266,12 +291,12 @@ class _ConverterModuleState extends State<ConverterModule> {
 
   Future<void> _openPDFFile(String pdfFileName) async {
     try {
-      // Syncfusion does not use a PdfController like pdfx. Instead, we directly open the PDF.
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              PDFViewerPage(filePath: 'assets/wzabt_pdfs/$pdfFileName'),
+          builder: (context) => PDFViewerPage(
+            filePath: 'assets/wzabt_pdfs/$pdfFileName',
+          ),
         ),
       );
     } catch (error) {
@@ -302,9 +327,7 @@ class PDFViewerPage extends StatelessWidget {
           ),
         ],
       ),
-      body: SfPdfViewer.asset(
-        filePath,
-      ),
+      body: SfPdfViewer.asset(filePath),
     );
   }
 }
