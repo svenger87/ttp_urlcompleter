@@ -1,16 +1,14 @@
 // lib/pages/qrcode_generator_page.dart
 
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart'; // TypeAhead
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import 'package:path/path.dart' as p;
 import 'package:qr/qr.dart';
 import '../models/profile.dart';
-import '../services/api_service.dart'; // your API service
-// import '../constants/constants.dart'; // only if needed
+import '../services/api_service.dart';
 
 class QrCodeGeneratorPage extends StatefulWidget {
   const QrCodeGeneratorPage({super.key});
@@ -20,39 +18,19 @@ class QrCodeGeneratorPage extends StatefulWidget {
 }
 
 class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
-  // CSV-related fields
+  // CSV-related
   String? csvFilePath;
   String? outputDirectory;
   double progressValue = 0;
   String statusMessage = "";
   bool isGenerating = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProfiles();
-  }
-
-  Future<void> _loadProfiles() async {
-    try {
-      // In your service, fetch everything (maybe pass an empty query or itemsPerPage=9999)
-      final profiles = await apiService.fetchAllProfiles();
-      setState(() {
-        apiProfiles = profiles;
-      });
-    } catch (e) {
-      // handle error
-    }
-  }
-
-  // API-related fields
-  bool isUsingApi = true; // Default to API
+  // API-related
+  bool isUsingApi = true; // default to API
   final ApiService apiService = ApiService();
-  List<Profile> apiProfiles =
-      []; // If you do local filtering, hold all profiles here
   List<Profile> selectedProfiles = [];
 
-  // Controller for CSV TextFormField
+  // CSV text field controller
   final TextEditingController _csvController = TextEditingController();
 
   @override
@@ -84,14 +62,12 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
                       setState(() {
                         isUsingApi = value;
                         if (isUsingApi) {
-                          // Reset CSV
+                          // reset CSV data
                           csvFilePath = null;
                           _csvController.clear();
-                          // Reset selected
                           selectedProfiles.clear();
                         } else {
-                          // Reset API
-                          apiProfiles.clear();
+                          // reset API data
                           selectedProfiles.clear();
                         }
                       });
@@ -102,12 +78,12 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
               ),
               const SizedBox(height: 20),
 
-              // Conditional UI
+              // Show CSV or API input
               isUsingApi ? _buildApiSection() : _buildCsvSection(),
 
               const SizedBox(height: 20),
 
-              // Show selected profiles (only for API mode)
+              // If using API, show selected profiles
               if (isUsingApi) _buildSelectedProfilesSection(),
 
               const SizedBox(height: 40),
@@ -135,7 +111,7 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
     );
   }
 
-  /// 1) CSV UI
+  /// CSV Input Section
   Widget _buildCsvSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,13 +146,16 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
     );
   }
 
-  /// 2) API + TypeAhead UI
+  /// API Section Using Server-Side Partial Search
   Widget _buildApiSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // The TypeAhead widget to search & fetch from server
         TypeAheadField<Profile>(
+          // required in flutter_typeahead >=5.0.0
           onSelected: (Profile suggestion) {
+            // Add the profile if not already in selection
             if (!selectedProfiles.contains(suggestion)) {
               setState(() {
                 selectedProfiles.add(suggestion);
@@ -191,22 +170,26 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
               );
             }
           },
+
+          // Called whenever user types
           suggestionsCallback: (pattern) async {
             if (pattern.trim().isEmpty) {
               return [];
             }
-            final lower = pattern.trim().toLowerCase();
-            return apiProfiles.where((profile) {
-              return profile.title.toLowerCase().contains(lower) ||
-                  profile.shortUrl.toLowerCase().contains(lower);
-            }).toList();
+            // Server-side partial matching
+            final results = await apiService.fetchProfiles(pattern.trim());
+            return results;
           },
-          itemBuilder: (context, Profile suggestion) {
+
+          // Build each dropdown item
+          itemBuilder: (context, Profile profile) {
             return ListTile(
-              title: Text(suggestion.title),
-              subtitle: Text(suggestion.shortUrl),
+              title: Text(profile.title),
+              subtitle: Text(profile.shortUrl),
             );
           },
+
+          // Build the text field itself
           builder: (context, textEditingController, focusNode) {
             return TextField(
               controller: textEditingController,
@@ -216,15 +199,13 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
                 hintText: "Geben Sie einen Suchbegriff ein",
                 prefixIcon: Icon(Icons.search),
               ),
-              onTap: () async {
-                if (apiProfiles.isEmpty) {
-                  await _loadProfiles();
-                }
-              },
             );
           },
+          // If you want a “no items found” UI, rename noItemsFoundBuilder => emptyBuilder
+          // e.g. emptyBuilder: (context) => const ListTile(title: Text('Nichts gefunden')),
         ),
         const SizedBox(height: 10),
+        // Show how many selected
         Text(
           selectedProfiles.isNotEmpty
               ? "${selectedProfiles.length} Profile ausgewählt."
@@ -238,7 +219,7 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
     );
   }
 
-  /// 3) Show selected profiles & allow deleting them
+  /// Display list of selected profiles & allow deletion
   Widget _buildSelectedProfilesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,33 +262,32 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
     );
   }
 
-  /// 4) Generate QR Codes (CSV or API)
+  /// Called when "Kisten QR Codes erstellen" is pressed
   Future<void> _generateQrCodes() async {
     if (outputDirectory == null) {
-      // Ask user to select output directory
-      String? selectedDir = await FilePicker.platform.getDirectoryPath();
+      // Let user pick an output directory
+      final selectedDir = await FilePicker.platform.getDirectoryPath();
       if (selectedDir != null) {
-        setState(() {
-          outputDirectory = selectedDir;
-        });
+        setState(() => outputDirectory = selectedDir);
       } else {
-        setState(() {
-          statusMessage = "Bitte ein Ausgabeverzeichnis auswählen.";
-        });
+        setState(
+            () => statusMessage = "Bitte ein Ausgabeverzeichnis auswählen.");
         return;
       }
     }
 
     List<Map<String, dynamic>> dataRows = [];
 
+    // Handle data based on toggle
     if (isUsingApi) {
+      // If no selection, show error
       if (selectedProfiles.isEmpty) {
         setState(() {
           statusMessage = "Bitte wählen Sie mindestens ein Profil aus.";
         });
         return;
       }
-
+      // Convert selected profiles
       dataRows = selectedProfiles.map((profile) {
         return {
           'shortUrl': profile.shortUrl,
@@ -315,7 +295,7 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
         };
       }).toList();
     } else {
-      // CSV path
+      // CSV-based approach
       if (csvFilePath == null) {
         setState(() {
           statusMessage = "Bitte eine CSV-Datei auswählen.";
@@ -331,7 +311,7 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
         return;
       }
 
-      // Read CSV
+      // read & parse CSV
       List<List<dynamic>> csvTable;
       try {
         final csvString = await inputFile.readAsString();
@@ -371,6 +351,7 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
         return;
       }
 
+      // build data rows
       dataRows = dataRowsRaw.map((row) {
         return {
           'shortUrl': row[shortUrlIndex].toString(),
@@ -386,8 +367,8 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
       return;
     }
 
-    final outputDir = Directory(outputDirectory!);
-    if (!await outputDir.exists()) {
+    final outDir = Directory(outputDirectory!);
+    if (!await outDir.exists()) {
       setState(() {
         statusMessage = "Das ausgewählte Ausgabeverzeichnis existiert nicht.";
       });
@@ -402,8 +383,8 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
 
     for (int i = 0; i < dataRows.length; i++) {
       final row = dataRows[i];
-      String shortUrl = row['shortUrl']?.toString() ?? '';
-      String title = row['title']?.toString() ?? '';
+      String shortUrl = row['shortUrl'] ?? '';
+      String title = row['title'] ?? '';
 
       if (shortUrl.isEmpty || title.isEmpty) {
         continue;
@@ -476,8 +457,7 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
     final buffer = StringBuffer();
     for (int r = 0; r < moduleCount; r++) {
       for (int c = 0; c < moduleCount; c++) {
-        final isDark = qrImage.isDark(r, c);
-        if (isDark) {
+        if (qrImage.isDark(r, c)) {
           final x = c * pixelSize + margin;
           final y = r * pixelSize + margin;
           buffer.writeln(
@@ -489,10 +469,11 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
     final textX = fullWidth / 2;
     final textY = totalSize + margin + fontSize;
 
-    final svg = '''
+    return '''
 <svg width="$fullWidth" height="$fullHeight" version="1.1"
      xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate($centerX, $centerY) rotate(180) translate(${-centerX}, ${-centerY})">
+  <g transform="translate($centerX, $centerY) rotate(180) 
+               translate(${-centerX}, ${-centerY})">
     $buffer
     <text x="$textX" y="$textY"
           font-size="$fontSize"
@@ -502,8 +483,6 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
   </g>
 </svg>
 ''';
-
-    return svg;
   }
 
   String getFirstWord(String text) {
