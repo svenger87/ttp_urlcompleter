@@ -1,7 +1,7 @@
 name: ttp_app
 description: App to make a businessprocess a bit more convienient.
 publish_to: 'none'
-version: 0.6.1+66
+version: 1.0.1+80
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -64,7 +64,6 @@ flutter:
     - assets/images/ac.png
     - assets/bookstack.png
     - assets/leuchtturm_blue.png
-    - assets/productionplan.png
     - assets/anbauteile.json
     - assets/wzabt_pdfs/
     - assets/IKOffice.ico
