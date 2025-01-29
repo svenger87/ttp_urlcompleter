@@ -28,6 +28,7 @@ class PDFComparisonScreen extends StatefulWidget {
   const PDFComparisonScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _PDFComparisonScreenState createState() => _PDFComparisonScreenState();
 }
 

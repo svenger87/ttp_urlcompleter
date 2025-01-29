@@ -36,8 +36,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     'Fahrversuch #1',
     'Fahrversuch #2',
     'Fahrversuch #3',
-    'Fahrversuch #4',
-    'Fahrversuch #5',
+    'Einfahrunterstützung #1',
+    'Einfahrunterstützung #2',
   ];
   final List<int> weekNumbers = List.generate(53, (i) => i + 1);
 

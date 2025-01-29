@@ -1,5 +1,4 @@
 // number_input_page.dart
-
 // ignore_for_file: deprecated_member_use, library_private_types_in_public_api
 
 import 'package:flutter/foundation.dart';
@@ -200,6 +199,7 @@ class _NumberInputPageState extends State<NumberInputPage>
                 child: const Text('Profilverzeichnis öffnen'),
               ),
             ),
+            // --- Autocomplete for profile suggestions ---
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Autocomplete<String>(
@@ -236,6 +236,7 @@ class _NumberInputPageState extends State<NumberInputPage>
                 },
               ),
             ),
+            // --- IKOffice links ---
             _buildLinkCard('PZE', ikOfficePZE),
             _buildLinkCard('Linienkonfiguration', ikOfficeLineConfig),
           ],
@@ -342,7 +343,6 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
-
     controller.scannedDataStream.listen((scanData) async {
       if (!hasScanned && isDataLoaded) {
         setState(() {
@@ -472,6 +472,10 @@ class _NumberInputPageState extends State<NumberInputPage>
     _saveRecentItems();
   }
 
+  // ----------------------------------
+  // Fetch Functions for Preloaded Data
+  // ----------------------------------
+
   Future<List<String>> _fetchAreaCenters() async {
     final response = await http.get(
         Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'));
@@ -541,6 +545,10 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
+  // ----------------------------------
+  // Profile Suggestions API
+  // ----------------------------------
+
   Future<void> _fetchProfileSuggestions(String query) async {
     if (query.isEmpty) {
       setState(() {
@@ -589,6 +597,9 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 }
 
+// -----------------------------------------------------------------
+// Modal for Creating an Issue (with TypeAheadFields for new API 5.x)
+// -----------------------------------------------------------------
 class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
@@ -693,7 +704,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               ],
             ),
 
-            // 1) Employee
+            // (1) Employee
             _buildTypeAheadField(
               labelText: 'Mitarbeiter auswählen',
               controller: employeeController,
@@ -704,7 +715,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 8),
 
-            // 2) Area Center
+            // (2) Area Center
             _buildTypeAheadField(
               labelText: 'Zuständige Stelle',
               controller: areaCenterController,
@@ -715,7 +726,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 8),
 
-            // 3) Line
+            // (3) Line
             _buildTypeAheadField(
               labelText: 'Linie',
               controller: lineController,
@@ -726,7 +737,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 8),
 
-            // 4) Tool
+            // (4) Tool
             _buildTypeAheadField(
               labelText: 'Werkzeug',
               controller: toolController,
@@ -737,7 +748,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 8),
 
-            // 5) Machine
+            // (5) Machine
             _buildTypeAheadField(
               labelText: 'Maschine / Anlage',
               controller: machineController,
@@ -748,7 +759,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 8),
 
-            // 6) Material
+            // (6) Material
             _buildTypeAheadField(
               labelText: 'Material',
               controller: materialController,
@@ -832,8 +843,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                       Navigator.pop(context);
                       showOverlayMessage(context, 'Störfall angelegt!');
                     } else {
-                      showOverlayMessage(context,
-                          'Bitte alle erforderlichen Felder ausfüllen.');
+                      showOverlayMessage(
+                        context,
+                        'Bitte alle erforderlichen Felder ausfüllen.',
+                      );
                     }
                   },
                   child: const Text('An IKOffice senden'),
@@ -846,7 +859,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     );
   }
 
-  /// A helper to build a TypeAheadField with the new API
+  /// A helper to build a TypeAheadField with the new flutter_typeahead 5.x API
   Widget _buildTypeAheadField({
     required String labelText,
     required TextEditingController controller,
@@ -854,12 +867,13 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     required ValueChanged<String> onItemSelected,
   }) {
     return TypeAheadField<String>(
+      // Replaces old 'onSuggestionSelected'
       onSelected: (String suggestion) {
         controller.text = suggestion;
         onItemSelected(suggestion);
       },
 
-      // Called each time the user types
+      // Called each time the user types:
       suggestionsCallback: (pattern) {
         if (pattern.trim().isEmpty) return [];
         final lower = pattern.trim().toLowerCase();
@@ -868,14 +882,12 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
       // How each item is built in the dropdown
       itemBuilder: (context, String suggestion) {
-        return ListTile(
-          title: Text(suggestion),
-        );
+        return ListTile(title: Text(suggestion));
       },
 
-      // Build the text field itself (replaces old textFieldConfiguration)
+      // Build the TextField itself (old 'TextFieldConfiguration' is removed)
       builder: (context, textEditingController, focusNode) {
-        // Copy the existing controller's text into textEditingController
+        // Keep the local textEditingController in sync with the main controller
         textEditingController.text = controller.text;
         return TextField(
           controller: textEditingController,
@@ -884,25 +896,37 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             labelText: labelText,
           ),
           onChanged: (val) {
-            // keep local controller in sync
             controller.text = val;
           },
         );
       },
 
-      // If you want to show a custom “no items” widget,
-      // rename `noItemsFoundBuilder` -> `emptyBuilder`
-      // If you want a custom loading or error UI, you can add them here too
-      // e.g. emptyBuilder: (context) => const ListTile(title: Text('Nichts gefunden')),
+      // If you want a custom 'no items' UI, or loading UI:
+      emptyBuilder: (context) => const ListTile(
+        title: Text('Keine Treffer'),
+      ),
+      loadingBuilder: (context) => const ListTile(
+        title: Text('Lade...'),
+      ),
+
+      // If you want the suggestions box to appear in-line (so it’s tappable in a BottomSheet)
+      // just use a simple transitionBuilder returning suggestionsBox:
+      transitionBuilder: (context, suggestionsBox, animationController) {
+        return suggestionsBox as Widget;
+      },
+      // Additional flags
+      hideOnEmpty: false,
+      hideOnLoading: false,
+      hideOnSelect: true, // Hide the box after the user selects something
+      retainOnLoading: true,
+      hideWithKeyboard: false,
     );
   }
 
   void showOverlayMessage(BuildContext context, String message) {
-    // Obtain the top-level Overlay from the rootNavigator (ensures we get the highest possible overlay layer)
     final overlay = Navigator.of(context, rootNavigator: true).overlay;
     if (overlay == null) return;
 
-    // Create the overlay entry
     final overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: 50.0,
@@ -924,10 +948,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       ),
     );
 
-    // Insert the entry into the overlay
     overlay.insert(overlayEntry);
 
-    // Remove the entry after a delay, e.g., 3 seconds
+    // Remove the entry after a delay (3 seconds, e.g.)
     Future.delayed(const Duration(seconds: 3), () {
       overlayEntry.remove();
     });
@@ -935,7 +958,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
   Future<File?> _pickImage() async {
     final picker = ImagePicker();
-
     ImageSource? source = await showDialog<ImageSource>(
       context: context,
       builder: (BuildContext context) {
@@ -1012,7 +1034,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
     final response = await request.send();
     if (response.statusCode == 201) {
-      // If you want to show SnackBar after closing the modal, do it in the calling code.
+      // Successfully created
+      // Optionally show a SnackBar or toast in the calling code
     } else {
       final errorMessage = await response.stream.bytesToString();
       ScaffoldMessenger.of(context).showSnackBar(
