@@ -62,6 +62,7 @@ flutter:
     - assets/leuchtturm.png
     - assets/ac.png
     - assets/images/ac.png
+    - assets/images/AHT.png
     - assets/bookstack.png
     - assets/leuchtturm_blue.png
     - assets/anbauteile.json
@@ -69,6 +70,7 @@ flutter:
     - assets/IKOffice.ico
     - assets/extruder.svg
     - assets/SAP.ico
+    - assets/images/SAP.png
     - assets/UPS.ico
     - assets/icon/UPS_icon.svg
   
