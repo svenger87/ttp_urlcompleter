@@ -985,11 +985,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         title: Text('Lade...'),
       ),
 
-      // If you want the suggestions box to appear in-line (so it’s tappable in a BottomSheet)
-      // just use a simple transitionBuilder returning suggestionsBox:
-      transitionBuilder: (context, suggestionsBox, animationController) {
-        return suggestionsBox as Widget;
-      },
+     
       // Additional flags
       hideOnEmpty: false,
       hideOnLoading: false,
