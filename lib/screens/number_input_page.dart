@@ -35,50 +35,13 @@ class _NumberInputPageState extends State<NumberInputPage>
   bool hasScanned = false;
   Timer? scanTimer;
   List<String> recentItems = [];
-  List<String> profileSuggestions = [];
-
-  // Data lists
-  List<String> areaCenters = [];
-  List<String> lines = [];
-  List<String> tools = [];
-  List<String> machines = [];
-  List<String> materials = [];
-  List<String> employees = [];
-  bool isDataLoaded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadRecentItems();
-    _preloadData();
-  }
-
-  void _preloadData() async {
-    try {
-      final results = await Future.wait([
-        _fetchAreaCenters(),
-        _fetchLines(),
-        _fetchTools(),
-        _fetchMachines(),
-        _fetchEmployees(),
-        _fetchMaterials(),
-      ]);
-
-      setState(() {
-        areaCenters = results[0];
-        lines = results[1];
-        tools = results[2];
-        machines = results[3];
-        employees = results[4];
-        materials = results[5];
-        isDataLoaded = true;
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error preloading data: $e');
-      }
-    }
+    // Removed _preloadData to prevent memory hogging
   }
 
   void _loadRecentItems() async {
@@ -127,17 +90,6 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   @override
   Widget build(BuildContext context) {
-    if (!isDataLoaded) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('ttp App'),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -204,11 +156,8 @@ class _NumberInputPageState extends State<NumberInputPage>
               padding: const EdgeInsets.all(16.0),
               child: Autocomplete<String>(
                 optionsBuilder: (TextEditingValue textEditingValue) {
-                  return profileSuggestions
-                      .where((String suggestion) => suggestion
-                          .toLowerCase()
-                          .contains(textEditingValue.text.toLowerCase()))
-                      .toList();
+                  return _filterProfileSuggestions(
+                      profileSuggestions, textEditingValue.text);
                 },
                 onSelected: (String selectedProfile) {
                   _numberController.text = selectedProfile;
@@ -243,6 +192,18 @@ class _NumberInputPageState extends State<NumberInputPage>
         ),
       ),
     );
+  }
+
+  // Function to filter profile suggestions
+  List<String> _filterProfileSuggestions(
+      List<String> suggestions, String query) {
+    if (query.isEmpty) {
+      return [];
+    }
+    final lowerQuery = query.toLowerCase();
+    return suggestions
+        .where((suggestion) => suggestion.toLowerCase().contains(lowerQuery))
+        .toList();
   }
 
   Widget _buildLinkCard(String title, String url) {
@@ -280,8 +241,6 @@ class _NumberInputPageState extends State<NumberInputPage>
   void _reportIssue(String scannedCode) {
     if (kDebugMode) {
       print('Reporting issue for scanned code: $scannedCode');
-      print('Tools list loaded with ${tools.length} items');
-      print('Machines list loaded with ${machines.length} items');
     }
 
     String normalizedScannedCode = scannedCode.trim().toLowerCase();
@@ -289,33 +248,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
 
-    List<String> normalizedTools =
-        tools.map((e) => e.trim().toLowerCase()).toList();
-    List<String> normalizedMachines =
-        machines.map((e) => e.trim().toLowerCase()).toList();
-
-    for (int i = 0; i < normalizedTools.length; i++) {
-      if (normalizedTools[i].contains(normalizedScannedCode) ||
-          normalizedScannedCode.contains(normalizedTools[i])) {
-        selectedToolBreakdown = tools[i];
-        break;
-      }
-    }
-
-    if (selectedToolBreakdown == null) {
-      for (int i = 0; i < normalizedMachines.length; i++) {
-        if (normalizedMachines[i].contains(normalizedScannedCode) ||
-            normalizedScannedCode.contains(normalizedMachines[i])) {
-          selectedMachineBreakdown = machines[i];
-          break;
-        }
-      }
-    }
-
-    if (kDebugMode) {
-      print('Matched tool breakdown: $selectedToolBreakdown');
-      print('Matched machine breakdown: $selectedMachineBreakdown');
-    }
+    // No preloaded data, so these variables are handled within the modal
 
     // Use showModalBottomSheet instead of showDialog
     showModalBottomSheet(
@@ -329,12 +262,12 @@ class _NumberInputPageState extends State<NumberInputPage>
             scannedCode: scannedCode,
             selectedToolBreakdown: selectedToolBreakdown,
             selectedMachineBreakdown: selectedMachineBreakdown,
-            areaCenters: areaCenters,
-            lines: lines,
-            tools: tools,
-            machines: machines,
-            materials: materials,
-            employees: employees,
+            fetchAreaCenters: _fetchAreaCenters,
+            fetchLines: _fetchLines,
+            fetchTools: _fetchTools,
+            fetchMachines: _fetchMachines,
+            fetchMaterials: _fetchMaterials,
+            fetchEmployees: _fetchEmployees,
           ),
         );
       },
@@ -344,7 +277,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
     controller.scannedDataStream.listen((scanData) async {
-      if (!hasScanned && isDataLoaded) {
+      if (!hasScanned) {
         setState(() {
           hasScanned = true;
         });
@@ -446,7 +379,9 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   void _addRecentItem(String item) async {
     final Uri uri = Uri.parse(item);
-    final String profileNumber = uri.pathSegments.last;
+    final String profileNumber = uri.pathSegments.isNotEmpty
+        ? uri.pathSegments.last
+        : item; // Handle cases where pathSegments might be empty
 
     setState(() {
       if (!recentItems.contains(profileNumber)) {
@@ -473,81 +408,176 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 
   // ----------------------------------
-  // Fetch Functions for Preloaded Data
+  // Fetch Functions for On-Demand Data
   // ----------------------------------
 
   Future<List<String>> _fetchAreaCenters() async {
-    final response = await http.get(
-        Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e['name'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch area centers');
+    try {
+      final response = await http.get(
+          Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
+          headers: {
+            'accept': 'application/json',
+            'X-Api-Key': apiKey,
+          });
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['name'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching area centers. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching area centers: $e');
+      }
+      return [];
     }
   }
 
   Future<List<String>> _fetchLines() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/salamanderline'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e['number'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch lines');
+    try {
+      final response = await http.get(
+          Uri.parse('http://wim-solution.sip.local:3006/salamanderline'),
+          headers: {
+            'accept': 'application/json',
+            'X-Api-Key': apiKey,
+          });
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['number'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print('Error fetching lines. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching lines: $e');
+      }
+      return [];
     }
   }
 
   Future<List<String>> _fetchTools() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e['number'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch tools');
+    try {
+      final response = await http.get(
+          Uri.parse('http://wim-solution.sip.local:3006/projects'),
+          headers: {
+            'accept': 'application/json',
+            'X-Api-Key': apiKey,
+          });
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['number'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print('Error fetching tools. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching tools: $e');
+      }
+      return [];
     }
   }
 
   Future<List<String>> _fetchMachines() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e['number'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch machines');
+    try {
+      final response = await http.get(
+          Uri.parse('http://wim-solution.sip.local:3006/machines'),
+          headers: {
+            'accept': 'application/json',
+            'X-Api-Key': apiKey,
+          });
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['number'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print('Error fetching machines. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching machines: $e');
+      }
+      return [];
     }
   }
 
   Future<List<String>> _fetchMaterials() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/material'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e['name'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch materials');
+    try {
+      final response = await http.get(
+          Uri.parse('http://wim-solution.sip.local:3006/material'),
+          headers: {
+            'accept': 'application/json',
+            'X-Api-Key': apiKey,
+          });
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['name'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching materials. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching materials: $e');
+      }
+      return [];
     }
   }
 
   Future<List<String>> _fetchEmployees() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/employee'));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      return data
-          .map((e) =>
-              '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
-          .toList();
-    } else {
-      throw Exception('Failed to fetch employees');
+    try {
+      final response = await http.get(
+          Uri.parse('http://wim-solution.sip.local:3006/employee'),
+          headers: {
+            'accept': 'application/json',
+            'X-Api-Key': apiKey,
+          });
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data
+            .map<String>((e) =>
+                '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
+            .toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching employees. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching employees: $e');
+      }
+      return [];
     }
   }
 
   // ----------------------------------
   // Profile Suggestions API
   // ----------------------------------
+
+  List<String> profileSuggestions = [];
 
   Future<void> _fetchProfileSuggestions(String query) async {
     if (query.isEmpty) {
@@ -604,24 +634,24 @@ class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
   final String? selectedMachineBreakdown;
-  final List<String> areaCenters;
-  final List<String> lines;
-  final List<String> tools;
-  final List<String> machines;
-  final List<String> materials;
-  final List<String> employees;
+  final Future<List<String>> Function() fetchAreaCenters;
+  final Future<List<String>> Function() fetchLines;
+  final Future<List<String>> Function() fetchTools;
+  final Future<List<String>> Function() fetchMachines;
+  final Future<List<String>> Function() fetchMaterials;
+  final Future<List<String>> Function() fetchEmployees;
 
   const CreateIssueModal({
     super.key,
     required this.scannedCode,
     this.selectedToolBreakdown,
     this.selectedMachineBreakdown,
-    required this.areaCenters,
-    required this.lines,
-    required this.tools,
-    required this.machines,
-    required this.materials,
-    required this.employees,
+    required this.fetchAreaCenters,
+    required this.fetchLines,
+    required this.fetchTools,
+    required this.fetchMachines,
+    required this.fetchMaterials,
+    required this.fetchEmployees,
   });
 
   @override
@@ -647,6 +677,16 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   final TextEditingController machineController = TextEditingController();
   final TextEditingController materialController = TextEditingController();
 
+  // Fetched data lists
+  List<String> areaCenters = [];
+  List<String> lines = [];
+  List<String> tools = [];
+  List<String> machines = [];
+  List<String> materials = [];
+  List<String> employees = [];
+
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
@@ -659,6 +699,39 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     if (widget.selectedMachineBreakdown?.isNotEmpty ?? false) {
       selectedMachineBreakdown = widget.selectedMachineBreakdown;
       machineController.text = selectedMachineBreakdown!;
+    }
+
+    _fetchAllData();
+  }
+
+  Future<void> _fetchAllData() async {
+    try {
+      final results = await Future.wait([
+        widget.fetchAreaCenters(),
+        widget.fetchLines(),
+        widget.fetchTools(),
+        widget.fetchMachines(),
+        widget.fetchMaterials(),
+        widget.fetchEmployees(),
+      ]);
+
+      setState(() {
+        areaCenters = results[0];
+        lines = results[1];
+        tools = results[2];
+        machines = results[3];
+        materials = results[4];
+        employees = results[5];
+        isLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching data in modal: $e');
+      }
+      setState(() {
+        isLoading = false;
+      });
+      // Optionally, show an error message to the user
     }
   }
 
@@ -675,6 +748,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.only(
@@ -708,7 +785,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             _buildTypeAheadField(
               labelText: 'Mitarbeiter auswählen',
               controller: employeeController,
-              items: widget.employees,
+              fetchSuggestions: _fetchEmployeeSuggestions,
               onItemSelected: (val) {
                 selectedEmployee = val;
               },
@@ -719,7 +796,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             _buildTypeAheadField(
               labelText: 'Zuständige Stelle',
               controller: areaCenterController,
-              items: widget.areaCenters,
+              fetchSuggestions: _fetchAreaCenterSuggestions,
               onItemSelected: (val) {
                 selectedAreaCenter = val;
               },
@@ -730,7 +807,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             _buildTypeAheadField(
               labelText: 'Linie',
               controller: lineController,
-              items: widget.lines,
+              fetchSuggestions: _fetchLineSuggestions,
               onItemSelected: (val) {
                 selectedLine = val;
               },
@@ -741,7 +818,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             _buildTypeAheadField(
               labelText: 'Werkzeug',
               controller: toolController,
-              items: widget.tools,
+              fetchSuggestions: _fetchToolSuggestions,
               onItemSelected: (val) {
                 selectedToolBreakdown = val;
               },
@@ -752,7 +829,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             _buildTypeAheadField(
               labelText: 'Maschine / Anlage',
               controller: machineController,
-              items: widget.machines,
+              fetchSuggestions: _fetchMachineSuggestions,
               onItemSelected: (val) {
                 selectedMachineBreakdown = val;
               },
@@ -763,7 +840,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             _buildTypeAheadField(
               labelText: 'Material',
               controller: materialController,
-              items: widget.materials,
+              fetchSuggestions: _fetchMaterialSuggestions,
               onItemSelected: (val) {
                 selectedMaterialBreakdown = val;
               },
@@ -863,7 +940,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   Widget _buildTypeAheadField({
     required String labelText,
     required TextEditingController controller,
-    required List<String> items,
+    required Future<List<String>> Function(String) fetchSuggestions,
     required ValueChanged<String> onItemSelected,
   }) {
     return TypeAheadField<String>(
@@ -874,10 +951,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       },
 
       // Called each time the user types:
-      suggestionsCallback: (pattern) {
+      suggestionsCallback: (pattern) async {
         if (pattern.trim().isEmpty) return [];
-        final lower = pattern.trim().toLowerCase();
-        return items.where((e) => e.toLowerCase().contains(lower)).toList();
+        return await fetchSuggestions(pattern);
       },
 
       // How each item is built in the dropdown
@@ -1041,6 +1117,183 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Fehler: $errorMessage')),
       );
+    }
+  }
+
+  // ----------------------------------
+  // Fetch Suggestions Functions for TypeAhead Fields
+  // ----------------------------------
+
+  Future<List<String>> _fetchEmployeeSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://wim-solution.sip.local:3006/employee?search=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data
+            .map<String>((e) =>
+                '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
+            .toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching employee suggestions. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching employee suggestions: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<List<String>> _fetchAreaCenterSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'http://wim-solution.sip.local:3006/salamanderareacenter?search=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['name'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching area center suggestions. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching area center suggestions: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<List<String>> _fetchLineSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'http://wim-solution.sip.local:3006/salamanderline?search=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['number'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching line suggestions. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching line suggestions: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<List<String>> _fetchToolSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://wim-solution.sip.local:3006/projects?search=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['number'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching tool suggestions. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching tool suggestions: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<List<String>> _fetchMachineSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://wim-solution.sip.local:3006/machines?search=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['number'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching machine suggestions. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching machine suggestions: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<List<String>> _fetchMaterialSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://wim-solution.sip.local:3006/material?search=$query'),
+        headers: {
+          'accept': 'application/json',
+          'X-Api-Key': apiKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map<String>((e) => e['name'].toString()).toList();
+      } else {
+        if (kDebugMode) {
+          print(
+              'Error fetching material suggestions. Status code: ${response.statusCode}');
+        }
+        return [];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching material suggestions: $e');
+      }
+      return [];
     }
   }
 }
