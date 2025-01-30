@@ -20,17 +20,26 @@ import 'package:http/io_client.dart'
     as io_http; // Changed prefix to avoid conflict
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
-/// Model class for Machine
+//// Model class for Machine
 class Machine {
   final String number;
   final String salamandermachinepitch;
+  final String? salamanderlineNumber; // New field (nullable)
+  final String productionworkplaceNumber; // Added for fallback
 
-  Machine({required this.number, required this.salamandermachinepitch});
+  Machine({
+    required this.number,
+    required this.salamandermachinepitch,
+    this.salamanderlineNumber, // Initialize the new field
+    required this.productionworkplaceNumber, // Initialize the new field
+  });
 
   factory Machine.fromJson(Map<String, dynamic> json) {
     return Machine(
       number: json['number'] ?? '',
       salamandermachinepitch: json['salamandermachinepitch'] ?? '',
+      salamanderlineNumber: json['salamanderline_number'], // Nullable
+      productionworkplaceNumber: json['productionworkplace_number'] ?? '',
     );
   }
 }
@@ -123,25 +132,37 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
-  /// Builds a mapping from salamandermachinepitch to corresponding lines
+  /// Builds a mapping from salamanderline_number to corresponding lines
   Map<String, String> _buildMachineToLineMap(
       List<String> lines, List<Machine> machines) {
     Map<String, String> map = {};
     for (var machine in machines) {
-      String machineCode = machine.salamandermachinepitch.trim().toUpperCase();
-      // Find the first line that ends with the machine code
-      String correspondingLine = lines.firstWhere(
-        (line) => line.toUpperCase().endsWith(machineCode),
-        orElse: () => '',
-      );
-      if (correspondingLine.isNotEmpty) {
-        map[machineCode] = correspondingLine;
-        if (kDebugMode) {
-          print('Mapping: $machineCode -> $correspondingLine');
+      String? machineCode = machine.salamanderlineNumber?.trim().toUpperCase();
+
+      // If salamanderline_number is null and productionworkplace_number starts with 'S0'
+      if (machineCode == null || machineCode.isEmpty) {
+        if (machine.productionworkplaceNumber.toUpperCase().startsWith('S0')) {
+          machineCode =
+              'TTP-${machine.productionworkplaceNumber.toUpperCase()}';
         }
-      } else {
-        if (kDebugMode) {
-          print('No corresponding line found for machine code: $machineCode');
+      }
+
+      // Proceed only if machineCode is not null or empty
+      if (machineCode != null && machineCode.isNotEmpty) {
+        // Find the line that exactly matches the machineCode
+        String correspondingLine = lines.firstWhere(
+          (line) => line.toUpperCase() == machineCode,
+          orElse: () => '',
+        );
+        if (correspondingLine.isNotEmpty) {
+          map[machineCode] = correspondingLine;
+          if (kDebugMode) {
+            print('Mapping: $machineCode -> $correspondingLine');
+          }
+        } else {
+          if (kDebugMode) {
+            print('No corresponding line found for machine code: $machineCode');
+          }
         }
       }
     }
@@ -669,7 +690,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         print('Fetched Machines:');
         for (var machine in fetchedMachines) {
           print(
-              'Number: ${machine.number}, Pitch: ${machine.salamandermachinepitch}');
+              'Number: ${machine.number}, Pitch: ${machine.salamandermachinepitch}, Line: ${machine.salamanderlineNumber}');
         }
       }
       return fetchedMachines;
@@ -1035,15 +1056,29 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 selectedMachineNumber = suggestion;
 
                 // Find the machine object based on the selected number
-                Machine? selectedMachine = widget.machines.firstWhere(
-                    (machine) => machine.number == suggestion,
-                    orElse: () =>
-                        Machine(number: '', salamandermachinepitch: ''));
+                Machine? selectedMachine = widget.machines
+                    .firstWhere((machine) => machine.number == suggestion,
+                        orElse: () => Machine(
+                              number: '',
+                              salamandermachinepitch: '',
+                              productionworkplaceNumber: '',
+                            ));
 
-                if (selectedMachine.salamandermachinepitch.isNotEmpty) {
-                  String machineCode = selectedMachine.salamandermachinepitch
+                String? machineCode;
+
+                if (selectedMachine.salamanderlineNumber != null &&
+                    selectedMachine.salamanderlineNumber!.isNotEmpty) {
+                  machineCode = selectedMachine.salamanderlineNumber!
                       .trim()
                       .toUpperCase();
+                } else if (selectedMachine.productionworkplaceNumber
+                    .toUpperCase()
+                    .startsWith('S0')) {
+                  machineCode =
+                      'TTP-${selectedMachine.productionworkplaceNumber.toUpperCase()}';
+                }
+
+                if (machineCode != null && machineCode.isNotEmpty) {
                   String? mappedLine =
                       widget.machinePitchToLineMap[machineCode];
 
@@ -1065,6 +1100,16 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                       print(
                           'No corresponding line found for machine code: $machineCode');
                     }
+                  }
+                } else {
+                  // Handle cases where neither salamanderline_number nor productionworkplace_number provides a valid machineCode
+                  setState(() {
+                    selectedLine = '';
+                    lineController.text = '';
+                  });
+                  if (kDebugMode) {
+                    print(
+                        'salamanderline_number is null or productionworkplace_number does not start with S0 for machine: $suggestion');
                   }
                 }
               },
