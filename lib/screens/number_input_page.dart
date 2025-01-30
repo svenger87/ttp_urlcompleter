@@ -70,8 +70,23 @@ class _NumberInputPageState extends State<NumberInputPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Optional: Clear SharedPreferences on app start for testing purposes
+    // Uncomment the following line to enable cache clearing
+    // _clearSharedPreferencesForTesting();
+
     _loadRecentItems();
     _preloadData();
+  }
+
+  /// Optional: Clears SharedPreferences for testing purposes
+  // ignore: unused_element
+  void _clearSharedPreferencesForTesting() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (kDebugMode) {
+      print('SharedPreferences: Cleared all preferences for testing.');
+    }
   }
 
   /// Preload all necessary data and build the mapping
@@ -121,6 +136,9 @@ class _NumberInputPageState extends State<NumberInputPage>
       );
       if (correspondingLine.isNotEmpty) {
         map[machineCode] = correspondingLine;
+        if (kDebugMode) {
+          print('Mapping: $machineCode -> $correspondingLine');
+        }
       } else {
         if (kDebugMode) {
           print('No corresponding line found for machine code: $machineCode');
@@ -343,25 +361,32 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedMachinePitch;
     String? correspondingLine;
 
-    // Find if the scanned code matches any tool
+    // Find if the scanned code matches any tool using exact match
     for (var tool in tools) {
       String normalizedTool = tool.trim().toUpperCase();
-      if (normalizedTool.contains(normalizedScannedCode) ||
-          normalizedScannedCode.contains(normalizedTool)) {
+      if (normalizedTool == normalizedScannedCode) {
+        // Exact match
         selectedToolBreakdown = tool;
+        if (kDebugMode) {
+          print('Matched Tool: $tool');
+        }
         break;
       }
     }
 
-    // If not a tool, check if it's a machine
+    // If not a tool, check if it's a machine using exact match
     if (selectedToolBreakdown == null) {
       for (var machine in machines) {
         String normalizedMachine =
             machine.salamandermachinepitch.trim().toUpperCase();
-        if (normalizedMachine.contains(normalizedScannedCode) ||
-            normalizedScannedCode.contains(normalizedMachine)) {
+        if (normalizedMachine == normalizedScannedCode) {
+          // Exact match
           selectedMachineNumber = machine.number;
           selectedMachinePitch = machine.salamandermachinepitch;
+          if (kDebugMode) {
+            print(
+                'Matched Machine: Number=${machine.number}, Pitch=${machine.salamandermachinepitch}');
+          }
           break;
         }
       }
@@ -375,6 +400,8 @@ class _NumberInputPageState extends State<NumberInputPage>
         if (kDebugMode) {
           print('No corresponding line found for machine code: $machineCode');
         }
+      } else if (kDebugMode) {
+        print('Corresponding Line: $correspondingLine');
       }
     }
 
@@ -568,9 +595,17 @@ class _NumberInputPageState extends State<NumberInputPage>
   /// Fetches area centers from the API
   Future<List<String>> _fetchAreaCenters() async {
     final response = await http.get(
-        Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'));
+      Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    );
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
+      if (kDebugMode) {
+        print('Fetched Area Centers: $data');
+      }
       return data.map((e) => e['name'].toString()).toList();
     } else {
       throw Exception('Failed to fetch area centers');
@@ -579,10 +614,18 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   /// Fetches lines from the API
   Future<List<String>> _fetchLines() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/salamanderline'));
+    final response = await http.get(
+      Uri.parse('http://wim-solution.sip.local:3006/salamanderline'),
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    );
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
+      if (kDebugMode) {
+        print('Fetched Lines: $data');
+      }
       return data.map((e) => e['number'].toString()).toList();
     } else {
       throw Exception('Failed to fetch lines');
@@ -591,10 +634,18 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   /// Fetches tools from the API
   Future<List<String>> _fetchTools() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
+    final response = await http.get(
+      Uri.parse('http://wim-solution.sip.local:3006/projects'),
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    );
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
+      if (kDebugMode) {
+        print('Fetched Tools: $data');
+      }
       return data.map((e) => e['number'].toString()).toList();
     } else {
       throw Exception('Failed to fetch tools');
@@ -603,11 +654,25 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   /// Fetches machines from the API and parses them into Machine objects
   Future<List<Machine>> _fetchMachines() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
+    final response = await http.get(
+      Uri.parse('http://wim-solution.sip.local:3006/machines'),
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    );
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => Machine.fromJson(e)).toList();
+      List<Machine> fetchedMachines =
+          data.map((e) => Machine.fromJson(e)).toList();
+      if (kDebugMode) {
+        print('Fetched Machines:');
+        for (var machine in fetchedMachines) {
+          print(
+              'Number: ${machine.number}, Pitch: ${machine.salamandermachinepitch}');
+        }
+      }
+      return fetchedMachines;
     } else {
       throw Exception('Failed to fetch machines');
     }
@@ -615,10 +680,18 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   /// Fetches materials from the API
   Future<List<String>> _fetchMaterials() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/material'));
+    final response = await http.get(
+      Uri.parse('http://wim-solution.sip.local:3006/material'),
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    );
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
+      if (kDebugMode) {
+        print('Fetched Materials: $data');
+      }
       return data.map((e) => e['name'].toString()).toList();
     } else {
       throw Exception('Failed to fetch materials');
@@ -627,10 +700,18 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   /// Fetches employees from the API
   Future<List<String>> _fetchEmployees() async {
-    final response = await http
-        .get(Uri.parse('http://wim-solution.sip.local:3006/employee'));
+    final response = await http.get(
+      Uri.parse('http://wim-solution.sip.local:3006/employee'),
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    );
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
+      if (kDebugMode) {
+        print('Fetched Employees: $data');
+      }
       return data
           .map((e) =>
               '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
@@ -751,11 +832,17 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         widget.selectedToolBreakdown!.isNotEmpty) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
+      if (kDebugMode) {
+        print('CreateIssueModal: Set tool breakdown to $selectedToolBreakdown');
+      }
     }
     if (widget.selectedMachineNumber != null &&
         widget.selectedMachineNumber!.isNotEmpty) {
       selectedMachineNumber = widget.selectedMachineNumber;
       machineController.text = selectedMachineNumber!;
+      if (kDebugMode) {
+        print('CreateIssueModal: Set machine number to $selectedMachineNumber');
+      }
     }
 
     // Prefill the line field if a corresponding line is provided
@@ -763,11 +850,17 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         widget.correspondingLine!.isNotEmpty) {
       selectedLine = widget.correspondingLine;
       lineController.text = selectedLine!;
+      if (kDebugMode) {
+        print('CreateIssueModal: Set line to $selectedLine');
+      }
     }
 
     if (widget.selectedMachinePitch != null &&
         widget.selectedMachinePitch!.isNotEmpty) {
       selectedMachinePitch = widget.selectedMachinePitch;
+      if (kDebugMode) {
+        print('CreateIssueModal: Set machine pitch to $selectedMachinePitch');
+      }
     }
   }
 
@@ -829,6 +922,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               onSuggestionSelected: (suggestion) {
                 employeeController.text = suggestion;
                 selectedEmployee = suggestion;
+                if (kDebugMode) {
+                  print('CreateIssueModal: Selected employee: $suggestion');
+                }
               },
               validator: (value) => (value == null || value.isEmpty)
                   ? 'Bitte Mitarbeiter auswählen'
@@ -854,6 +950,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               onSuggestionSelected: (suggestion) {
                 areaCenterController.text = suggestion;
                 selectedAreaCenter = suggestion;
+                if (kDebugMode) {
+                  print('CreateIssueModal: Selected area center: $suggestion');
+                }
               },
               validator: (value) => (value == null || value.isEmpty)
                   ? 'Bitte zuständige Stelle auswählen'
@@ -879,6 +978,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               onSuggestionSelected: (suggestion) {
                 lineController.text = suggestion;
                 selectedLine = suggestion;
+                if (kDebugMode) {
+                  print('CreateIssueModal: Selected line: $suggestion');
+                }
               },
               validator: (value) => (value == null || value.isEmpty)
                   ? 'Bitte Linie oder Stellplatz auswählen'
@@ -904,6 +1006,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               onSuggestionSelected: (suggestion) {
                 toolController.text = suggestion;
                 selectedToolBreakdown = suggestion;
+                if (kDebugMode) {
+                  print('CreateIssueModal: Selected tool: $suggestion');
+                }
               },
             ),
 
@@ -947,6 +1052,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                       selectedLine = mappedLine;
                       lineController.text = selectedLine!;
                     });
+                    if (kDebugMode) {
+                      print(
+                          'CreateIssueModal: Mapped machine code $machineCode to line $mappedLine');
+                    }
                   } else {
                     setState(() {
                       selectedLine = '';
@@ -983,6 +1092,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               onSuggestionSelected: (suggestion) {
                 materialController.text = suggestion;
                 selectedMaterialBreakdown = suggestion;
+                if (kDebugMode) {
+                  print('CreateIssueModal: Selected material: $suggestion');
+                }
               },
             ),
 
@@ -993,6 +1105,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               ),
               onChanged: (value) {
                 workCardComment = value;
+                if (kDebugMode) {
+                  print('CreateIssueModal: Work card comment updated.');
+                }
               },
             ),
 
@@ -1003,6 +1118,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 if (pickedImage != null) {
                   setState(() {
                     imagePath = pickedImage.path;
+                    if (kDebugMode) {
+                      print('CreateIssueModal: Image selected at $imagePath');
+                    }
                   });
                 }
               },
@@ -1056,9 +1174,16 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                       });
                       Navigator.pop(context);
                       showOverlayMessage(context, 'Störfall angelegt!');
+                      if (kDebugMode) {
+                        print(
+                            'CreateIssueModal: Issue submitted successfully.');
+                      }
                     } else {
                       showOverlayMessage(context,
                           'Bitte alle erforderlichen Felder ausfüllen.');
+                      if (kDebugMode) {
+                        print('CreateIssueModal: Form validation failed.');
+                      }
                     }
                   },
                   child: const Text('An IKOffice senden'),
@@ -1184,21 +1309,30 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     request.files
         .add(await http.MultipartFile.fromPath('imageFile', imageFile.path));
 
-    final response = await request.send();
-    if (response.statusCode == 201) {
-      // Success handling if needed
-      if (kDebugMode) {
-        print('Issue successfully submitted.');
+    try {
+      final response = await request.send();
+      if (response.statusCode == 201) {
+        // Success handling if needed
+        if (kDebugMode) {
+          print('Issue successfully submitted.');
+        }
+      } else {
+        final errorMessage = await response.stream.bytesToString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler: $errorMessage')),
+        );
+        if (kDebugMode) {
+          print('Failed to submit issue. Status code: ${response.statusCode}');
+          print('Error message: $errorMessage');
+        }
       }
-    } else {
-      final errorMessage = await response.stream.bytesToString();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Exception during issue submission: $e');
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler: $errorMessage')),
+        SnackBar(content: Text('Fehler beim Senden des Störfalls: $e')),
       );
-      if (kDebugMode) {
-        print('Failed to submit issue. Status code: ${response.statusCode}');
-        print('Error message: $errorMessage');
-      }
     }
   }
 }
