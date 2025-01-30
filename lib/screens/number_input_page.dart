@@ -16,7 +16,8 @@ import '../modules/webview_module.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:http/io_client.dart' as http;
+import 'package:http/io_client.dart'
+    as io_http; // Changed prefix to avoid conflict
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class NumberInputPage extends StatefulWidget {
@@ -47,6 +48,9 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> employees = [];
   bool isDataLoaded = false;
 
+  // Mapping from machine code to corresponding line
+  Map<String, String> machineToLineMap = {};
+
   @override
   void initState() {
     super.initState();
@@ -57,11 +61,15 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   void _preloadData() async {
     try {
+      // Fetch lines and machines first to build the mapping
+      final linesFuture = _fetchLines();
+      final machinesFuture = _fetchMachines();
+
       final results = await Future.wait([
         _fetchAreaCenters(),
-        _fetchLines(),
+        linesFuture,
         _fetchTools(),
-        _fetchMachines(),
+        machinesFuture,
         _fetchEmployees(),
         _fetchMaterials(),
       ]);
@@ -74,12 +82,40 @@ class _NumberInputPageState extends State<NumberInputPage>
         employees = results[4];
         materials = results[5];
         isDataLoaded = true;
+
+        // Build the machine to line mapping
+        machineToLineMap = _buildMachineToLineMap(lines, machines);
+        if (kDebugMode) {
+          print('Machine to Line Map: $machineToLineMap');
+        }
       });
     } catch (e) {
       if (kDebugMode) {
         print('Error preloading data: $e');
       }
     }
+  }
+
+  /// Builds a mapping from machine codes to corresponding lines.
+  Map<String, String> _buildMachineToLineMap(
+      List<String> lines, List<String> machines) {
+    Map<String, String> map = {};
+    for (var machine in machines) {
+      String machineCode = machine.trim().toUpperCase();
+      // Find the first line that ends with the machine code
+      String? correspondingLine = lines.firstWhere(
+        (line) => line.toUpperCase().endsWith(machineCode),
+        orElse: () => '',
+      );
+      if (correspondingLine.isNotEmpty) {
+        map[machineCode] = correspondingLine;
+      } else {
+        if (kDebugMode) {
+          print('No corresponding line found for machine code: $machineCode');
+        }
+      }
+    }
+    return map;
   }
 
   void _loadRecentItems() async {
@@ -281,19 +317,21 @@ class _NumberInputPageState extends State<NumberInputPage>
       print('Reporting issue for scanned code: $scannedCode');
       print('Tools list loaded with ${tools.length} items');
       print('Machines list loaded with ${machines.length} items');
+      print('Lines list loaded with ${lines.length} items');
     }
 
-    String normalizedScannedCode = scannedCode.trim().toLowerCase();
+    String normalizedScannedCode = scannedCode.trim().toUpperCase();
 
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
     String? correspondingLine;
 
     List<String> normalizedTools =
-        tools.map((e) => e.trim().toLowerCase()).toList();
+        tools.map((e) => e.trim().toUpperCase()).toList();
     List<String> normalizedMachines =
-        machines.map((e) => e.trim().toLowerCase()).toList();
+        machines.map((e) => e.trim().toUpperCase()).toList();
 
+    // Find if the scanned code matches any tool
     for (int i = 0; i < normalizedTools.length; i++) {
       if (normalizedTools[i].contains(normalizedScannedCode) ||
           normalizedScannedCode.contains(normalizedTools[i])) {
@@ -302,6 +340,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       }
     }
 
+    // If not a tool, check if it's a machine
     if (selectedToolBreakdown == null) {
       for (int i = 0; i < normalizedMachines.length; i++) {
         if (normalizedMachines[i].contains(normalizedScannedCode) ||
@@ -312,19 +351,13 @@ class _NumberInputPageState extends State<NumberInputPage>
       }
     }
 
+    // If a machine is found, find the corresponding line using the mapping
     if (selectedMachineBreakdown != null) {
-      // Extract the machine code part (e.g., 'S001' from 'S001')
-      String machineCode = selectedMachineBreakdown.toUpperCase();
-
-      // Find the corresponding line that ends with the machine code
-      correspondingLine = lines.firstWhere(
-        (line) => line.toUpperCase().endsWith(machineCode),
-        orElse: () => '',
-      );
-
-      if (correspondingLine.isEmpty && kDebugMode) {
+      String machineCode = selectedMachineBreakdown.trim().toUpperCase();
+      correspondingLine = machineToLineMap[machineCode];
+      if (correspondingLine == null && kDebugMode) {
         if (kDebugMode) {
-          print('No matching line found for machine code: $machineCode');
+          print('No corresponding line found for machine code: $machineCode');
         }
       }
     }
@@ -582,9 +615,9 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
 
     try {
-      final httpClient = http.IOClient(
+      final ioClient = io_http.IOClient(
           HttpClient()..badCertificateCallback = ((_, __, ___) => true));
-      final response = await httpClient.get(
+      final response = await ioClient.get(
         Uri.parse('$apiUrl&q=$query'),
         headers: {
           'accept': 'application/json',
@@ -612,7 +645,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         }
       }
 
-      httpClient.close();
+      ioClient.close();
     } catch (e) {
       if (kDebugMode) {
         print('Error fetching profile suggestions: $e');
@@ -847,6 +880,16 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               onSuggestionSelected: (suggestion) {
                 machineController.text = suggestion;
                 selectedMachineBreakdown = suggestion;
+                // Attempt to prefill the corresponding line
+                suggestion.trim().toUpperCase();
+                String? mappedLine = widget.correspondingLine;
+
+                if (mappedLine != null && mappedLine.isNotEmpty) {
+                  setState(() {
+                    selectedLine = mappedLine;
+                    lineController.text = selectedLine!;
+                  });
+                }
               },
             ),
 
@@ -1068,7 +1111,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
     final response = await request.send();
     if (response.statusCode == 201) {
-      // If you want to show SnackBar after closing the modal, do it in the calling code.
+      // Success handling if needed
     } else {
       final errorMessage = await response.stream.bytesToString();
       ScaffoldMessenger.of(context).showSnackBar(
