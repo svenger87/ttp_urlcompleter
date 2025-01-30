@@ -63,7 +63,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> employees = [];
   bool isDataLoaded = false;
 
-  // Mapping from salamandermachinepitch to corresponding line
+  // Define the mapping as a member variable
   Map<String, String> machinePitchToLineMap = {};
 
   @override
@@ -115,7 +115,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     for (var machine in machines) {
       String machineCode = machine.salamandermachinepitch.trim().toUpperCase();
       // Find the first line that ends with the machine code
-      String? correspondingLine = lines.firstWhere(
+      String correspondingLine = lines.firstWhere(
         (line) => line.toUpperCase().endsWith(machineCode),
         orElse: () => '',
       );
@@ -339,7 +339,8 @@ class _NumberInputPageState extends State<NumberInputPage>
     String normalizedScannedCode = scannedCode.trim().toUpperCase();
 
     String? selectedToolBreakdown;
-    String? selectedMachineBreakdown;
+    String? selectedMachineNumber;
+    String? selectedMachinePitch;
     String? correspondingLine;
 
     // Find if the scanned code matches any tool
@@ -359,15 +360,16 @@ class _NumberInputPageState extends State<NumberInputPage>
             machine.salamandermachinepitch.trim().toUpperCase();
         if (normalizedMachine.contains(normalizedScannedCode) ||
             normalizedScannedCode.contains(normalizedMachine)) {
-          selectedMachineBreakdown = machine.salamandermachinepitch;
+          selectedMachineNumber = machine.number;
+          selectedMachinePitch = machine.salamandermachinepitch;
           break;
         }
       }
     }
 
     // If a machine is found, find the corresponding line using the mapping
-    if (selectedMachineBreakdown != null) {
-      String machineCode = selectedMachineBreakdown.trim().toUpperCase();
+    if (selectedMachinePitch != null) {
+      String machineCode = selectedMachinePitch.trim().toUpperCase();
       correspondingLine = machinePitchToLineMap[machineCode];
       if (correspondingLine == null && kDebugMode) {
         if (kDebugMode) {
@@ -378,7 +380,8 @@ class _NumberInputPageState extends State<NumberInputPage>
 
     if (kDebugMode) {
       print('Matched tool breakdown: $selectedToolBreakdown');
-      print('Matched machine breakdown: $selectedMachineBreakdown');
+      print('Matched machine number: $selectedMachineNumber');
+      print('Matched machine pitch: $selectedMachinePitch');
       print('Corresponding line: $correspondingLine');
     }
 
@@ -393,7 +396,8 @@ class _NumberInputPageState extends State<NumberInputPage>
           child: CreateIssueModal(
             scannedCode: scannedCode,
             selectedToolBreakdown: selectedToolBreakdown,
-            selectedMachineBreakdown: selectedMachineBreakdown,
+            selectedMachineNumber: selectedMachineNumber,
+            selectedMachinePitch: selectedMachinePitch,
             correspondingLine: correspondingLine, // Pass the matching line
             areaCenters: areaCenters,
             lines: lines,
@@ -401,6 +405,7 @@ class _NumberInputPageState extends State<NumberInputPage>
             machines: machines,
             materials: materials,
             employees: employees,
+            machinePitchToLineMap: machinePitchToLineMap, // Pass mapping
           ),
         );
       },
@@ -688,7 +693,8 @@ class _NumberInputPageState extends State<NumberInputPage>
 class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
-  final String? selectedMachineBreakdown;
+  final String? selectedMachineNumber;
+  final String? selectedMachinePitch;
   final String? correspondingLine; // New parameter
   final List<String> areaCenters;
   final List<String> lines;
@@ -696,12 +702,14 @@ class CreateIssueModal extends StatefulWidget {
   final List<Machine> machines;
   final List<String> materials;
   final List<String> employees;
+  final Map<String, String> machinePitchToLineMap; // Added mapping
 
   const CreateIssueModal({
     super.key,
     required this.scannedCode,
     this.selectedToolBreakdown,
-    this.selectedMachineBreakdown,
+    this.selectedMachineNumber, // New parameter
+    this.selectedMachinePitch, // New parameter
     this.correspondingLine, // Initialize the new parameter
     required this.areaCenters,
     required this.lines,
@@ -709,6 +717,7 @@ class CreateIssueModal extends StatefulWidget {
     required this.machines,
     required this.materials,
     required this.employees,
+    required this.machinePitchToLineMap, // Require mapping
   });
 
   @override
@@ -720,7 +729,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   String? selectedAreaCenter;
   String? selectedLine;
   String? selectedToolBreakdown;
-  String? selectedMachineBreakdown;
+  String? selectedMachineNumber;
+  String? selectedMachinePitch;
   String? selectedMaterialBreakdown;
   String? selectedEmployee;
   String? workCardComment;
@@ -742,10 +752,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
     }
-    if (widget.selectedMachineBreakdown != null &&
-        widget.selectedMachineBreakdown!.isNotEmpty) {
-      selectedMachineBreakdown = widget.selectedMachineBreakdown;
-      machineController.text = selectedMachineBreakdown!;
+    if (widget.selectedMachineNumber != null &&
+        widget.selectedMachineNumber!.isNotEmpty) {
+      selectedMachineNumber = widget.selectedMachineNumber;
+      machineController.text = selectedMachineNumber!;
     }
 
     // Prefill the line field if a corresponding line is provided
@@ -753,6 +763,11 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         widget.correspondingLine!.isNotEmpty) {
       selectedLine = widget.correspondingLine;
       lineController.text = selectedLine!;
+    }
+
+    if (widget.selectedMachinePitch != null &&
+        widget.selectedMachinePitch!.isNotEmpty) {
+      selectedMachinePitch = widget.selectedMachinePitch;
     }
   }
 
@@ -771,7 +786,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -892,7 +907,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
 
-            // Machine selection
+            /// Machine selection
             TypeAheadFormField<String>(
               textFieldConfiguration: TextFieldConfiguration(
                 controller: machineController,
@@ -905,24 +920,48 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                     .where((machine) => machine.salamandermachinepitch
                         .toLowerCase()
                         .contains(pattern.toLowerCase()))
-                    .map((machine) => machine.salamandermachinepitch)
+                    .map((machine) => machine.number) // Suggest machine numbers
                     .toList();
               },
               itemBuilder: (context, suggestion) =>
                   ListTile(title: Text(suggestion)),
               onSuggestionSelected: (suggestion) {
                 machineController.text = suggestion;
-                selectedMachineBreakdown = suggestion;
-                // Attempt to prefill the corresponding line
-                String? mappedLine = widget.correspondingLine;
+                selectedMachineNumber = suggestion;
 
-                if (mappedLine != null && mappedLine.isNotEmpty) {
-                  setState(() {
-                    selectedLine = mappedLine;
-                    lineController.text = selectedLine!;
-                  });
+                // Find the machine object based on the selected number
+                Machine? selectedMachine = widget.machines.firstWhere(
+                    (machine) => machine.number == suggestion,
+                    orElse: () =>
+                        Machine(number: '', salamandermachinepitch: ''));
+
+                if (selectedMachine.salamandermachinepitch.isNotEmpty) {
+                  String machineCode = selectedMachine.salamandermachinepitch
+                      .trim()
+                      .toUpperCase();
+                  String? mappedLine =
+                      widget.machinePitchToLineMap[machineCode];
+
+                  if (mappedLine != null && mappedLine.isNotEmpty) {
+                    setState(() {
+                      selectedLine = mappedLine;
+                      lineController.text = selectedLine!;
+                    });
+                  } else {
+                    setState(() {
+                      selectedLine = '';
+                      lineController.text = '';
+                    });
+                    if (kDebugMode) {
+                      print(
+                          'No corresponding line found for machine code: $machineCode');
+                    }
+                  }
                 }
               },
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Bitte Maschine oder Anlage auswählen'
+                  : null,
             ),
 
             // Material selection
