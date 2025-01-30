@@ -20,6 +20,21 @@ import 'package:http/io_client.dart'
     as io_http; // Changed prefix to avoid conflict
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
+/// Model class for Machine
+class Machine {
+  final String number;
+  final String salamandermachinepitch;
+
+  Machine({required this.number, required this.salamandermachinepitch});
+
+  factory Machine.fromJson(Map<String, dynamic> json) {
+    return Machine(
+      number: json['number'] ?? '',
+      salamandermachinepitch: json['salamandermachinepitch'] ?? '',
+    );
+  }
+}
+
 class NumberInputPage extends StatefulWidget {
   const NumberInputPage({super.key});
 
@@ -43,13 +58,13 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> areaCenters = [];
   List<String> lines = [];
   List<String> tools = [];
-  List<String> machines = [];
+  List<Machine> machines = []; // Changed to list of Machine objects
   List<String> materials = [];
   List<String> employees = [];
   bool isDataLoaded = false;
 
-  // Mapping from machine code to corresponding line
-  Map<String, String> machineToLineMap = {};
+  // Mapping from salamandermachinepitch to corresponding line
+  Map<String, String> machinePitchToLineMap = {};
 
   @override
   void initState() {
@@ -59,49 +74,46 @@ class _NumberInputPageState extends State<NumberInputPage>
     _preloadData();
   }
 
+  /// Preload all necessary data and build the mapping
   void _preloadData() async {
     try {
-      // Fetch lines and machines first to build the mapping
-      final linesFuture = _fetchLines();
-      final machinesFuture = _fetchMachines();
-
-      final results = await Future.wait([
-        _fetchAreaCenters(),
-        linesFuture,
-        _fetchTools(),
-        machinesFuture,
-        _fetchEmployees(),
-        _fetchMaterials(),
-      ]);
+      // Fetch each data type sequentially to preserve type information
+      final fetchedAreaCenters = await _fetchAreaCenters();
+      final fetchedLines = await _fetchLines();
+      final fetchedTools = await _fetchTools();
+      final fetchedMachines = await _fetchMachines();
+      final fetchedEmployees = await _fetchEmployees();
+      final fetchedMaterials = await _fetchMaterials();
 
       setState(() {
-        areaCenters = results[0];
-        lines = results[1];
-        tools = results[2];
-        machines = results[3];
-        employees = results[4];
-        materials = results[5];
+        areaCenters = fetchedAreaCenters;
+        lines = fetchedLines;
+        tools = fetchedTools;
+        machines = fetchedMachines;
+        employees = fetchedEmployees;
+        materials = fetchedMaterials;
         isDataLoaded = true;
 
         // Build the machine to line mapping
-        machineToLineMap = _buildMachineToLineMap(lines, machines);
+        machinePitchToLineMap = _buildMachineToLineMap(lines, machines);
         if (kDebugMode) {
-          print('Machine to Line Map: $machineToLineMap');
+          print('Machine to Line Map: $machinePitchToLineMap');
         }
       });
     } catch (e) {
       if (kDebugMode) {
         print('Error preloading data: $e');
       }
+      // Optionally, you can show an error message to the user here
     }
   }
 
-  /// Builds a mapping from machine codes to corresponding lines.
+  /// Builds a mapping from salamandermachinepitch to corresponding lines
   Map<String, String> _buildMachineToLineMap(
-      List<String> lines, List<String> machines) {
+      List<String> lines, List<Machine> machines) {
     Map<String, String> map = {};
     for (var machine in machines) {
-      String machineCode = machine.trim().toUpperCase();
+      String machineCode = machine.salamandermachinepitch.trim().toUpperCase();
       // Find the first line that ends with the machine code
       String? correspondingLine = lines.firstWhere(
         (line) => line.toUpperCase().endsWith(machineCode),
@@ -118,6 +130,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     return map;
   }
 
+  /// Load recent items from shared preferences
   void _loadRecentItems() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -155,6 +168,7 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   Timer? _debounce;
 
+  /// Debounce for search input
   void _onSearchChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -280,6 +294,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
+  /// Builds a link card with an icon and title
   Widget _buildLinkCard(String title, String url) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -312,6 +327,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
+  /// Handles reporting an issue based on the scanned code
   void _reportIssue(String scannedCode) {
     if (kDebugMode) {
       print('Reporting issue for scanned code: $scannedCode');
@@ -326,26 +342,24 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedMachineBreakdown;
     String? correspondingLine;
 
-    List<String> normalizedTools =
-        tools.map((e) => e.trim().toUpperCase()).toList();
-    List<String> normalizedMachines =
-        machines.map((e) => e.trim().toUpperCase()).toList();
-
     // Find if the scanned code matches any tool
-    for (int i = 0; i < normalizedTools.length; i++) {
-      if (normalizedTools[i].contains(normalizedScannedCode) ||
-          normalizedScannedCode.contains(normalizedTools[i])) {
-        selectedToolBreakdown = tools[i];
+    for (var tool in tools) {
+      String normalizedTool = tool.trim().toUpperCase();
+      if (normalizedTool.contains(normalizedScannedCode) ||
+          normalizedScannedCode.contains(normalizedTool)) {
+        selectedToolBreakdown = tool;
         break;
       }
     }
 
     // If not a tool, check if it's a machine
     if (selectedToolBreakdown == null) {
-      for (int i = 0; i < normalizedMachines.length; i++) {
-        if (normalizedMachines[i].contains(normalizedScannedCode) ||
-            normalizedScannedCode.contains(normalizedMachines[i])) {
-          selectedMachineBreakdown = machines[i];
+      for (var machine in machines) {
+        String normalizedMachine =
+            machine.salamandermachinepitch.trim().toUpperCase();
+        if (normalizedMachine.contains(normalizedScannedCode) ||
+            normalizedScannedCode.contains(normalizedMachine)) {
+          selectedMachineBreakdown = machine.salamandermachinepitch;
           break;
         }
       }
@@ -354,7 +368,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     // If a machine is found, find the corresponding line using the mapping
     if (selectedMachineBreakdown != null) {
       String machineCode = selectedMachineBreakdown.trim().toUpperCase();
-      correspondingLine = machineToLineMap[machineCode];
+      correspondingLine = machinePitchToLineMap[machineCode];
       if (correspondingLine == null && kDebugMode) {
         if (kDebugMode) {
           print('No corresponding line found for machine code: $machineCode');
@@ -368,7 +382,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       print('Corresponding line: $correspondingLine');
     }
 
-    // Use showModalBottomSheet instead of showDialog
+    // Show the CreateIssueModal with the prefilled line if available
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -392,6 +406,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       },
     );
 
+    // Reset scan state after a delay
     scanTimer = Timer(const Duration(seconds: 3), () {
       setState(() {
         hasScanned = false;
@@ -399,6 +414,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     });
   }
 
+  /// Handles the QR view creation and scanning
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
 
@@ -447,6 +463,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     });
   }
 
+  /// Displays the options modal after scanning
   void _showOptionsModal(String fullUrl, String codeToUse) {
     showDialog(
       context: context,
@@ -483,6 +500,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
+  /// Navigates to the specified URL using WebViewModule
   void _navigateToUrl(String url) {
     Navigator.push(
       context,
@@ -492,6 +510,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
+  /// Opens the profile directory URL based on the entered number
   void _openUrlWithNumber() async {
     final String number = _numberController.text.trim().toUpperCase();
 
@@ -505,10 +524,12 @@ class _NumberInputPageState extends State<NumberInputPage>
         if (kDebugMode) {
           print('Could not launch $url');
         }
+        // Optionally, show an error message to the user here
       }
     }
   }
 
+  /// Adds an item to the recent items list and saves it
   void _addRecentItem(String item) async {
     final Uri uri = Uri.parse(item);
     final String profileNumber = uri.pathSegments.last;
@@ -525,11 +546,13 @@ class _NumberInputPageState extends State<NumberInputPage>
     await _saveRecentItems();
   }
 
+  /// Saves the recent items list to shared preferences
   Future<void> _saveRecentItems() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('recentItems', recentItems);
   }
 
+  /// Clears the recent items list
   void _clearRecentItems() {
     setState(() {
       recentItems.clear();
@@ -537,6 +560,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     _saveRecentItems();
   }
 
+  /// Fetches area centers from the API
   Future<List<String>> _fetchAreaCenters() async {
     final response = await http.get(
         Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'));
@@ -548,6 +572,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
+  /// Fetches lines from the API
   Future<List<String>> _fetchLines() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/salamanderline'));
@@ -559,6 +584,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
+  /// Fetches tools from the API
   Future<List<String>> _fetchTools() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
@@ -570,17 +596,19 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
-  Future<List<String>> _fetchMachines() async {
+  /// Fetches machines from the API and parses them into Machine objects
+  Future<List<Machine>> _fetchMachines() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e['number'].toString()).toList();
+      return data.map((e) => Machine.fromJson(e)).toList();
     } else {
       throw Exception('Failed to fetch machines');
     }
   }
 
+  /// Fetches materials from the API
   Future<List<String>> _fetchMaterials() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/material'));
@@ -592,6 +620,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
+  /// Fetches employees from the API
   Future<List<String>> _fetchEmployees() async {
     final response = await http
         .get(Uri.parse('http://wim-solution.sip.local:3006/employee'));
@@ -606,6 +635,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
+  /// Fetches profile suggestions based on the search query
   Future<void> _fetchProfileSuggestions(String query) async {
     if (query.isEmpty) {
       setState(() {
@@ -654,6 +684,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 }
 
+/// Modal for creating an issue
 class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
@@ -662,7 +693,7 @@ class CreateIssueModal extends StatefulWidget {
   final List<String> areaCenters;
   final List<String> lines;
   final List<String> tools;
-  final List<String> machines;
+  final List<Machine> machines;
   final List<String> materials;
   final List<String> employees;
 
@@ -871,8 +902,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               ),
               suggestionsCallback: (pattern) {
                 return widget.machines
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .where((machine) => machine.salamandermachinepitch
+                        .toLowerCase()
+                        .contains(pattern.toLowerCase()))
+                    .map((machine) => machine.salamandermachinepitch)
                     .toList();
               },
               itemBuilder: (context, suggestion) =>
@@ -881,7 +914,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 machineController.text = suggestion;
                 selectedMachineBreakdown = suggestion;
                 // Attempt to prefill the corresponding line
-                suggestion.trim().toUpperCase();
                 String? mappedLine = widget.correspondingLine;
 
                 if (mappedLine != null && mappedLine.isNotEmpty) {
@@ -1000,6 +1032,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     );
   }
 
+  /// Shows an overlay message at the top of the screen
   void showOverlayMessage(BuildContext context, String message) {
     final overlay = Navigator.of(context, rootNavigator: true).overlay;
     if (overlay == null) return;
@@ -1032,6 +1065,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     });
   }
 
+  /// Picks an image from the camera or gallery
   Future<File?> _pickImage() async {
     final picker = ImagePicker();
 
@@ -1068,6 +1102,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     return null;
   }
 
+  /// Validates the form fields
   bool _validateForm({
     required bool operable,
     required String? areaCenter,
@@ -1095,6 +1130,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         imagePath != null;
   }
 
+  /// Submits the issue to the server
   void _submitIssue(Map<String, String> issueData) async {
     final uri = Uri.parse('http://wim-solution.sip.local:3006/report-issue');
     final request = http.MultipartRequest('POST', uri);
@@ -1112,11 +1148,18 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     final response = await request.send();
     if (response.statusCode == 201) {
       // Success handling if needed
+      if (kDebugMode) {
+        print('Issue successfully submitted.');
+      }
     } else {
       final errorMessage = await response.stream.bytesToString();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Fehler: $errorMessage')),
       );
+      if (kDebugMode) {
+        print('Failed to submit issue. Status code: ${response.statusCode}');
+        print('Error message: $errorMessage');
+      }
     }
   }
 }
