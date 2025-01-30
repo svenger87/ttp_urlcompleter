@@ -1,9 +1,9 @@
 // number_input_page.dart
+
 // ignore_for_file: deprecated_member_use, library_private_types_in_public_api
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,6 +17,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:http/io_client.dart' as http;
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class NumberInputPage extends StatefulWidget {
   const NumberInputPage({super.key});
@@ -35,13 +36,50 @@ class _NumberInputPageState extends State<NumberInputPage>
   bool hasScanned = false;
   Timer? scanTimer;
   List<String> recentItems = [];
+  List<String> profileSuggestions = [];
+
+  // Data lists
+  List<String> areaCenters = [];
+  List<String> lines = [];
+  List<String> tools = [];
+  List<String> machines = [];
+  List<String> materials = [];
+  List<String> employees = [];
+  bool isDataLoaded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadRecentItems();
-    // Removed _preloadData to prevent memory hogging
+    _preloadData();
+  }
+
+  void _preloadData() async {
+    try {
+      final results = await Future.wait([
+        _fetchAreaCenters(),
+        _fetchLines(),
+        _fetchTools(),
+        _fetchMachines(),
+        _fetchEmployees(),
+        _fetchMaterials(),
+      ]);
+
+      setState(() {
+        areaCenters = results[0];
+        lines = results[1];
+        tools = results[2];
+        machines = results[3];
+        employees = results[4];
+        materials = results[5];
+        isDataLoaded = true;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error preloading data: $e');
+      }
+    }
   }
 
   void _loadRecentItems() async {
@@ -90,6 +128,17 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   @override
   Widget build(BuildContext context) {
+    if (!isDataLoaded) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('ttp App'),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -151,13 +200,15 @@ class _NumberInputPageState extends State<NumberInputPage>
                 child: const Text('Profilverzeichnis öffnen'),
               ),
             ),
-            // --- Autocomplete for profile suggestions ---
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Autocomplete<String>(
                 optionsBuilder: (TextEditingValue textEditingValue) {
-                  return _filterProfileSuggestions(
-                      profileSuggestions, textEditingValue.text);
+                  return profileSuggestions
+                      .where((String suggestion) => suggestion
+                          .toLowerCase()
+                          .contains(textEditingValue.text.toLowerCase()))
+                      .toList();
                 },
                 onSelected: (String selectedProfile) {
                   _numberController.text = selectedProfile;
@@ -185,25 +236,12 @@ class _NumberInputPageState extends State<NumberInputPage>
                 },
               ),
             ),
-            // --- IKOffice links ---
             _buildLinkCard('PZE', ikOfficePZE),
             _buildLinkCard('Linienkonfiguration', ikOfficeLineConfig),
           ],
         ),
       ),
     );
-  }
-
-  // Function to filter profile suggestions
-  List<String> _filterProfileSuggestions(
-      List<String> suggestions, String query) {
-    if (query.isEmpty) {
-      return [];
-    }
-    final lowerQuery = query.toLowerCase();
-    return suggestions
-        .where((suggestion) => suggestion.toLowerCase().contains(lowerQuery))
-        .toList();
   }
 
   Widget _buildLinkCard(String title, String url) {
@@ -241,6 +279,8 @@ class _NumberInputPageState extends State<NumberInputPage>
   void _reportIssue(String scannedCode) {
     if (kDebugMode) {
       print('Reporting issue for scanned code: $scannedCode');
+      print('Tools list loaded with ${tools.length} items');
+      print('Machines list loaded with ${machines.length} items');
     }
 
     String normalizedScannedCode = scannedCode.trim().toLowerCase();
@@ -248,7 +288,33 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
 
-    // No preloaded data, so these variables are handled within the modal
+    List<String> normalizedTools =
+        tools.map((e) => e.trim().toLowerCase()).toList();
+    List<String> normalizedMachines =
+        machines.map((e) => e.trim().toLowerCase()).toList();
+
+    for (int i = 0; i < normalizedTools.length; i++) {
+      if (normalizedTools[i].contains(normalizedScannedCode) ||
+          normalizedScannedCode.contains(normalizedTools[i])) {
+        selectedToolBreakdown = tools[i];
+        break;
+      }
+    }
+
+    if (selectedToolBreakdown == null) {
+      for (int i = 0; i < normalizedMachines.length; i++) {
+        if (normalizedMachines[i].contains(normalizedScannedCode) ||
+            normalizedScannedCode.contains(normalizedMachines[i])) {
+          selectedMachineBreakdown = machines[i];
+          break;
+        }
+      }
+    }
+
+    if (kDebugMode) {
+      print('Matched tool breakdown: $selectedToolBreakdown');
+      print('Matched machine breakdown: $selectedMachineBreakdown');
+    }
 
     // Use showModalBottomSheet instead of showDialog
     showModalBottomSheet(
@@ -262,12 +328,12 @@ class _NumberInputPageState extends State<NumberInputPage>
             scannedCode: scannedCode,
             selectedToolBreakdown: selectedToolBreakdown,
             selectedMachineBreakdown: selectedMachineBreakdown,
-            fetchAreaCenters: _fetchAreaCenters,
-            fetchLines: _fetchLines,
-            fetchTools: _fetchTools,
-            fetchMachines: _fetchMachines,
-            fetchMaterials: _fetchMaterials,
-            fetchEmployees: _fetchEmployees,
+            areaCenters: areaCenters,
+            lines: lines,
+            tools: tools,
+            machines: machines,
+            materials: materials,
+            employees: employees,
           ),
         );
       },
@@ -276,8 +342,9 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
+
     controller.scannedDataStream.listen((scanData) async {
-      if (!hasScanned) {
+      if (!hasScanned && isDataLoaded) {
         setState(() {
           hasScanned = true;
         });
@@ -379,9 +446,7 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   void _addRecentItem(String item) async {
     final Uri uri = Uri.parse(item);
-    final String profileNumber = uri.pathSegments.isNotEmpty
-        ? uri.pathSegments.last
-        : item; // Handle cases where pathSegments might be empty
+    final String profileNumber = uri.pathSegments.last;
 
     setState(() {
       if (!recentItems.contains(profileNumber)) {
@@ -407,177 +472,74 @@ class _NumberInputPageState extends State<NumberInputPage>
     _saveRecentItems();
   }
 
-  // ----------------------------------
-  // Fetch Functions for On-Demand Data
-  // ----------------------------------
-
   Future<List<String>> _fetchAreaCenters() async {
-    try {
-      final response = await http.get(
-          Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
-          headers: {
-            'accept': 'application/json',
-            'X-Api-Key': apiKey,
-          });
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['name'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching area centers. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching area centers: $e');
-      }
-      return [];
+    final response = await http.get(
+        Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => e['name'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch area centers');
     }
   }
 
   Future<List<String>> _fetchLines() async {
-    try {
-      final response = await http.get(
-          Uri.parse('http://wim-solution.sip.local:3006/salamanderline'),
-          headers: {
-            'accept': 'application/json',
-            'X-Api-Key': apiKey,
-          });
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['number'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print('Error fetching lines. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching lines: $e');
-      }
-      return [];
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/salamanderline'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => e['number'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch lines');
     }
   }
 
   Future<List<String>> _fetchTools() async {
-    try {
-      final response = await http.get(
-          Uri.parse('http://wim-solution.sip.local:3006/projects'),
-          headers: {
-            'accept': 'application/json',
-            'X-Api-Key': apiKey,
-          });
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['number'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print('Error fetching tools. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching tools: $e');
-      }
-      return [];
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/projects'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => e['number'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch tools');
     }
   }
 
   Future<List<String>> _fetchMachines() async {
-    try {
-      final response = await http.get(
-          Uri.parse('http://wim-solution.sip.local:3006/machines'),
-          headers: {
-            'accept': 'application/json',
-            'X-Api-Key': apiKey,
-          });
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['number'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print('Error fetching machines. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching machines: $e');
-      }
-      return [];
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/machines'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => e['number'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch machines');
     }
   }
 
   Future<List<String>> _fetchMaterials() async {
-    try {
-      final response = await http.get(
-          Uri.parse('http://wim-solution.sip.local:3006/material'),
-          headers: {
-            'accept': 'application/json',
-            'X-Api-Key': apiKey,
-          });
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['name'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching materials. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching materials: $e');
-      }
-      return [];
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/material'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((e) => e['name'].toString()).toList();
+    } else {
+      throw Exception('Failed to fetch materials');
     }
   }
 
   Future<List<String>> _fetchEmployees() async {
-    try {
-      final response = await http.get(
-          Uri.parse('http://wim-solution.sip.local:3006/employee'),
-          headers: {
-            'accept': 'application/json',
-            'X-Api-Key': apiKey,
-          });
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data
-            .map<String>((e) =>
-                '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
-            .toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching employees. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching employees: $e');
-      }
-      return [];
+    final response = await http
+        .get(Uri.parse('http://wim-solution.sip.local:3006/employee'));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data
+          .map((e) =>
+              '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
+          .toList();
+    } else {
+      throw Exception('Failed to fetch employees');
     }
   }
-
-  // ----------------------------------
-  // Profile Suggestions API
-  // ----------------------------------
-
-  List<String> profileSuggestions = [];
 
   Future<void> _fetchProfileSuggestions(String query) async {
     if (query.isEmpty) {
@@ -627,31 +589,28 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 }
 
-// -----------------------------------------------------------------
-// Modal for Creating an Issue (with TypeAheadFields for new API 5.x)
-// -----------------------------------------------------------------
 class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
   final String? selectedMachineBreakdown;
-  final Future<List<String>> Function() fetchAreaCenters;
-  final Future<List<String>> Function() fetchLines;
-  final Future<List<String>> Function() fetchTools;
-  final Future<List<String>> Function() fetchMachines;
-  final Future<List<String>> Function() fetchMaterials;
-  final Future<List<String>> Function() fetchEmployees;
+  final List<String> areaCenters;
+  final List<String> lines;
+  final List<String> tools;
+  final List<String> machines;
+  final List<String> materials;
+  final List<String> employees;
 
   const CreateIssueModal({
     super.key,
     required this.scannedCode,
     this.selectedToolBreakdown,
     this.selectedMachineBreakdown,
-    required this.fetchAreaCenters,
-    required this.fetchLines,
-    required this.fetchTools,
-    required this.fetchMachines,
-    required this.fetchMaterials,
-    required this.fetchEmployees,
+    required this.areaCenters,
+    required this.lines,
+    required this.tools,
+    required this.machines,
+    required this.materials,
+    required this.employees,
   });
 
   @override
@@ -669,7 +628,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   String? workCardComment;
   String? imagePath;
 
-  // Controllers
   final TextEditingController employeeController = TextEditingController();
   final TextEditingController areaCenterController = TextEditingController();
   final TextEditingController lineController = TextEditingController();
@@ -677,61 +635,19 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   final TextEditingController machineController = TextEditingController();
   final TextEditingController materialController = TextEditingController();
 
-  // Fetched data lists
-  List<String> areaCenters = [];
-  List<String> lines = [];
-  List<String> tools = [];
-  List<String> machines = [];
-  List<String> materials = [];
-  List<String> employees = [];
-
-  bool isLoading = true;
-
   @override
   void initState() {
     super.initState();
 
-    // Pre-fill tool / machine if provided
-    if (widget.selectedToolBreakdown?.isNotEmpty ?? false) {
+    if (widget.selectedToolBreakdown != null &&
+        widget.selectedToolBreakdown!.isNotEmpty) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
     }
-    if (widget.selectedMachineBreakdown?.isNotEmpty ?? false) {
+    if (widget.selectedMachineBreakdown != null &&
+        widget.selectedMachineBreakdown!.isNotEmpty) {
       selectedMachineBreakdown = widget.selectedMachineBreakdown;
       machineController.text = selectedMachineBreakdown!;
-    }
-
-    _fetchAllData();
-  }
-
-  Future<void> _fetchAllData() async {
-    try {
-      final results = await Future.wait([
-        widget.fetchAreaCenters(),
-        widget.fetchLines(),
-        widget.fetchTools(),
-        widget.fetchMachines(),
-        widget.fetchMaterials(),
-        widget.fetchEmployees(),
-      ]);
-
-      setState(() {
-        areaCenters = results[0];
-        lines = results[1];
-        tools = results[2];
-        machines = results[3];
-        materials = results[4];
-        employees = results[5];
-        isLoading = false;
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching data in modal: $e');
-      }
-      setState(() {
-        isLoading = false;
-      });
-      // Optionally, show an error message to the user
     }
   }
 
@@ -748,18 +664,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return SingleChildScrollView(
       child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          top: 16,
-        ),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -769,84 +676,160 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             ),
             const SizedBox(height: 16),
 
-            // Checkbox for operable
             Row(
               children: [
                 Checkbox(
                   value: operable,
-                  onChanged: (value) =>
-                      setState(() => operable = value ?? true),
+                  onChanged: (value) {
+                    setState(() {
+                      operable = value!;
+                    });
+                  },
                 ),
                 const Text('Betrieb möglich?'),
               ],
             ),
 
-            // (1) Employee
-            _buildTypeAheadField(
-              labelText: 'Mitarbeiter auswählen',
-              controller: employeeController,
-              fetchSuggestions: _fetchEmployeeSuggestions,
-              onItemSelected: (val) {
-                selectedEmployee = val;
+            // Employee selection
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: employeeController,
+                decoration: const InputDecoration(
+                  labelText: 'Mitarbeiter auswählen',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.employees
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
               },
-            ),
-            const SizedBox(height: 8),
-
-            // (2) Area Center
-            _buildTypeAheadField(
-              labelText: 'Zuständige Stelle',
-              controller: areaCenterController,
-              fetchSuggestions: _fetchAreaCenterSuggestions,
-              onItemSelected: (val) {
-                selectedAreaCenter = val;
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
+              onSuggestionSelected: (suggestion) {
+                employeeController.text = suggestion;
+                selectedEmployee = suggestion;
               },
-            ),
-            const SizedBox(height: 8),
-
-            // (3) Line
-            _buildTypeAheadField(
-              labelText: 'Linie',
-              controller: lineController,
-              fetchSuggestions: _fetchLineSuggestions,
-              onItemSelected: (val) {
-                selectedLine = val;
-              },
-            ),
-            const SizedBox(height: 8),
-
-            // (4) Tool
-            _buildTypeAheadField(
-              labelText: 'Werkzeug',
-              controller: toolController,
-              fetchSuggestions: _fetchToolSuggestions,
-              onItemSelected: (val) {
-                selectedToolBreakdown = val;
-              },
-            ),
-            const SizedBox(height: 8),
-
-            // (5) Machine
-            _buildTypeAheadField(
-              labelText: 'Maschine / Anlage',
-              controller: machineController,
-              fetchSuggestions: _fetchMachineSuggestions,
-              onItemSelected: (val) {
-                selectedMachineBreakdown = val;
-              },
-            ),
-            const SizedBox(height: 8),
-
-            // (6) Material
-            _buildTypeAheadField(
-              labelText: 'Material',
-              controller: materialController,
-              fetchSuggestions: _fetchMaterialSuggestions,
-              onItemSelected: (val) {
-                selectedMaterialBreakdown = val;
-              },
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Bitte Mitarbeiter auswählen'
+                  : null,
             ),
 
-            const SizedBox(height: 8),
+            // Area Center selection
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: areaCenterController,
+                decoration: const InputDecoration(
+                  labelText: 'Zuständige Stelle',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.areaCenters
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
+              onSuggestionSelected: (suggestion) {
+                areaCenterController.text = suggestion;
+                selectedAreaCenter = suggestion;
+              },
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Bitte zuständige Stelle auswählen'
+                  : null,
+            ),
+
+            // Line selection
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: lineController,
+                decoration: const InputDecoration(
+                  labelText: 'Linie',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.lines
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
+              onSuggestionSelected: (suggestion) {
+                lineController.text = suggestion;
+                selectedLine = suggestion;
+              },
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Bitte Linie auswählen'
+                  : null,
+            ),
+
+            // Tool selection
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: toolController,
+                decoration: const InputDecoration(
+                  labelText: 'Werkzeug',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.tools
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
+              onSuggestionSelected: (suggestion) {
+                toolController.text = suggestion;
+                selectedToolBreakdown = suggestion;
+              },
+            ),
+
+            // Machine selection
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: machineController,
+                decoration: const InputDecoration(
+                  labelText: 'Maschine / Anlage',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.machines
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
+              onSuggestionSelected: (suggestion) {
+                machineController.text = suggestion;
+                selectedMachineBreakdown = suggestion;
+              },
+            ),
+
+            // Material selection
+            TypeAheadFormField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: materialController,
+                decoration: const InputDecoration(
+                  labelText: 'Material',
+                ),
+              ),
+              suggestionsCallback: (pattern) {
+                return widget.materials
+                    .where(
+                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, suggestion) =>
+                  ListTile(title: Text(suggestion)),
+              onSuggestionSelected: (suggestion) {
+                materialController.text = suggestion;
+                selectedMaterialBreakdown = suggestion;
+              },
+            ),
 
             // Work card comment
             TextField(
@@ -857,14 +840,15 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 workCardComment = value;
               },
             ),
-            const SizedBox(height: 16.0),
 
-            // Pick image
+            const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () async {
                 final pickedImage = await _pickImage();
                 if (pickedImage != null) {
-                  setState(() => imagePath = pickedImage.path);
+                  setState(() {
+                    imagePath = pickedImage.path;
+                  });
                 }
               },
               child: Row(
@@ -872,19 +856,17 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 children: [
                   const Icon(Icons.camera_alt),
                   const SizedBox(width: 8.0),
-                  const Text(
-                    'Bild auswählen\noder Foto aufnehmen',
-                    textAlign: TextAlign.center,
-                  ),
+                  const Text('Bild auswählen\noder Foto aufnehmen',
+                      textAlign: TextAlign.center),
                 ],
               ),
             ),
             const SizedBox(height: 16.0),
 
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
+
             const SizedBox(height: 16.0),
 
-            // Action buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -915,15 +897,13 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         'machineBreakdown': machineController.text,
                         'materialBreakdown': materialController.text,
                         'workCardComment': workCardComment!,
-                        'imagePath': imagePath!,
+                        'imageFile': imagePath!,
                       });
                       Navigator.pop(context);
                       showOverlayMessage(context, 'Störfall angelegt!');
                     } else {
-                      showOverlayMessage(
-                        context,
-                        'Bitte alle erforderlichen Felder ausfüllen.',
-                      );
+                      showOverlayMessage(context,
+                          'Bitte alle erforderlichen Felder ausfüllen.');
                     }
                   },
                   child: const Text('An IKOffice senden'),
@@ -933,65 +913,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
           ],
         ),
       ),
-    );
-  }
-
-  /// A helper to build a TypeAheadField with the new flutter_typeahead 5.x API
-  Widget _buildTypeAheadField({
-    required String labelText,
-    required TextEditingController controller,
-    required Future<List<String>> Function(String) fetchSuggestions,
-    required ValueChanged<String> onItemSelected,
-  }) {
-    return TypeAheadField<String>(
-      // Replaces old 'onSuggestionSelected'
-      onSelected: (String suggestion) {
-        controller.text = suggestion;
-        onItemSelected(suggestion);
-      },
-
-      // Called each time the user types:
-      suggestionsCallback: (pattern) async {
-        if (pattern.trim().isEmpty) return [];
-        return await fetchSuggestions(pattern);
-      },
-
-      // How each item is built in the dropdown
-      itemBuilder: (context, String suggestion) {
-        return ListTile(title: Text(suggestion));
-      },
-
-      // Build the TextField itself (old 'TextFieldConfiguration' is removed)
-      builder: (context, textEditingController, focusNode) {
-        // Keep the local textEditingController in sync with the main controller
-        textEditingController.text = controller.text;
-        return TextField(
-          controller: textEditingController,
-          focusNode: focusNode,
-          decoration: InputDecoration(
-            labelText: labelText,
-          ),
-          onChanged: (val) {
-            controller.text = val;
-          },
-        );
-      },
-
-      // If you want a custom 'no items' UI, or loading UI:
-      emptyBuilder: (context) => const ListTile(
-        title: Text('Keine Treffer'),
-      ),
-      loadingBuilder: (context) => const ListTile(
-        title: Text('Lade...'),
-      ),
-
-     
-      // Additional flags
-      hideOnEmpty: false,
-      hideOnLoading: false,
-      hideOnSelect: true, // Hide the box after the user selects something
-      retainOnLoading: true,
-      hideWithKeyboard: false,
     );
   }
 
@@ -1022,7 +943,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
     overlay.insert(overlayEntry);
 
-    // Remove the entry after a delay (3 seconds, e.g.)
     Future.delayed(const Duration(seconds: 3), () {
       overlayEntry.remove();
     });
@@ -1030,6 +950,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
   Future<File?> _pickImage() async {
     final picker = ImagePicker();
+
     ImageSource? source = await showDialog<ImageSource>(
       context: context,
       builder: (BuildContext context) {
@@ -1095,201 +1016,23 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     final request = http.MultipartRequest('POST', uri);
 
     issueData.forEach((key, value) {
-      if (key != 'imagePath') {
+      if (key != 'imageFile') {
         request.fields[key] = value;
       }
     });
 
-    final imageFile = File(issueData['imagePath']!);
+    final imageFile = File(issueData['imageFile']!);
     request.files
         .add(await http.MultipartFile.fromPath('imageFile', imageFile.path));
 
     final response = await request.send();
     if (response.statusCode == 201) {
-      // Successfully created
-      // Optionally show a SnackBar or toast in the calling code
+      // If you want to show SnackBar after closing the modal, do it in the calling code.
     } else {
       final errorMessage = await response.stream.bytesToString();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Fehler: $errorMessage')),
       );
-    }
-  }
-
-  // ----------------------------------
-  // Fetch Suggestions Functions for TypeAhead Fields
-  // ----------------------------------
-
-  Future<List<String>> _fetchEmployeeSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://wim-solution.sip.local:3006/employee?search=$query'),
-        headers: {
-          'accept': 'application/json',
-          'X-Api-Key': apiKey,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data
-            .map<String>((e) =>
-                '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
-            .toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching employee suggestions. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching employee suggestions: $e');
-      }
-      return [];
-    }
-  }
-
-  Future<List<String>> _fetchAreaCenterSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-            'http://wim-solution.sip.local:3006/salamanderareacenter?search=$query'),
-        headers: {
-          'accept': 'application/json',
-          'X-Api-Key': apiKey,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['name'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching area center suggestions. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching area center suggestions: $e');
-      }
-      return [];
-    }
-  }
-
-  Future<List<String>> _fetchLineSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-            'http://wim-solution.sip.local:3006/salamanderline?search=$query'),
-        headers: {
-          'accept': 'application/json',
-          'X-Api-Key': apiKey,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['number'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching line suggestions. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching line suggestions: $e');
-      }
-      return [];
-    }
-  }
-
-  Future<List<String>> _fetchToolSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://wim-solution.sip.local:3006/projects?search=$query'),
-        headers: {
-          'accept': 'application/json',
-          'X-Api-Key': apiKey,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['number'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching tool suggestions. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching tool suggestions: $e');
-      }
-      return [];
-    }
-  }
-
-  Future<List<String>> _fetchMachineSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://wim-solution.sip.local:3006/machines?search=$query'),
-        headers: {
-          'accept': 'application/json',
-          'X-Api-Key': apiKey,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['number'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching machine suggestions. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching machine suggestions: $e');
-      }
-      return [];
-    }
-  }
-
-  Future<List<String>> _fetchMaterialSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://wim-solution.sip.local:3006/material?search=$query'),
-        headers: {
-          'accept': 'application/json',
-          'X-Api-Key': apiKey,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map<String>((e) => e['name'].toString()).toList();
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching material suggestions. Status code: ${response.statusCode}');
-        }
-        return [];
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching material suggestions: $e');
-      }
-      return [];
     }
   }
 }

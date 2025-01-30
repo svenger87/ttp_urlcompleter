@@ -5,7 +5,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
-// Notice: we still import flutter_typeahead, but we'll use the new API
+// Import flutter_typeahead for older versions
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -22,8 +22,10 @@ class _ConverterModuleState extends State<ConverterModule> {
       IconData(0xf0250, fontFamily: 'MaterialIcons');
 
   List<Map<String, dynamic>> anbauteileData = [];
-  String? selectedNeueBezeichnung;
-  String? selectedAlteBezeichnung;
+
+  // Changed from nullable String? to non-nullable String
+  String selectedNeueBezeichnung = '';
+  String selectedAlteBezeichnung = '';
 
   @override
   void initState() {
@@ -65,102 +67,117 @@ class _ConverterModuleState extends State<ConverterModule> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Anbauteilenummern übersetzen'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Neue Bezeichnung
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Neue Bezeichnung'),
-                  TypeAheadField<String>(
-                    // REQUIRED in flutter_typeahead >=5.0.0
-                    onSelected: (String suggestion) {
-                      setState(() {
-                        selectedNeueBezeichnung = suggestion;
-                      });
-                      _showTranslationResultDialog(
-                          context, selectedNeueBezeichnung);
-                    },
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Neue Bezeichnung
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Neue Bezeichnung'),
+                    const SizedBox(height: 8.0),
+                    TypeAheadField<String>(
+                      // In older versions, use textFieldConfiguration to configure the TextField
+                      textFieldConfiguration: TextFieldConfiguration(
+                        decoration: const InputDecoration(
+                          hintText: 'Geben Sie eine neue Bezeichnung ein',
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                      suggestionsCallback: (pattern) async {
+                        if (pattern.trim().isEmpty) return [];
+                        return anbauteileData
+                            .where((item) =>
+                                item['Neue_Bezeichnung']
+                                    .toLowerCase()
+                                    .contains(pattern.toLowerCase()) &&
+                                (item['Neue_Bezeichnung'] as String).isNotEmpty)
+                            .map((item) => item['Neue_Bezeichnung'] as String)
+                            .toList();
+                      },
+                      itemBuilder: (context, String suggestion) {
+                        return ListTile(
+                          title: Text(suggestion),
+                        );
+                      },
+                      onSuggestionSelected: (String suggestion) {
+                        // Check for duplicate selection
+                        if (selectedNeueBezeichnung != suggestion) {
+                          setState(() {
+                            selectedNeueBezeichnung = suggestion;
+                          });
+                          _showTranslationResultDialog(
+                              context, selectedNeueBezeichnung);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Bezeichnung bereits ausgewählt.'),
+                            ),
+                          );
+                        }
+                      },
+                      noItemsFoundBuilder: (context) => const ListTile(
+                        title: Text('Keine Ergebnisse gefunden'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-                    // Replace old textFieldConfiguration with a builder
-                    builder: (context, textEditingController, focusNode) {
-                      return TextField(
-                        controller: textEditingController,
-                        focusNode: focusNode,
-                        decoration: const InputDecoration(),
-                      );
-                    },
-
-                    // Called when user types
-                    suggestionsCallback: (pattern) async {
-                      if (pattern.trim().isEmpty) return [];
-                      return anbauteileData
-                          .where((item) =>
-                              item['Neue_Bezeichnung']
-                                  .toLowerCase()
-                                  .contains(pattern.toLowerCase()) &&
-                              (item['Neue_Bezeichnung'] as String).isNotEmpty)
-                          .map((item) => item['Neue_Bezeichnung'] as String)
-                          .toList();
-                    },
-
-                    // How each item in the dropdown is built
-                    itemBuilder: (context, String suggestion) {
-                      return ListTile(
-                        title: Text(suggestion),
-                      );
-                    },
-
-                    // Optionally define emptyBuilder if you want a “no items found” UI
-                    // emptyBuilder: (context) => const ListTile(
-                    //   title: Text('Nichts gefunden'),
-                    // ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Alte Bezeichnung
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Alte Bezeichnung'),
-                  TypeAheadField<String>(
-                    onSelected: (String suggestion) {
-                      setState(() {
-                        selectedAlteBezeichnung = suggestion;
-                      });
-                      _showTranslationResultDialog(
-                          context, selectedAlteBezeichnung);
-                    },
-                    builder: (context, textEditingController, focusNode) {
-                      return TextField(
-                        controller: textEditingController,
-                        focusNode: focusNode,
-                        decoration: const InputDecoration(),
-                      );
-                    },
-                    suggestionsCallback: (pattern) async {
-                      if (pattern.trim().isEmpty) return [];
-                      return anbauteileData
-                          .where((item) =>
-                              item['Alte_Bezeichnung']
-                                  .toLowerCase()
-                                  .contains(pattern.toLowerCase()) &&
-                              (item['Alte_Bezeichnung'] as String).isNotEmpty)
-                          .map((item) => item['Alte_Bezeichnung'] as String)
-                          .toList();
-                    },
-                    itemBuilder: (context, String suggestion) {
-                      return ListTile(
-                        title: Text(suggestion),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
+                // Alte Bezeichnung
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Alte Bezeichnung'),
+                    const SizedBox(height: 8.0),
+                    TypeAheadField<String>(
+                      textFieldConfiguration: TextFieldConfiguration(
+                        decoration: const InputDecoration(
+                          hintText: 'Geben Sie eine alte Bezeichnung ein',
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                      suggestionsCallback: (pattern) async {
+                        if (pattern.trim().isEmpty) return [];
+                        return anbauteileData
+                            .where((item) =>
+                                item['Alte_Bezeichnung']
+                                    .toLowerCase()
+                                    .contains(pattern.toLowerCase()) &&
+                                (item['Alte_Bezeichnung'] as String).isNotEmpty)
+                            .map((item) => item['Alte_Bezeichnung'] as String)
+                            .toList();
+                      },
+                      itemBuilder: (context, String suggestion) {
+                        return ListTile(
+                          title: Text(suggestion),
+                        );
+                      },
+                      onSuggestionSelected: (String suggestion) {
+                        // Check for duplicate selection
+                        if (selectedAlteBezeichnung != suggestion) {
+                          setState(() {
+                            selectedAlteBezeichnung = suggestion;
+                          });
+                          _showTranslationResultDialog(
+                              context, selectedAlteBezeichnung);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Bezeichnung bereits ausgewählt.'),
+                            ),
+                          );
+                        }
+                      },
+                      noItemsFoundBuilder: (context) => const ListTile(
+                        title: Text('Keine Ergebnisse gefunden'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -169,7 +186,7 @@ class _ConverterModuleState extends State<ConverterModule> {
 
   void _showTranslationResultDialog(
       BuildContext context, String? selectedValue) async {
-    if (selectedValue == null) {
+    if (selectedValue == null || selectedValue.isEmpty) {
       return;
     }
 
@@ -266,7 +283,12 @@ class _ConverterModuleState extends State<ConverterModule> {
           icon: const Icon(Icons.content_copy),
           onPressed: () {
             _copyToClipboard(value);
-            setState(() {});
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('$label kopiert!'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
           },
         ),
       ],
@@ -275,16 +297,16 @@ class _ConverterModuleState extends State<ConverterModule> {
 
   void _copyToClipboard(String data) {
     Clipboard.setData(ClipboardData(text: data));
-    // Show a Snackbar or message if desired
+    // Optionally, show a Snackbar or message if desired
   }
 
   Future<bool> _pdfFileExists(String pdfFileName) async {
     try {
-      final ByteData data =
-          await rootBundle.load('assets/wzabt_pdfs/$pdfFileName');
-      // ignore: unnecessary_null_comparison
-      return data != null; // If load succeeds, file presumably exists
+      await rootBundle.load('assets/wzabt_pdfs/$pdfFileName');
+      // If load succeeds, the PDF exists
+      return true;
     } catch (error) {
+      // If an error occurs, the PDF doesn't exist
       return false;
     }
   }

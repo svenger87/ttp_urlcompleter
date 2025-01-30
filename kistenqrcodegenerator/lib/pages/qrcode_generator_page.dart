@@ -33,9 +33,13 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
   // CSV text field controller
   final TextEditingController _csvController = TextEditingController();
 
+  // TypeAhead text field controller for API section
+  final TextEditingController _typeAheadController = TextEditingController();
+
   @override
   void dispose() {
     _csvController.dispose();
+    _typeAheadController.dispose();
     super.dispose();
   }
 
@@ -153,8 +157,31 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
       children: [
         // The TypeAhead widget to search & fetch from server
         TypeAheadField<Profile>(
-          // required in flutter_typeahead >=5.0.0
-          onSelected: (Profile suggestion) {
+          textFieldConfiguration: TextFieldConfiguration(
+            controller: _typeAheadController,
+            decoration: const InputDecoration(
+              labelText: "Profil suchen",
+              hintText: "Geben Sie einen Suchbegriff ein",
+              prefixIcon: Icon(Icons.search),
+            ),
+          ),
+          suggestionsCallback: (pattern) async {
+            if (pattern.trim().isEmpty) {
+              return [];
+            }
+            // Server-side partial matching
+            final results = await apiService.fetchProfiles(pattern.trim());
+            return results;
+          },
+          itemBuilder: (context, Profile profile) {
+            return ListTile(
+              title: Text(profile.title),
+              subtitle: Text(profile.shortUrl),
+            );
+          },
+          onSuggestionSelected: (Profile suggestion) {
+            // Clear the typeahead field after selection
+            _typeAheadController.clear();
             // Add the profile if not already in selection
             if (!selectedProfiles.contains(suggestion)) {
               setState(() {
@@ -170,39 +197,9 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
               );
             }
           },
-
-          // Called whenever user types
-          suggestionsCallback: (pattern) async {
-            if (pattern.trim().isEmpty) {
-              return [];
-            }
-            // Server-side partial matching
-            final results = await apiService.fetchProfiles(pattern.trim());
-            return results;
-          },
-
-          // Build each dropdown item
-          itemBuilder: (context, Profile profile) {
-            return ListTile(
-              title: Text(profile.title),
-              subtitle: Text(profile.shortUrl),
-            );
-          },
-
-          // Build the text field itself
-          builder: (context, textEditingController, focusNode) {
-            return TextField(
-              controller: textEditingController,
-              focusNode: focusNode,
-              decoration: const InputDecoration(
-                labelText: "Profil suchen",
-                hintText: "Geben Sie einen Suchbegriff ein",
-                prefixIcon: Icon(Icons.search),
-              ),
-            );
-          },
-          // If you want a “no items found” UI, rename noItemsFoundBuilder => emptyBuilder
-          // e.g. emptyBuilder: (context) => const ListTile(title: Text('Nichts gefunden')),
+          noItemsFoundBuilder: (context) => const ListTile(
+            title: Text('Nichts gefunden'),
+          ),
         ),
         const SizedBox(height: 10),
         // Show how many selected
