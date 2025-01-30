@@ -287,6 +287,7 @@ class _NumberInputPageState extends State<NumberInputPage>
 
     String? selectedToolBreakdown;
     String? selectedMachineBreakdown;
+    String? correspondingLine;
 
     List<String> normalizedTools =
         tools.map((e) => e.trim().toLowerCase()).toList();
@@ -311,9 +312,27 @@ class _NumberInputPageState extends State<NumberInputPage>
       }
     }
 
+    if (selectedMachineBreakdown != null) {
+      // Extract the machine code part (e.g., 'S001' from 'S001')
+      String machineCode = selectedMachineBreakdown.toUpperCase();
+
+      // Find the corresponding line that ends with the machine code
+      correspondingLine = lines.firstWhere(
+        (line) => line.toUpperCase().endsWith(machineCode),
+        orElse: () => '',
+      );
+
+      if (correspondingLine.isEmpty && kDebugMode) {
+        if (kDebugMode) {
+          print('No matching line found for machine code: $machineCode');
+        }
+      }
+    }
+
     if (kDebugMode) {
       print('Matched tool breakdown: $selectedToolBreakdown');
       print('Matched machine breakdown: $selectedMachineBreakdown');
+      print('Corresponding line: $correspondingLine');
     }
 
     // Use showModalBottomSheet instead of showDialog
@@ -328,6 +347,7 @@ class _NumberInputPageState extends State<NumberInputPage>
             scannedCode: scannedCode,
             selectedToolBreakdown: selectedToolBreakdown,
             selectedMachineBreakdown: selectedMachineBreakdown,
+            correspondingLine: correspondingLine, // Pass the matching line
             areaCenters: areaCenters,
             lines: lines,
             tools: tools,
@@ -338,6 +358,12 @@ class _NumberInputPageState extends State<NumberInputPage>
         );
       },
     );
+
+    scanTimer = Timer(const Duration(seconds: 3), () {
+      setState(() {
+        hasScanned = false;
+      });
+    });
   }
 
   void _onQRViewCreated(QRViewController controller) {
@@ -599,6 +625,7 @@ class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
   final String? selectedMachineBreakdown;
+  final String? correspondingLine; // New parameter
   final List<String> areaCenters;
   final List<String> lines;
   final List<String> tools;
@@ -611,6 +638,7 @@ class CreateIssueModal extends StatefulWidget {
     required this.scannedCode,
     this.selectedToolBreakdown,
     this.selectedMachineBreakdown,
+    this.correspondingLine, // Initialize the new parameter
     required this.areaCenters,
     required this.lines,
     required this.tools,
@@ -654,6 +682,13 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         widget.selectedMachineBreakdown!.isNotEmpty) {
       selectedMachineBreakdown = widget.selectedMachineBreakdown;
       machineController.text = selectedMachineBreakdown!;
+    }
+
+    // Prefill the line field if a corresponding line is provided
+    if (widget.correspondingLine != null &&
+        widget.correspondingLine!.isNotEmpty) {
+      selectedLine = widget.correspondingLine;
+      lineController.text = selectedLine!;
     }
   }
 
@@ -751,7 +786,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               textFieldConfiguration: TextFieldConfiguration(
                 controller: lineController,
                 decoration: const InputDecoration(
-                  labelText: 'Linie',
+                  labelText: 'Linie oder Stellplatz',
                 ),
               ),
               suggestionsCallback: (pattern) {
@@ -767,7 +802,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 selectedLine = suggestion;
               },
               validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte Linie auswählen'
+                  ? 'Bitte Linie oder Stellplatz auswählen'
                   : null,
             ),
 
