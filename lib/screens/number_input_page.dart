@@ -20,18 +20,18 @@ import 'package:http/io_client.dart'
     as io_http; // Changed prefix to avoid conflict
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
-//// Model class for Machine
+/// Model class for Machine
 class Machine {
   final String number;
   final String salamandermachinepitch;
-  final String? salamanderlineNumber; // New field (nullable)
-  final String productionworkplaceNumber; // Added for fallback
+  final String? salamanderlineNumber; // Nullable
+  final String productionworkplaceNumber;
 
   Machine({
     required this.number,
     required this.salamandermachinepitch,
-    this.salamanderlineNumber, // Initialize the new field
-    required this.productionworkplaceNumber, // Initialize the new field
+    this.salamanderlineNumber,
+    required this.productionworkplaceNumber,
   });
 
   factory Machine.fromJson(Map<String, dynamic> json) {
@@ -132,37 +132,38 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
-  /// Builds a mapping from salamanderline_number to corresponding lines
+  /// Builds a mapping from machine number to corresponding salamanderline_number
   Map<String, String> _buildMachineToLineMap(
       List<String> lines, List<Machine> machines) {
     Map<String, String> map = {};
     for (var machine in machines) {
-      String? machineCode = machine.salamanderlineNumber?.trim().toUpperCase();
+      String machineNumber = machine.number.trim().toUpperCase();
+      String? lineNumber = machine.salamanderlineNumber?.trim().toUpperCase();
 
-      // If salamanderline_number is null and productionworkplace_number starts with 'S0'
-      if (machineCode == null || machineCode.isEmpty) {
-        if (machine.productionworkplaceNumber.toUpperCase().startsWith('S0')) {
-          machineCode =
-              'TTP-${machine.productionworkplaceNumber.toUpperCase()}';
-        }
+      // If salamanderline_number is null or empty and productionworkplace_number starts with 'S0', generate it
+      if ((lineNumber == null || lineNumber.isEmpty) &&
+          machine.productionworkplaceNumber.toUpperCase().startsWith('S0')) {
+        lineNumber = 'TTP-${machine.productionworkplaceNumber.toUpperCase()}';
       }
 
-      // Proceed only if machineCode is not null or empty
-      if (machineCode != null && machineCode.isNotEmpty) {
-        // Find the line that exactly matches the machineCode
-        String correspondingLine = lines.firstWhere(
-          (line) => line.toUpperCase() == machineCode,
-          orElse: () => '',
-        );
-        if (correspondingLine.isNotEmpty) {
-          map[machineCode] = correspondingLine;
+      // Proceed only if lineNumber is not null or empty
+      if (lineNumber != null && lineNumber.isNotEmpty) {
+        // Ensure that the line exists in the lines list
+        if (lines.map((e) => e.toUpperCase()).contains(lineNumber)) {
+          map[machineNumber] = lineNumber;
           if (kDebugMode) {
-            print('Mapping: $machineCode -> $correspondingLine');
+            print('Mapping: $machineNumber -> $lineNumber');
           }
         } else {
           if (kDebugMode) {
-            print('No corresponding line found for machine code: $machineCode');
+            print(
+                'No corresponding line found in lines list for line number: $lineNumber');
           }
+        }
+      } else {
+        if (kDebugMode) {
+          print(
+              'No salamanderline_number and productionworkplace_number does not start with S0 for machine: $machineNumber');
         }
       }
     }
@@ -398,8 +399,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     // If not a tool, check if it's a machine using exact match
     if (selectedToolBreakdown == null) {
       for (var machine in machines) {
-        String normalizedMachine =
-            machine.salamandermachinepitch.trim().toUpperCase();
+        String normalizedMachine = machine.number.trim().toUpperCase();
         if (normalizedMachine == normalizedScannedCode) {
           // Exact match
           selectedMachineNumber = machine.number;
@@ -414,8 +414,8 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
 
     // If a machine is found, find the corresponding line using the mapping
-    if (selectedMachinePitch != null) {
-      String machineCode = selectedMachinePitch.trim().toUpperCase();
+    if (selectedMachineNumber != null) {
+      String machineCode = selectedMachineNumber.trim().toUpperCase();
       correspondingLine = machinePitchToLineMap[machineCode];
       if (correspondingLine == null && kDebugMode) {
         if (kDebugMode) {
@@ -1043,7 +1043,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               ),
               suggestionsCallback: (pattern) {
                 return widget.machines
-                    .where((machine) => machine.salamandermachinepitch
+                    .where((machine) => machine.number
                         .toLowerCase()
                         .contains(pattern.toLowerCase()))
                     .map((machine) => machine.number) // Suggest machine numbers
@@ -1061,6 +1061,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         orElse: () => Machine(
                               number: '',
                               salamandermachinepitch: '',
+                              salamanderlineNumber: null,
                               productionworkplaceNumber: '',
                             ));
 
