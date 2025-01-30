@@ -396,7 +396,7 @@ class _NumberInputPageState extends State<NumberInputPage>
             children: [
               ListTile(
                 leading: const Icon(Icons.open_in_browser),
-                title: const Text('Werkzeugdetails öffnen'),
+                title: const Text('Werkzeug- oder Maschinendetails öffnen'),
                 onTap: () {
                   Navigator.pop(context);
                   _navigateToUrl(fullUrl);
