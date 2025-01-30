@@ -351,12 +351,17 @@ class _NumberInputPageState extends State<NumberInputPage>
 
         Vibration.vibrate(duration: 50);
 
-        final scannedData = scanData.code!;
+        String scannedData = scanData.code!;
         if (kDebugMode) {
           print('Scanned QR Code: $scannedData');
         }
 
         String fullUrl = scannedData;
+
+        // If the scanned QR code has exactly 5 characters, prepend the machine URL
+        if (scannedData.length == 5) {
+          fullUrl = 'https://wim-solution.sip.local:8081/$scannedData';
+        }
 
         String codeToUse;
         try {
@@ -368,6 +373,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         }
 
         if (kDebugMode) {
+          print('Processed URL: $fullUrl');
           print('Extracted code: $codeToUse');
         }
 
