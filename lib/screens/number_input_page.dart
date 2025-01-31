@@ -1330,63 +1330,61 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   }
 
   /// Picks an image from the camera or gallery
-  Future<File?> _pickImage() async {
+  Future<XFile?> _pickImage() async {
     final picker = ImagePicker();
 
-    // Show dialog to choose image source
-    ImageSource? source = await showDialog<ImageSource>(
+    final source = await showDialog<ImageSource>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Bildquelle wählen'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Kamera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_album),
-                title: const Text('Galerie'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Bildquelle wählen'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Kamera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_album),
+              title: const Text('Galerie'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
     );
 
     if (source == null) return null;
 
     final XFile? pickedFile = await picker.pickImage(source: source);
+
     if (pickedFile != null) {
-      File imageFile = File(pickedFile.path);
+      // Check if an image was picked.
+      try {
+        final Directory tempDir = await getTemporaryDirectory();
+        final String targetPath = path.join(
+          tempDir.path,
+          '${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
 
-      // Determine the temporary directory
-      final Directory tempDir = await getTemporaryDirectory();
-      final String targetPath = path.join(
-        tempDir.path,
-        '${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
+        final XFile? compressedFile =
+            await FlutterImageCompress.compressAndGetFile(
+          pickedFile.path, // Correct: Using XFile.path here
+          targetPath,
+          quality: 85,
+          format: CompressFormat.jpeg,
+        );
 
-      // Compress and convert the image to JPEG
-      File? compressedFile = (await FlutterImageCompress.compressAndGetFile(
-        imageFile.absolute.path,
-        targetPath,
-        quality: 90, // Adjust quality as needed
-        format: CompressFormat.jpeg,
-      )) as File?;
-
-      if (compressedFile != null) {
         return compressedFile;
-      } else {
-        // If compression fails, return the original file
-        return imageFile;
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error compressing image: $e');
+        }
+        return null;
       }
     }
-    return null;
+    return null; // Return null if pickedFile is null (no image selected)
   }
 
   /// Submits the issue to the server
