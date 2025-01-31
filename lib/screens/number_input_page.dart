@@ -20,8 +20,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/io_client.dart'
     as io_http; // Changed prefix to avoid conflict
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path/path.dart' as path;
+import 'package:http_parser/http_parser.dart';
 
 /// Model class for Machine
 class Machine {
@@ -899,19 +899,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     super.dispose();
   }
 
-  /// Validates if the image file is valid and can be read
-  Future<bool> _isImageFileValid(File file) async {
-    try {
-      final bytes = await file.readAsBytes();
-      return bytes.isNotEmpty;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error reading image file: $e');
-      }
-      return false;
-    }
-  }
-
   /// Validates the form fields
   bool _validateForm({
     required bool operable,
@@ -1330,7 +1317,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   }
 
   /// Picks an image from the camera or gallery
-  Future<XFile?> _pickImage() async {
+  Future<File?> _pickImage() async {
     final picker = ImagePicker();
 
     final source = await showDialog<ImageSource>(
@@ -1358,33 +1345,40 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     if (source == null) return null;
 
     final XFile? pickedFile = await picker.pickImage(source: source);
-
-    if (pickedFile != null) {
-      // Check if an image was picked.
-      try {
-        final Directory tempDir = await getTemporaryDirectory();
-        final String targetPath = path.join(
-          tempDir.path,
-          '${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
-
-        final XFile? compressedFile =
-            await FlutterImageCompress.compressAndGetFile(
-          pickedFile.path, // Correct: Using XFile.path here
-          targetPath,
-          quality: 85,
-          format: CompressFormat.jpeg,
-        );
-
-        return compressedFile;
-      } catch (e) {
-        if (kDebugMode) {
-          print('Error compressing image: $e');
-        }
-        return null;
-      }
+    if (pickedFile == null) {
+      if (kDebugMode) print('No image selected.');
+      return null;
     }
-    return null; // Return null if pickedFile is null (no image selected)
+
+    // Convert XFile to File
+    File imageFile = File(pickedFile.path);
+
+    // Ensure the picked file is valid
+    final isValid = await _isImageFileValid(imageFile);
+    if (!isValid) {
+      if (kDebugMode) print('Image file is invalid or corrupted.');
+      return null;
+    }
+
+    // Optional: Save a copy before sending
+    final tempDir = await getTemporaryDirectory();
+    final savedFilePath =
+        path.join(tempDir.path, '${DateTime.now().millisecondsSinceEpoch}.jpg');
+    final savedFile = await imageFile.copy(savedFilePath);
+
+    if (kDebugMode) print('Image saved locally at: $savedFilePath');
+    return savedFile;
+  }
+
+  /// Validates if the image file is valid
+  Future<bool> _isImageFileValid(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      return bytes.isNotEmpty;
+    } catch (e) {
+      if (kDebugMode) print('Error reading image file: $e');
+      return false;
+    }
   }
 
   /// Submits the issue to the server
@@ -1399,8 +1393,23 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     });
 
     final imageFile = File(issueData['imageFile']!);
-    request.files
-        .add(await http.MultipartFile.fromPath('imageFile', imageFile.path));
+
+    // Determine MIME type based on file extension
+    String mimeType = 'application/octet-stream'; // Default MIME type
+    String extension = imageFile.path.split('.').last.toLowerCase();
+    if (extension == 'jpg' || extension == 'jpeg') {
+      mimeType = 'image/jpeg';
+    } else if (extension == 'png') {
+      mimeType = 'image/png';
+    } else if (extension == 'gif') {
+      mimeType = 'image/gif';
+    }
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'imageFile',
+      imageFile.path,
+      contentType: MediaType.parse(mimeType),
+    ));
 
     try {
       final response = await request.send();
