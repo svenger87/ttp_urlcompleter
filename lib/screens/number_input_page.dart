@@ -4,6 +4,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -19,6 +20,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/io_client.dart'
     as io_http; // Changed prefix to avoid conflict
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path/path.dart' as path;
 
 /// Model class for Machine
 class Machine {
@@ -1279,6 +1282,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   Future<File?> _pickImage() async {
     final picker = ImagePicker();
 
+    // Show dialog to choose image source
     ImageSource? source = await showDialog<ImageSource>(
       context: context,
       builder: (BuildContext context) {
@@ -1305,9 +1309,31 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
 
     if (source == null) return null;
 
-    final pickedFile = await picker.pickImage(source: source);
+    final XFile? pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
-      return File(pickedFile.path);
+      File imageFile = File(pickedFile.path);
+
+      // Determine the temporary directory
+      final Directory tempDir = await getTemporaryDirectory();
+      final String targetPath = path.join(
+        tempDir.path,
+        '${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      // Compress and convert the image to JPEG
+      File? compressedFile = (await FlutterImageCompress.compressAndGetFile(
+        imageFile.absolute.path,
+        targetPath,
+        quality: 90, // Adjust quality as needed
+        format: CompressFormat.jpeg,
+      )) as File?;
+
+      if (compressedFile != null) {
+        return compressedFile;
+      } else {
+        // If compression fails, return the original file
+        return imageFile;
+      }
     }
     return null;
   }
