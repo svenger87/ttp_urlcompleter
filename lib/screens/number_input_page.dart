@@ -899,6 +899,47 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     super.dispose();
   }
 
+  /// Validates if the image file is valid and can be read
+  Future<bool> _isImageFileValid(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      return bytes.isNotEmpty;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error reading image file: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Validates the form fields
+  bool _validateForm({
+    required bool operable,
+    required String? areaCenter,
+    required String? line,
+    required String? employee,
+    required String? toolBreakdown,
+    required String? machineBreakdown,
+    required String? materialBreakdown,
+    required String? workCardComment,
+    required String? imagePath,
+  }) {
+    bool hasBreakdown = ((toolBreakdown != null && toolBreakdown.isNotEmpty) ||
+        (machineBreakdown != null && machineBreakdown.isNotEmpty) ||
+        (materialBreakdown != null && materialBreakdown.isNotEmpty));
+
+    return areaCenter != null &&
+        areaCenter.isNotEmpty &&
+        line != null &&
+        line.isNotEmpty &&
+        employee != null &&
+        employee.isNotEmpty &&
+        hasBreakdown &&
+        workCardComment != null &&
+        workCardComment.isNotEmpty &&
+        imagePath != null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -1198,7 +1239,17 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    if (imagePath != null) {
+                      File imageFile = File(imagePath!);
+                      bool isValid = await _isImageFileValid(imageFile);
+                      if (!isValid) {
+                        showOverlayMessage(
+                            context, 'Das Bild ist ungültig oder beschädigt.');
+                        return;
+                      }
+                    }
+
                     if (_validateForm(
                       operable: operable,
                       areaCenter: selectedAreaCenter,
@@ -1336,34 +1387,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       }
     }
     return null;
-  }
-
-  /// Validates the form fields
-  bool _validateForm({
-    required bool operable,
-    required String? areaCenter,
-    required String? line,
-    required String? employee,
-    required String? toolBreakdown,
-    required String? machineBreakdown,
-    required String? materialBreakdown,
-    required String? workCardComment,
-    required String? imagePath,
-  }) {
-    bool hasBreakdown = ((toolBreakdown != null && toolBreakdown.isNotEmpty) ||
-        (machineBreakdown != null && machineBreakdown.isNotEmpty) ||
-        (materialBreakdown != null && materialBreakdown.isNotEmpty));
-
-    return areaCenter != null &&
-        areaCenter.isNotEmpty &&
-        line != null &&
-        line.isNotEmpty &&
-        employee != null &&
-        employee.isNotEmpty &&
-        hasBreakdown &&
-        workCardComment != null &&
-        workCardComment.isNotEmpty &&
-        imagePath != null;
   }
 
   /// Submits the issue to the server
