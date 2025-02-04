@@ -239,8 +239,8 @@ class _NumberInputPageState extends State<NumberInputPage>
     final scannerWidth = MediaQuery.of(context).size.width;
     final scanWindow = Rect.fromCenter(
       center: Offset(scannerWidth / 2, scannerHeight / 2),
-      width: 300,
-      height: 200,
+      width: 150,
+      height: 150,
     );
 
     return Scaffold(
@@ -1275,7 +1275,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         'imageFile': imagePath!,
                       });
                       Navigator.pop(context);
-                      showOverlayMessage(context, 'Störfall angelegt!');
+                      showOverlayMessage(context, 'Störfall angelegt!',
+                          backgroundColor: Colors.green);
                       if (kDebugMode) {
                         print(
                             'CreateIssueModal: Issue submitted successfully.');
@@ -1299,7 +1300,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   }
 
   /// Shows an overlay message at the top of the screen
-  void showOverlayMessage(BuildContext context, String message) {
+  void showOverlayMessage(BuildContext context, String message,
+      {Color backgroundColor = Colors.red}) {
     final overlay = Navigator.of(context, rootNavigator: true).overlay;
     if (overlay == null) return;
 
@@ -1311,7 +1313,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         child: Material(
           elevation: 10.0,
           borderRadius: BorderRadius.circular(8.0),
-          color: Colors.red,
+          color: backgroundColor, // Use the passed background color
           child: Padding(
             padding: const EdgeInsets.all(12.0),
             child: Text(
