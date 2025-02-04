@@ -27,9 +27,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
         backgroundColor: const Color(0xFF104382),
         title: const Text('PIN eingeben'),
         titleTextStyle: const TextStyle(
-          color: Colors.white, // Set the text color to white
-          fontSize: 20, // Optionally adjust the font size
-          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
       ),
       body: Padding(
@@ -41,6 +41,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
             children: <Widget>[
               TextFormField(
                 controller: _pinController,
+                autofocus: true, // Automatically focus on the input field
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 decoration: const InputDecoration(
@@ -56,6 +57,8 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                   }
                   return null;
                 },
+                onFieldSubmitted: (_) =>
+                    _submitPin(), // Submit on Enter key press
               ),
               const SizedBox(height: 20),
               ElevatedButton(

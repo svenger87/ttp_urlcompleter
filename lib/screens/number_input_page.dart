@@ -23,6 +23,7 @@ import 'package:vibration/vibration.dart';
 import '../modules/webview_module.dart';
 import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
+import '../modules/suggestions_module.dart';
 
 /// Model class for Machine
 class Machine {
@@ -819,16 +820,16 @@ class CreateIssueModal extends StatefulWidget {
     super.key,
     required this.scannedCode,
     this.selectedToolBreakdown,
-    this.selectedMachineNumber, // New parameter
-    this.selectedMachinePitch, // New parameter
-    this.correspondingLine, // Initialize the new parameter
+    this.selectedMachineNumber,
+    this.selectedMachinePitch,
+    this.correspondingLine,
     required this.areaCenters,
     required this.lines,
     required this.tools,
     required this.machines,
     required this.materials,
     required this.employees,
-    required this.machinePitchToLineMap, // Require mapping
+    required this.machinePitchToLineMap,
   });
 
   @override
@@ -854,6 +855,14 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   final TextEditingController machineController = TextEditingController();
   final TextEditingController materialController = TextEditingController();
 
+  // --- New variables for the comment field ---
+  late TextEditingController _commentController;
+  late FocusNode commentFocusNode;
+
+  /// Controls whether the comment field is unlocked for free text editing.
+  bool freeText = false;
+  // ------------------------------------------------
+
   @override
   void initState() {
     super.initState();
@@ -874,8 +883,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         print('CreateIssueModal: Set machine number to $selectedMachineNumber');
       }
     }
-
-    // Prefill the line field if a corresponding line is provided
     if (widget.correspondingLine != null &&
         widget.correspondingLine!.isNotEmpty) {
       selectedLine = widget.correspondingLine;
@@ -884,7 +891,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         print('CreateIssueModal: Set line to $selectedLine');
       }
     }
-
     if (widget.selectedMachinePitch != null &&
         widget.selectedMachinePitch!.isNotEmpty) {
       selectedMachinePitch = widget.selectedMachinePitch;
@@ -892,6 +898,10 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         print('CreateIssueModal: Set machine pitch to $selectedMachinePitch');
       }
     }
+
+    // Initialize the comment controller and focus node.
+    _commentController = TextEditingController(text: workCardComment ?? '');
+    commentFocusNode = FocusNode();
   }
 
   @override
@@ -902,10 +912,12 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     toolController.dispose();
     machineController.dispose();
     materialController.dispose();
+    _commentController.dispose();
+    commentFocusNode.dispose();
     super.dispose();
   }
 
-  /// Validates the form fields
+  /// Validates the form fields (unchanged)
   bool _validateForm({
     required bool operable,
     required String? areaCenter,
@@ -1193,16 +1205,63 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
             const SizedBox(height: 16),
-            // Work card comment (simple TextField)
             TextField(
-              decoration: const InputDecoration(
+              controller: _commentController,
+              focusNode: commentFocusNode,
+              // The field remains editable so the user can type freely.
+              readOnly: false,
+              decoration: InputDecoration(
                 labelText: 'Fehlerbeschreibung',
+                hintText: 'Kommentar eingeben oder Vorschlag wählen',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.arrow_drop_down),
+                  onPressed: () async {
+                    // Always show the selection dialog regardless of previous selection.
+                    final selection = await showDialog<String>(
+                      context: context,
+                      builder: (context) {
+                        return SimpleDialog(
+                          title: const Text('Kommentar Typ wählen'),
+                          children: [
+                            SimpleDialogOption(
+                              onPressed: () =>
+                                  Navigator.pop(context, 'suggestion'),
+                              child: const Text('Text auswählen'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () => Navigator.pop(context, 'free'),
+                              child: const Text('Freier Text'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                    if (selection != null) {
+                      // For "Textbaustein auswählen", load the suggestions modal.
+                      if (selection == 'suggestion') {
+                        final selectedText = await showPredefinedTextsModal(
+                          context,
+                          initialText: _commentController.text,
+                        );
+                        if (selectedText != null) {
+                          setState(() {
+                            _commentController.text = selectedText;
+                            workCardComment = selectedText;
+                          });
+                        }
+                      }
+                      // Always return focus to the field for further editing.
+                      FocusScope.of(context).requestFocus(commentFocusNode);
+                    }
+                  },
+                ),
               ),
+              onTap: () {
+                // Just set focus; the dialog can be opened via the suffix icon.
+                FocusScope.of(context).requestFocus(commentFocusNode);
+              },
               onChanged: (value) {
                 workCardComment = value;
-                if (kDebugMode) {
-                  print('CreateIssueModal: Work card comment updated.');
-                }
               },
             ),
             const SizedBox(height: 16.0),

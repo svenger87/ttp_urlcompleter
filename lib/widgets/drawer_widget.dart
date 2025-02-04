@@ -15,6 +15,7 @@ import 'package:tryout_planning/screens/einfahr_planer_screen.dart';
 import 'package:sap2worldship/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:kistenqrcodegenerator/pages/qrcode_generator_page.dart';
+import '../modules/suggestions_manager.dart';
 
 class MainDrawer extends StatelessWidget {
   const MainDrawer({super.key});
@@ -206,6 +207,18 @@ class MainDrawer extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => ProductionOrdersScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(MdiIcons.packageVariant),
+                title: const Text('Störfall Textbaustein Manager'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SuggestionsManager(),
                     ),
                   );
                 },
