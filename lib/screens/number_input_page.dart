@@ -2,26 +2,27 @@
 
 // ignore_for_file: deprecated_member_use, library_private_types_in_public_api
 
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:ttp_app/constants.dart';
-import 'package:ttp_app/widgets/drawer_widget.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:vibration/vibration.dart';
-import 'dart:async';
-import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../modules/webview_module.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
 import 'package:http/io_client.dart'
     as io_http; // Changed prefix to avoid conflict
-import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:vibration/vibration.dart';
+import '../modules/webview_module.dart';
+import 'package:ttp_app/constants.dart';
+import 'package:ttp_app/widgets/drawer_widget.dart';
 
 /// Model class for Machine
 class Machine {
@@ -86,7 +87,6 @@ class _NumberInputPageState extends State<NumberInputPage>
     WidgetsBinding.instance.addObserver(this);
 
     // Optional: Clear SharedPreferences on app start for testing purposes
-    // Uncomment the following line to enable cache clearing
     // _clearSharedPreferencesForTesting();
 
     _loadRecentItems();
@@ -234,6 +234,15 @@ class _NumberInputPageState extends State<NumberInputPage>
       );
     }
 
+    // Define scanner dimensions and a scan window.
+    final scannerHeight = MediaQuery.of(context).size.shortestSide * 0.4;
+    final scannerWidth = MediaQuery.of(context).size.width;
+    final scanWindow = Rect.fromCenter(
+      center: Offset(scannerWidth / 2, scannerHeight / 2),
+      width: 300,
+      height: 200,
+    );
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -268,29 +277,37 @@ class _NumberInputPageState extends State<NumberInputPage>
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Replace the QRView with MobileScanner.
+            // Only display the scanner on non-Windows platforms.
             if (!Platform.isWindows)
               SizedBox(
-                height: MediaQuery.of(context).size.shortestSide * 0.4,
-                child: MobileScanner(
-                  controller: mobileScannerController,
-                  onDetect: (BarcodeCapture barcodeCapture) {
-                    // Only process if we haven't scanned yet and data is loaded.
-                    if (!hasScanned && isDataLoaded) {
-                      final Barcode barcode = barcodeCapture.barcodes.first;
-                      if (barcode.rawValue != null) {
-                        setState(() {
-                          hasScanned = true;
-                        });
-                        Vibration.vibrate(duration: 50);
-                        String scannedData = barcode.rawValue!;
-                        if (kDebugMode) {
-                          print('Scanned QR Code: $scannedData');
+                height: scannerHeight,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    MobileScanner(
+                      controller: mobileScannerController,
+                      scanWindow: scanWindow,
+                      onDetect: (BarcodeCapture barcodeCapture) {
+                        // Only process if we haven't scanned yet and data is loaded.
+                        if (!hasScanned && isDataLoaded) {
+                          final Barcode barcode = barcodeCapture.barcodes.first;
+                          if (barcode.rawValue != null) {
+                            setState(() {
+                              hasScanned = true;
+                            });
+                            Vibration.vibrate(duration: 50);
+                            String scannedData = barcode.rawValue!;
+                            if (kDebugMode) {
+                              print('Scanned QR Code: $scannedData');
+                            }
+                            _processScannedData(scannedData);
+                          }
                         }
-                        _processScannedData(scannedData);
-                      }
-                    }
-                  },
+                      },
+                    ),
+                    // Draw the scan window overlay (the open corner lines)
+                    ScanWindowOverlay(scanWindow: scanWindow),
+                  ],
                 ),
               ),
             Padding(
@@ -1435,4 +1452,85 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       );
     }
   }
+}
+
+/// ScanWindowOverlay draws a rounded square with open corner lines
+class ScanWindowOverlay extends StatelessWidget {
+  final Rect scanWindow;
+
+  const ScanWindowOverlay({super.key, required this.scanWindow});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _ScanWindowPainter(scanWindow),
+      child: Container(),
+    );
+  }
+}
+
+class _ScanWindowPainter extends CustomPainter {
+  final Rect scanWindow;
+  _ScanWindowPainter(this.scanWindow);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+
+    final cornerLength = 30.0;
+
+    // Top-left corner
+    canvas.drawLine(
+      Offset(scanWindow.left, scanWindow.top),
+      Offset(scanWindow.left + cornerLength, scanWindow.top),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(scanWindow.left, scanWindow.top),
+      Offset(scanWindow.left, scanWindow.top + cornerLength),
+      paint,
+    );
+
+    // Top-right corner
+    canvas.drawLine(
+      Offset(scanWindow.right, scanWindow.top),
+      Offset(scanWindow.right - cornerLength, scanWindow.top),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(scanWindow.right, scanWindow.top),
+      Offset(scanWindow.right, scanWindow.top + cornerLength),
+      paint,
+    );
+
+    // Bottom-left corner
+    canvas.drawLine(
+      Offset(scanWindow.left, scanWindow.bottom),
+      Offset(scanWindow.left + cornerLength, scanWindow.bottom),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(scanWindow.left, scanWindow.bottom),
+      Offset(scanWindow.left, scanWindow.bottom - cornerLength),
+      paint,
+    );
+
+    // Bottom-right corner
+    canvas.drawLine(
+      Offset(scanWindow.right, scanWindow.bottom),
+      Offset(scanWindow.right - cornerLength, scanWindow.bottom),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(scanWindow.right, scanWindow.bottom),
+      Offset(scanWindow.right, scanWindow.bottom - cornerLength),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
