@@ -557,7 +557,9 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
       BuildContext context, String? equipmentNumber) async {
     if (equipmentNumber == null ||
         equipmentNumber.isEmpty ||
-        equipmentNumber == 'N/A') return;
+        equipmentNumber == 'N/A') {
+      return;
+    }
 
     try {
       _showLoadingDialog(context);

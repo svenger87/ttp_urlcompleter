@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:vibration/vibration.dart';
 import 'dart:async';
 import 'dart:io';
@@ -56,11 +56,13 @@ class NumberInputPage extends StatefulWidget {
 
 class _NumberInputPageState extends State<NumberInputPage>
     with WidgetsBindingObserver {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   final TextEditingController _numberController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  QRViewController? controller;
+  // Create a MobileScannerController instance.
+  final MobileScannerController mobileScannerController =
+      MobileScannerController();
+
   bool hasScanned = false;
   Timer? scanTimer;
   List<String> recentItems = [];
@@ -191,7 +193,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    controller?.dispose();
+    mobileScannerController.dispose();
     _numberController.dispose();
     scanTimer?.cancel();
     super.dispose();
@@ -199,13 +201,13 @@ class _NumberInputPageState extends State<NumberInputPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (controller != null) {
-      if (state == AppLifecycleState.inactive ||
-          state == AppLifecycleState.paused) {
-        controller!.pauseCamera();
-      } else if (state == AppLifecycleState.resumed) {
-        controller!.resumeCamera();
-      }
+    // mobile_scanner handles lifecycle changes automatically,
+    // but you can pause/resume if needed:
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      mobileScannerController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      mobileScannerController.start();
     }
   }
 
@@ -266,19 +268,29 @@ class _NumberInputPageState extends State<NumberInputPage>
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Replace the QRView with MobileScanner.
             if (!Platform.isWindows)
               SizedBox(
                 height: MediaQuery.of(context).size.shortestSide * 0.4,
-                child: QRView(
-                  key: qrKey,
-                  onQRViewCreated: _onQRViewCreated,
-                  overlay: QrScannerOverlayShape(
-                    borderRadius: 10,
-                    borderColor: Theme.of(context).primaryColor,
-                    borderLength: 30,
-                    borderWidth: 10,
-                    cutOutSize: MediaQuery.of(context).size.shortestSide * 0.4,
-                  ),
+                child: MobileScanner(
+                  controller: mobileScannerController,
+                  onDetect: (BarcodeCapture barcodeCapture) {
+                    // Only process if we haven't scanned yet and data is loaded.
+                    if (!hasScanned && isDataLoaded) {
+                      final Barcode barcode = barcodeCapture.barcodes.first;
+                      if (barcode.rawValue != null) {
+                        setState(() {
+                          hasScanned = true;
+                        });
+                        Vibration.vibrate(duration: 50);
+                        String scannedData = barcode.rawValue!;
+                        if (kDebugMode) {
+                          print('Scanned QR Code: $scannedData');
+                        }
+                        _processScannedData(scannedData);
+                      }
+                    }
+                  },
                 ),
               ),
             Padding(
@@ -470,52 +482,29 @@ class _NumberInputPageState extends State<NumberInputPage>
     });
   }
 
-  /// Handles the QR view creation and scanning
-  void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
-
-    controller.scannedDataStream.listen((scanData) async {
-      if (!hasScanned && isDataLoaded) {
-        setState(() {
-          hasScanned = true;
-        });
-
-        Vibration.vibrate(duration: 50);
-
-        String scannedData = scanData.code!;
-        if (kDebugMode) {
-          print('Scanned QR Code: $scannedData');
-        }
-
-        String fullUrl = scannedData;
-
-        // If the scanned QR code has exactly 5 characters, prepend the machine URL
-        if (scannedData.length == 5) {
-          fullUrl = 'https://wim-solution.sip.local:8081/$scannedData';
-        }
-
-        String codeToUse;
-        try {
-          Uri uri = Uri.parse(scannedData);
-          codeToUse =
-              uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
-        } catch (e) {
-          codeToUse = scannedData;
-        }
-
-        if (kDebugMode) {
-          print('Processed URL: $fullUrl');
-          print('Extracted code: $codeToUse');
-        }
-
-        _showOptionsModal(fullUrl, codeToUse);
-
-        scanTimer = Timer(const Duration(seconds: 3), () {
-          setState(() {
-            hasScanned = false;
-          });
-        });
-      }
+  /// Processes scanned QR code data using your existing logic.
+  void _processScannedData(String scannedData) {
+    String fullUrl = scannedData;
+    if (scannedData.length == 5) {
+      fullUrl = 'https://wim-solution.sip.local:8081/$scannedData';
+    }
+    String codeToUse;
+    try {
+      Uri uri = Uri.parse(scannedData);
+      codeToUse =
+          uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
+    } catch (e) {
+      codeToUse = scannedData;
+    }
+    if (kDebugMode) {
+      print('Processed URL: $fullUrl');
+      print('Extracted code: $codeToUse');
+    }
+    _showOptionsModal(fullUrl, codeToUse);
+    scanTimer = Timer(const Duration(seconds: 3), () {
+      setState(() {
+        hasScanned = false;
+      });
     });
   }
 
@@ -940,7 +929,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-
             Row(
               children: [
                 Checkbox(
@@ -954,108 +942,118 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 const Text('Betrieb möglich?'),
               ],
             ),
-
             // Employee selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: employeeController,
-                decoration: const InputDecoration(
-                  labelText: 'Mitarbeiter auswählen',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
+            TypeAheadField<String>(
+              controller: employeeController,
+              builder: (context, textController, focusNode) {
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Mitarbeiter auswählen',
+                  ),
+                );
+              },
+              suggestionsCallback: (pattern) async {
                 return widget.employees
                     .where(
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
+              itemBuilder: (context, suggestion) {
+                return ListTile(title: Text(suggestion));
+              },
+              onSelected: (suggestion) {
                 employeeController.text = suggestion;
                 selectedEmployee = suggestion;
                 if (kDebugMode) {
                   print('CreateIssueModal: Selected employee: $suggestion');
                 }
               },
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte Mitarbeiter auswählen'
-                  : null,
             ),
-
+            const SizedBox(height: 16),
             // Area Center selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: areaCenterController,
-                decoration: const InputDecoration(
-                  labelText: 'Zuständige Stelle',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
+            TypeAheadField<String>(
+              controller: areaCenterController,
+              builder: (context, textController, focusNode) {
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Zuständige Stelle',
+                  ),
+                );
+              },
+              suggestionsCallback: (pattern) async {
                 return widget.areaCenters
                     .where(
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
+              itemBuilder: (context, suggestion) {
+                return ListTile(title: Text(suggestion));
+              },
+              onSelected: (suggestion) {
                 areaCenterController.text = suggestion;
                 selectedAreaCenter = suggestion;
                 if (kDebugMode) {
                   print('CreateIssueModal: Selected area center: $suggestion');
                 }
               },
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte zuständige Stelle auswählen'
-                  : null,
             ),
-
+            const SizedBox(height: 16),
             // Line selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: lineController,
-                decoration: const InputDecoration(
-                  labelText: 'Linie oder Stellplatz',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
+            TypeAheadField<String>(
+              controller: lineController,
+              builder: (context, textController, focusNode) {
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Linie oder Stellplatz',
+                  ),
+                );
+              },
+              suggestionsCallback: (pattern) async {
                 return widget.lines
                     .where(
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
+              itemBuilder: (context, suggestion) {
+                return ListTile(title: Text(suggestion));
+              },
+              onSelected: (suggestion) {
                 lineController.text = suggestion;
                 selectedLine = suggestion;
                 if (kDebugMode) {
                   print('CreateIssueModal: Selected line: $suggestion');
                 }
               },
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte Linie oder Stellplatz auswählen'
-                  : null,
             ),
-
+            const SizedBox(height: 16),
             // Tool selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: toolController,
-                decoration: const InputDecoration(
-                  labelText: 'Werkzeug',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
+            TypeAheadField<String>(
+              controller: toolController,
+              builder: (context, textController, focusNode) {
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Werkzeug',
+                  ),
+                );
+              },
+              suggestionsCallback: (pattern) async {
                 return widget.tools
                     .where(
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
+              itemBuilder: (context, suggestion) {
+                return ListTile(title: Text(suggestion));
+              },
+              onSelected: (suggestion) {
                 toolController.text = suggestion;
                 selectedToolBreakdown = suggestion;
                 if (kDebugMode) {
@@ -1063,41 +1061,44 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 }
               },
             ),
-
-            /// Machine selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: machineController,
-                decoration: const InputDecoration(
-                  labelText: 'Maschine / Anlage',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
+            const SizedBox(height: 16),
+            // Machine selection
+            TypeAheadField<String>(
+              controller: machineController,
+              builder: (context, textController, focusNode) {
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Maschine / Anlage',
+                  ),
+                );
+              },
+              suggestionsCallback: (pattern) async {
                 return widget.machines
                     .where((machine) => machine.number
                         .toLowerCase()
                         .contains(pattern.toLowerCase()))
-                    .map((machine) => machine.number) // Suggest machine numbers
+                    .map((machine) => machine.number)
                     .toList();
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
+              itemBuilder: (context, suggestion) {
+                return ListTile(title: Text(suggestion));
+              },
+              onSelected: (suggestion) {
                 machineController.text = suggestion;
                 selectedMachineNumber = suggestion;
-
                 // Find the machine object based on the selected number
-                Machine? selectedMachine = widget.machines
-                    .firstWhere((machine) => machine.number == suggestion,
-                        orElse: () => Machine(
-                              number: '',
-                              salamandermachinepitch: '',
-                              salamanderlineNumber: null,
-                              productionworkplaceNumber: '',
-                            ));
-
+                Machine? selectedMachine = widget.machines.firstWhere(
+                  (machine) => machine.number == suggestion,
+                  orElse: () => Machine(
+                    number: '',
+                    salamandermachinepitch: '',
+                    salamanderlineNumber: null,
+                    productionworkplaceNumber: '',
+                  ),
+                );
                 String? machineCode;
-
                 if (selectedMachine.salamanderlineNumber != null &&
                     selectedMachine.salamanderlineNumber!.isNotEmpty) {
                   machineCode = selectedMachine.salamanderlineNumber!
@@ -1109,11 +1110,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   machineCode =
                       'TTP-${selectedMachine.productionworkplaceNumber.toUpperCase()}';
                 }
-
                 if (machineCode != null && machineCode.isNotEmpty) {
                   String? mappedLine =
                       widget.machinePitchToLineMap[machineCode];
-
                   if (mappedLine != null && mappedLine.isNotEmpty) {
                     setState(() {
                       selectedLine = mappedLine;
@@ -1134,7 +1133,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                     }
                   }
                 } else {
-                  // Handle cases where neither salamanderline_number nor productionworkplace_number provides a valid machineCode
+                  // Handle cases where no valid machineCode is found
                   setState(() {
                     selectedLine = '';
                     lineController.text = '';
@@ -1145,28 +1144,30 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   }
                 }
               },
-              validator: (value) => (value == null || value.isEmpty)
-                  ? 'Bitte Maschine oder Anlage auswählen'
-                  : null,
             ),
-
+            const SizedBox(height: 16),
             // Material selection
-            TypeAheadFormField<String>(
-              textFieldConfiguration: TextFieldConfiguration(
-                controller: materialController,
-                decoration: const InputDecoration(
-                  labelText: 'Material',
-                ),
-              ),
-              suggestionsCallback: (pattern) {
+            TypeAheadField<String>(
+              controller: materialController,
+              builder: (context, textController, focusNode) {
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Material',
+                  ),
+                );
+              },
+              suggestionsCallback: (pattern) async {
                 return widget.materials
                     .where(
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) =>
-                  ListTile(title: Text(suggestion)),
-              onSuggestionSelected: (suggestion) {
+              itemBuilder: (context, suggestion) {
+                return ListTile(title: Text(suggestion));
+              },
+              onSelected: (suggestion) {
                 materialController.text = suggestion;
                 selectedMaterialBreakdown = suggestion;
                 if (kDebugMode) {
@@ -1174,8 +1175,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 }
               },
             ),
-
-            // Work card comment
+            const SizedBox(height: 16),
+            // Work card comment (simple TextField)
             TextField(
               decoration: const InputDecoration(
                 labelText: 'Fehlerbeschreibung',
@@ -1187,7 +1188,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 }
               },
             ),
-
             const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () async {
@@ -1203,20 +1203,19 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.camera_alt),
-                  const SizedBox(width: 8.0),
-                  const Text('Bild auswählen\noder Foto aufnehmen',
-                      textAlign: TextAlign.center),
+                children: const [
+                  Icon(Icons.camera_alt),
+                  SizedBox(width: 8.0),
+                  Text(
+                    'Bild auswählen\noder Foto aufnehmen',
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16.0),
-
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
-
             const SizedBox(height: 16.0),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -1236,7 +1235,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         return;
                       }
                     }
-
                     if (_validateForm(
                       operable: operable,
                       areaCenter: selectedAreaCenter,

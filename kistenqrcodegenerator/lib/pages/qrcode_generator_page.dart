@@ -150,59 +150,60 @@ class _QrCodeGeneratorPageState extends State<QrCodeGeneratorPage> {
     );
   }
 
-  /// API Section Using Server-Side Partial Search
   Widget _buildApiSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // The TypeAhead widget to search & fetch from server
         TypeAheadField<Profile>(
-          textFieldConfiguration: TextFieldConfiguration(
-            controller: _typeAheadController,
-            decoration: const InputDecoration(
-              labelText: "Profil suchen",
-              hintText: "Geben Sie einen Suchbegriff ein",
-              prefixIcon: Icon(Icons.search),
-            ),
-          ),
-          suggestionsCallback: (pattern) async {
-            if (pattern.trim().isEmpty) {
-              return [];
-            }
-            // Server-side partial matching
-            final results = await apiService.fetchProfiles(pattern.trim());
-            return results;
+          // Pass the controller directly (new in 5.2.0)
+          controller: _typeAheadController,
+          // Use the builder parameter to create your TextField
+          builder: (context, controller, focusNode) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: const InputDecoration(
+                labelText: "Profil suchen",
+                hintText: "Geben Sie einen Suchbegriff ein",
+                prefixIcon: Icon(Icons.search),
+              ),
+            );
           },
-          itemBuilder: (context, Profile profile) {
+          // Suggestions callback to fetch suggestions from your API
+          suggestionsCallback: (pattern) async {
+            if (pattern.trim().isEmpty) return [];
+            return await apiService.fetchProfiles(pattern.trim());
+          },
+          // Build each suggestion widget
+          itemBuilder: (context, suggestion) {
+            final profile = suggestion;
             return ListTile(
               title: Text(profile.title),
               subtitle: Text(profile.shortUrl),
             );
           },
-          onSuggestionSelected: (Profile suggestion) {
-            // Clear the typeahead field after selection
+          // The onSelected callback (renamed from onSuggestionSelected)
+          onSelected: (suggestion) {
+            final profile = suggestion;
             _typeAheadController.clear();
-            // Add the profile if not already in selection
-            if (!selectedProfiles.contains(suggestion)) {
+            if (!selectedProfiles.contains(profile)) {
               setState(() {
-                selectedProfiles.add(suggestion);
+                selectedProfiles.add(profile);
                 statusMessage =
                     "${selectedProfiles.length} Profile ausgewählt.";
               });
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profil bereits ausgewählt.'),
-                ),
+                const SnackBar(content: Text('Profil bereits ausgewählt.')),
               );
             }
           },
-          noItemsFoundBuilder: (context) => const ListTile(
-            title: Text('Nichts gefunden'),
-          ),
+          // Remove noItemsFound/noItemsFoundBuilder – not supported in v5.2.0!
         ),
         const SizedBox(height: 10),
-        // Show how many selected
+        // Optionally, show a widget when no suggestions are found.
+        // You could, for example, track the suggestions list in state and display:
+        // selectedSuggestions.isEmpty ? const Text('Nichts gefunden') : Container(),
         Text(
           selectedProfiles.isNotEmpty
               ? "${selectedProfiles.length} Profile ausgewählt."

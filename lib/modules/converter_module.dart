@@ -77,14 +77,23 @@ class _ConverterModuleState extends State<ConverterModule> {
                   children: [
                     const Text('Neue Bezeichnung'),
                     const SizedBox(height: 8.0),
+                    // Updated TypeAheadField for Neue Bezeichnung:
                     TypeAheadField<String>(
-                      // In older versions, use textFieldConfiguration to configure the TextField
-                      textFieldConfiguration: TextFieldConfiguration(
-                        decoration: const InputDecoration(
-                          hintText: 'Geben Sie eine neue Bezeichnung ein',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                      ),
+                      // Optionally, create a dedicated TextEditingController
+                      // If you want to keep the input value, you can also store it in state.
+                      controller: TextEditingController(),
+                      // Use builder to create the TextField
+                      builder: (context, textController, focusNode) {
+                        return TextField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(
+                            hintText: 'Geben Sie eine neue Bezeichnung ein',
+                            prefixIcon: Icon(Icons.search),
+                          ),
+                        );
+                      },
+                      // Return the list of suggestions based on the pattern.
                       suggestionsCallback: (pattern) async {
                         if (pattern.trim().isEmpty) return [];
                         return anbauteileData
@@ -96,13 +105,12 @@ class _ConverterModuleState extends State<ConverterModule> {
                             .map((item) => item['Neue_Bezeichnung'] as String)
                             .toList();
                       },
+                      // Build each suggestion widget.
                       itemBuilder: (context, String suggestion) {
-                        return ListTile(
-                          title: Text(suggestion),
-                        );
+                        return ListTile(title: Text(suggestion));
                       },
-                      onSuggestionSelected: (String suggestion) {
-                        // Check for duplicate selection
+                      // Use the required onSelected callback.
+                      onSelected: (String suggestion) {
                         if (selectedNeueBezeichnung != suggestion) {
                           setState(() {
                             selectedNeueBezeichnung = suggestion;
@@ -112,32 +120,36 @@ class _ConverterModuleState extends State<ConverterModule> {
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Bezeichnung bereits ausgewählt.'),
-                            ),
+                                content:
+                                    Text('Bezeichnung bereits ausgewählt.')),
                           );
                         }
                       },
-                      noItemsFoundBuilder: (context) => const ListTile(
-                        title: Text('Keine Ergebnisse gefunden'),
-                      ),
+                      // Remove noItemsFoundBuilder – if you want to show a "no results" message,
+                      // handle it externally or via state.
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-
                 // Alte Bezeichnung
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Alte Bezeichnung'),
                     const SizedBox(height: 8.0),
+                    // Updated TypeAheadField for Alte Bezeichnung:
                     TypeAheadField<String>(
-                      textFieldConfiguration: TextFieldConfiguration(
-                        decoration: const InputDecoration(
-                          hintText: 'Geben Sie eine alte Bezeichnung ein',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                      ),
+                      controller: TextEditingController(),
+                      builder: (context, textController, focusNode) {
+                        return TextField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(
+                            hintText: 'Geben Sie eine alte Bezeichnung ein',
+                            prefixIcon: Icon(Icons.search),
+                          ),
+                        );
+                      },
                       suggestionsCallback: (pattern) async {
                         if (pattern.trim().isEmpty) return [];
                         return anbauteileData
@@ -150,12 +162,9 @@ class _ConverterModuleState extends State<ConverterModule> {
                             .toList();
                       },
                       itemBuilder: (context, String suggestion) {
-                        return ListTile(
-                          title: Text(suggestion),
-                        );
+                        return ListTile(title: Text(suggestion));
                       },
-                      onSuggestionSelected: (String suggestion) {
-                        // Check for duplicate selection
+                      onSelected: (String suggestion) {
                         if (selectedAlteBezeichnung != suggestion) {
                           setState(() {
                             selectedAlteBezeichnung = suggestion;
@@ -165,14 +174,11 @@ class _ConverterModuleState extends State<ConverterModule> {
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Bezeichnung bereits ausgewählt.'),
-                            ),
+                                content:
+                                    Text('Bezeichnung bereits ausgewählt.')),
                           );
                         }
                       },
-                      noItemsFoundBuilder: (context) => const ListTile(
-                        title: Text('Keine Ergebnisse gefunden'),
-                      ),
                     ),
                   ],
                 ),
