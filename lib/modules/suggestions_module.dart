@@ -8,15 +8,15 @@ import 'package:http/http.dart' as http;
 class PredefinedTextNode {
   final String id;
   final String title;
-  final String? text; // Optional text for leaf nodes
-  final List<String>
-      childrenIds; // Store only IDs of children, not full objects
+  final String? text;
+
+  // No more ‘childrenIds’ from the server—just store direct children or note that we don’t have them yet.
+  // We can store a boolean or something that says “are we expanded?”
 
   PredefinedTextNode({
     required this.id,
     required this.title,
     this.text,
-    this.childrenIds = const [],
   });
 
   factory PredefinedTextNode.fromJson(Map<String, dynamic> json) {
@@ -24,10 +24,6 @@ class PredefinedTextNode {
       id: json['id'].toString(),
       title: json['title'] ?? '',
       text: json['text'],
-      childrenIds: (json['children'] as List<dynamic>?)
-              ?.map((child) => child['id'].toString())
-              .toList() ??
-          [],
     );
   }
 }
@@ -42,21 +38,24 @@ Map<String, List<PredefinedTextNode>> _cache = {};
 /// Fetches predefined texts tree but only loads the necessary parts.
 Future<List<PredefinedTextNode>> fetchPredefinedTexts(
     {String? parentId}) async {
-  if (_cache.containsKey(parentId ?? "")) {
-    return _cache[parentId]!;
-  }
+  // (Optionally check cache first)
 
-  final response = await http
-      .get(Uri.parse('$suggestionsApiUrl?parent_id=${parentId ?? ""}'));
+  final url = parentId == null
+      ? suggestionsApiUrl // no param => root
+      : '$suggestionsApiUrl?parent_id=$parentId';
+
+  final response = await http.get(Uri.parse(url));
+
   if (response.statusCode == 200) {
     final List<dynamic> jsonData = json.decode(response.body);
+    // Each item in jsonData is just a direct child with no nested children.
     final nodes =
         jsonData.map((node) => PredefinedTextNode.fromJson(node)).toList();
-    _cache[parentId ?? ""] = nodes; // Store in cache
+    // Cache it
+    _cache[parentId ?? 'root'] = nodes;
     return nodes;
   } else {
-    throw Exception(
-        'Failed to load predefined texts: ${response.statusCode} - ${response.reasonPhrase}');
+    throw Exception('Failed to load suggestions');
   }
 }
 
@@ -93,20 +92,40 @@ class _PredefinedTextsModalState extends State<PredefinedTextsModal> {
   /// Loads child nodes only when expanded.
   Widget _buildNodeWidget(PredefinedTextNode node) {
     return FutureBuilder<List<PredefinedTextNode>>(
-      future:
-          fetchPredefinedTexts(parentId: node.id), // Load children dynamically
+      // pass node.id to fetch the direct children
+      future: fetchPredefinedTexts(parentId: node.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return ListTile(
-              title: Text(node.title), trailing: CircularProgressIndicator());
+            title: Text(node.title),
+            trailing: CircularProgressIndicator(),
+          );
         } else if (snapshot.hasError) {
-          return ListTile(title: Text("${node.title} (Fehler beim Laden)"));
+          return ListTile(
+            title: Text('${node.title} (Error: ${snapshot.error})'),
+          );
         } else {
           final children = snapshot.data ?? [];
-          return ExpansionTile(
-            title: Text(node.title),
-            children: children.map((child) => _buildNodeWidget(child)).toList(),
-          );
+          if (children.isEmpty) {
+            // If leaf node, just return a simple ListTile that inserts node.text into your text field
+            return ListTile(
+              title: Text(node.title),
+              onTap: () {
+                // E.g. add this text to the _textController
+                if (node.text != null) {
+                  setState(() {
+                    _textController.text += node.text!;
+                  });
+                }
+              },
+            );
+          } else {
+            // Non-leaf node => show ExpansionTile
+            return ExpansionTile(
+              title: Text(node.title),
+              children: children.map(_buildNodeWidget).toList(),
+            );
+          }
         }
       },
     );
