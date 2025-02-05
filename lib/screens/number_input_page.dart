@@ -977,7 +977,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   controller: textController,
                   focusNode: focusNode,
                   decoration: const InputDecoration(
-                    labelText: 'Mitarbeiter auswählen',
+                    labelText: 'Ersteller Störfall',
                   ),
                 );
               },
