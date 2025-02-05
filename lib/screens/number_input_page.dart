@@ -1207,6 +1207,8 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               controller: _commentController,
               focusNode: commentFocusNode,
               // The field remains editable so the user can type freely.
+              maxLines: 5,
+              minLines: 5,
               readOnly: false,
               decoration: InputDecoration(
                 labelText: 'Fehlerbeschreibung',
