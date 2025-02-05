@@ -9,8 +9,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/io_client.dart'
-    as io_http; // Changed prefix to avoid conflict
+import 'package:http/io_client.dart' as io_http;
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path/path.dart' as path;
@@ -20,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
+
 import '../modules/webview_module.dart';
 import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
@@ -29,7 +29,7 @@ import '../modules/suggestions_module.dart';
 class Machine {
   final String number;
   final String salamandermachinepitch;
-  final String? salamanderlineNumber; // Nullable
+  final String? salamanderlineNumber;
   final String productionworkplaceNumber;
 
   Machine({
@@ -39,11 +39,12 @@ class Machine {
     required this.productionworkplaceNumber,
   });
 
+  /// Add a factory fromJson to parse machine data
   factory Machine.fromJson(Map<String, dynamic> json) {
     return Machine(
       number: json['number'] ?? '',
       salamandermachinepitch: json['salamandermachinepitch'] ?? '',
-      salamanderlineNumber: json['salamanderline_number'], // Nullable
+      salamanderlineNumber: json['salamanderline_number'],
       productionworkplaceNumber: json['productionworkplace_number'] ?? '',
     );
   }
@@ -61,7 +62,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   final TextEditingController _numberController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Create a MobileScannerController instance.
+  // Scanner
   final MobileScannerController mobileScannerController =
       MobileScannerController();
 
@@ -74,40 +75,44 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> areaCenters = [];
   List<String> lines = [];
   List<String> tools = [];
-  List<Machine> machines = []; // Changed to list of Machine objects
+  List<Machine> machines = [];
   List<String> materials = [];
   List<String> employees = [];
   bool isDataLoaded = false;
 
-  // Define the mapping as a member variable
+  // Mapping
   Map<String, String> machinePitchToLineMap = {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // Optional: Clear SharedPreferences on app start for testing purposes
-    // _clearSharedPreferencesForTesting();
-
     _loadRecentItems();
     _preloadData();
   }
 
-  /// Optional: Clears SharedPreferences for testing purposes
-  // ignore: unused_element
-  void _clearSharedPreferencesForTesting() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    if (kDebugMode) {
-      print('SharedPreferences: Cleared all preferences for testing.');
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    mobileScannerController.dispose();
+    _numberController.dispose();
+    scanTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      mobileScannerController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      mobileScannerController.start();
     }
   }
 
-  /// Preload all necessary data and build the mapping
+  /// Preload all necessary data
   void _preloadData() async {
     try {
-      // Fetch each data type sequentially to preserve type information
       final fetchedAreaCenters = await _fetchAreaCenters();
       final fetchedLines = await _fetchLines();
       final fetchedTools = await _fetchTools();
@@ -124,7 +129,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         materials = fetchedMaterials;
         isDataLoaded = true;
 
-        // Build the machine to line mapping
+        // Build the machine->line map
         machinePitchToLineMap = _buildMachineToLineMap(lines, machines);
         if (kDebugMode) {
           print('Machine to Line Map: $machinePitchToLineMap');
@@ -134,49 +139,38 @@ class _NumberInputPageState extends State<NumberInputPage>
       if (kDebugMode) {
         print('Error preloading data: $e');
       }
-      // Optionally, you can show an error message to the user here
     }
   }
 
-  /// Builds a mapping from machine number to corresponding salamanderline_number
+  /// Builds a mapping from machine number -> line
   Map<String, String> _buildMachineToLineMap(
       List<String> lines, List<Machine> machines) {
     Map<String, String> map = {};
-    for (var machine in machines) {
-      String machineNumber = machine.number.trim().toUpperCase();
-      String? lineNumber = machine.salamanderlineNumber?.trim().toUpperCase();
+    final lineSet = lines.map((ln) => ln.trim().toUpperCase()).toSet();
 
-      // If salamanderline_number is null or empty and productionworkplace_number starts with 'S0', generate it
+    for (var machine in machines) {
+      final machineNumber = machine.number.trim().toUpperCase();
+      var lineNumber = machine.salamanderlineNumber?.trim().toUpperCase();
+
       if ((lineNumber == null || lineNumber.isEmpty) &&
           machine.productionworkplaceNumber.toUpperCase().startsWith('S0')) {
         lineNumber = 'TTP-${machine.productionworkplaceNumber.toUpperCase()}';
       }
 
-      // Proceed only if lineNumber is not null or empty
       if (lineNumber != null && lineNumber.isNotEmpty) {
-        // Ensure that the line exists in the lines list
-        if (lines.map((e) => e.toUpperCase()).contains(lineNumber)) {
+        if (lineSet.contains(lineNumber)) {
           map[machineNumber] = lineNumber;
-          if (kDebugMode) {
-            print('Mapping: $machineNumber -> $lineNumber');
-          }
         } else {
           if (kDebugMode) {
-            print(
-                'No corresponding line found in lines list for line number: $lineNumber');
+            print('No corresponding line in lines for $lineNumber');
           }
-        }
-      } else {
-        if (kDebugMode) {
-          print(
-              'No salamanderline_number and productionworkplace_number does not start with S0 for machine: $machineNumber');
         }
       }
     }
     return map;
   }
 
-  /// Load recent items from shared preferences
+  /// Load recent items
   void _loadRecentItems() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -191,32 +185,15 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    mobileScannerController.dispose();
-    _numberController.dispose();
-    scanTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // mobile_scanner handles lifecycle changes automatically,
-    // but you can pause/resume if needed:
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
-      mobileScannerController.stop();
-    } else if (state == AppLifecycleState.resumed) {
-      mobileScannerController.start();
-    }
+  void _clearRecentItems() async {
+    setState(() => recentItems.clear());
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('recentItems', []);
   }
 
   Timer? _debounce;
-
-  /// Debounce for search input
   void _onSearchChanged(String value) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       _fetchProfileSuggestions(value);
     });
@@ -226,16 +203,11 @@ class _NumberInputPageState extends State<NumberInputPage>
   Widget build(BuildContext context) {
     if (!isDataLoaded) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('ttp App'),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        appBar: AppBar(title: const Text('ttp App')),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Define scanner dimensions and a scan window.
     final scannerHeight = MediaQuery.of(context).size.shortestSide * 0.4;
     final scannerWidth = MediaQuery.of(context).size.width;
     final scanWindow = Rect.fromCenter(
@@ -258,16 +230,9 @@ class _NumberInputPageState extends State<NumberInputPage>
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
-            onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer();
-            },
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
           ),
         ],
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
       ),
       drawer: const MainDrawer(),
       endDrawer: RecentItemsDrawer(
@@ -278,7 +243,6 @@ class _NumberInputPageState extends State<NumberInputPage>
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Only display the scanner on non-Windows platforms.
             if (!Platform.isWindows)
               SizedBox(
                 height: scannerHeight,
@@ -288,25 +252,17 @@ class _NumberInputPageState extends State<NumberInputPage>
                     MobileScanner(
                       controller: mobileScannerController,
                       scanWindow: scanWindow,
-                      onDetect: (BarcodeCapture barcodeCapture) {
-                        // Only process if we haven't scanned yet and data is loaded.
+                      onDetect: (capture) {
                         if (!hasScanned && isDataLoaded) {
-                          final Barcode barcode = barcodeCapture.barcodes.first;
-                          if (barcode.rawValue != null) {
-                            setState(() {
-                              hasScanned = true;
-                            });
+                          final code = capture.barcodes.first.rawValue;
+                          if (code != null) {
+                            setState(() => hasScanned = true);
                             Vibration.vibrate(duration: 50);
-                            String scannedData = barcode.rawValue!;
-                            if (kDebugMode) {
-                              print('Scanned QR Code: $scannedData');
-                            }
-                            _processScannedData(scannedData);
+                            _processScannedData(code);
                           }
                         }
                       },
                     ),
-                    // Draw the scan window overlay (the open corner lines)
                     ScanWindowOverlay(scanWindow: scanWindow),
                   ],
                 ),
@@ -326,23 +282,16 @@ class _NumberInputPageState extends State<NumberInputPage>
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Autocomplete<String>(
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  return profileSuggestions
-                      .where((String suggestion) => suggestion
-                          .toLowerCase()
-                          .contains(textEditingValue.text.toLowerCase()))
-                      .toList();
+                optionsBuilder: (value) {
+                  return profileSuggestions.where((sug) =>
+                      sug.toLowerCase().contains(value.text.toLowerCase()));
                 },
-                onSelected: (String selectedProfile) {
+                onSelected: (selectedProfile) {
                   _numberController.text = selectedProfile;
                   _openUrlWithNumber();
                 },
-                fieldViewBuilder: (
-                  BuildContext context,
-                  TextEditingController textEditingController,
-                  FocusNode focusNode,
-                  VoidCallback onFieldSubmitted,
-                ) {
+                fieldViewBuilder:
+                    (ctx, textEditingController, focusNode, onFieldSubmitted) {
                   return TextField(
                     controller: textEditingController,
                     focusNode: focusNode,
@@ -367,7 +316,6 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
-  /// Builds a link card with an icon and title
   Widget _buildLinkCard(String title, String url) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -377,9 +325,7 @@ class _NumberInputPageState extends State<NumberInputPage>
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => WebViewModule(url: url),
-              ),
+              MaterialPageRoute(builder: (_) => WebViewModule(url: url)),
             );
           },
           child: Row(
@@ -387,12 +333,7 @@ class _NumberInputPageState extends State<NumberInputPage>
             children: [
               Image.asset('assets/IKOffice.ico', width: 72, height: 72),
               const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title),
-                ],
-              ),
+              Text(title),
             ],
           ),
         ),
@@ -400,77 +341,147 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
-  /// Handles reporting an issue based on the scanned code
+  void _processScannedData(String scannedData) {
+    String fullUrl = scannedData;
+    if (scannedData.length == 5) {
+      fullUrl = 'https://wim-solution.sip.local:8081/$scannedData';
+    }
+    String codeToUse;
+    try {
+      final uri = Uri.parse(scannedData);
+      codeToUse =
+          uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
+    } catch (_) {
+      codeToUse = scannedData;
+    }
+    _showOptionsModal(fullUrl, codeToUse);
+
+    scanTimer = Timer(const Duration(seconds: 3), () {
+      setState(() => hasScanned = false);
+    });
+  }
+
+  void _showOptionsModal(String fullUrl, String codeToUse) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text(
+          'Wählen Sie eine Aktion aus',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.open_in_browser),
+              title: const Text('Werkzeug- oder Maschinendetails öffnen'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToUrl(fullUrl);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.add_alert),
+              title: const Text('Störfall anlegen'),
+              onTap: () {
+                Navigator.pop(context);
+                _reportIssue(codeToUse);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToUrl(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WebViewModule(url: url)),
+    );
+  }
+
+  void _openUrlWithNumber() async {
+    final number = _numberController.text.trim().toUpperCase();
+    if (number.isNotEmpty) {
+      final url = '$wim/$number';
+      if (await canLaunch(url)) {
+        _navigateToUrl(url);
+        _addRecentItem(url);
+      } else {
+        if (kDebugMode) print('Could not launch $url');
+      }
+    }
+  }
+
+  void _addRecentItem(String url) async {
+    final uri = Uri.parse(url);
+    final profileNum = uri.pathSegments.last;
+
+    setState(() {
+      if (!recentItems.contains(profileNum)) {
+        recentItems.insert(0, profileNum);
+        if (recentItems.length > 10) {
+          recentItems.removeLast();
+        }
+      }
+    });
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('recentItems', recentItems);
+  }
+
+  /// Called when user chooses “Störfall anlegen” for a scanned code
   void _reportIssue(String scannedCode) {
     if (kDebugMode) {
-      print('Reporting issue for scanned code: $scannedCode');
-      print('Tools list loaded with ${tools.length} items');
-      print('Machines list loaded with ${machines.length} items');
-      print('Lines list loaded with ${lines.length} items');
+      print('Reporting issue for: $scannedCode');
+      print(
+          'Tools: ${tools.length}, Machines: ${machines.length}, Lines: ${lines.length}');
     }
 
-    String normalizedScannedCode = scannedCode.trim().toUpperCase();
+    final normalized = scannedCode.trim().toUpperCase();
 
     String? selectedToolBreakdown;
     String? selectedMachineNumber;
     String? selectedMachinePitch;
     String? correspondingLine;
 
-    // Find if the scanned code matches any tool using exact match
-    for (var tool in tools) {
-      String normalizedTool = tool.trim().toUpperCase();
-      if (normalizedTool == normalizedScannedCode) {
-        // Exact match
-        selectedToolBreakdown = tool;
-        if (kDebugMode) {
-          print('Matched Tool: $tool');
-        }
+    // Match tool first
+    for (var t in tools) {
+      if (t.trim().toUpperCase() == normalized) {
+        selectedToolBreakdown = t;
         break;
       }
     }
 
-    // If not a tool, check if it's a machine using exact match
+    // If not a tool, check machines
     if (selectedToolBreakdown == null) {
-      for (var machine in machines) {
-        String normalizedMachine = machine.number.trim().toUpperCase();
-        if (normalizedMachine == normalizedScannedCode) {
-          // Exact match
-          selectedMachineNumber = machine.number;
-          selectedMachinePitch = machine.salamandermachinepitch;
-          if (kDebugMode) {
-            print(
-                'Matched Machine: Number=${machine.number}, Pitch=${machine.salamandermachinepitch}');
-          }
+      for (var m in machines) {
+        if (m.number.trim().toUpperCase() == normalized) {
+          selectedMachineNumber = m.number;
+          selectedMachinePitch = m.salamandermachinepitch;
           break;
         }
       }
     }
 
-    // If a machine is found, find the corresponding line using the mapping
+    // If machine found, find line via machinePitchToLineMap
     if (selectedMachineNumber != null) {
-      String machineCode = selectedMachineNumber.trim().toUpperCase();
-      correspondingLine = machinePitchToLineMap[machineCode];
-      if (correspondingLine == null && kDebugMode) {
-        if (kDebugMode) {
-          print('No corresponding line found for machine code: $machineCode');
-        }
-      } else if (kDebugMode) {
-        print('Corresponding Line: $correspondingLine');
-      }
+      final key = selectedMachineNumber.trim().toUpperCase();
+      correspondingLine = machinePitchToLineMap[key];
     }
 
     if (kDebugMode) {
-      print('Matched tool breakdown: $selectedToolBreakdown');
-      print('Matched machine number: $selectedMachineNumber');
-      print('Matched machine pitch: $selectedMachinePitch');
-      print('Corresponding line: $correspondingLine');
+      print('Matched tool: $selectedToolBreakdown');
+      print(
+          'Matched machine: $selectedMachineNumber (pitch: $selectedMachinePitch)');
+      print('Line: $correspondingLine');
     }
 
-    // Show the CreateIssueModal with the prefilled line if available
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (BuildContext context) {
+      builder: (_) {
         return Padding(
           padding:
               EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -479,291 +490,110 @@ class _NumberInputPageState extends State<NumberInputPage>
             selectedToolBreakdown: selectedToolBreakdown,
             selectedMachineNumber: selectedMachineNumber,
             selectedMachinePitch: selectedMachinePitch,
-            correspondingLine: correspondingLine, // Pass the matching line
+            correspondingLine: correspondingLine,
             areaCenters: areaCenters,
             lines: lines,
             tools: tools,
             machines: machines,
             materials: materials,
             employees: employees,
-            machinePitchToLineMap: machinePitchToLineMap, // Pass mapping
+            machinePitchToLineMap: machinePitchToLineMap,
           ),
         );
       },
     );
 
-    // Reset scan state after a delay
     scanTimer = Timer(const Duration(seconds: 3), () {
-      setState(() {
-        hasScanned = false;
-      });
+      setState(() => hasScanned = false);
     });
   }
 
-  /// Processes scanned QR code data using your existing logic.
-  void _processScannedData(String scannedData) {
-    String fullUrl = scannedData;
-    if (scannedData.length == 5) {
-      fullUrl = 'https://wim-solution.sip.local:8081/$scannedData';
-    }
-    String codeToUse;
-    try {
-      Uri uri = Uri.parse(scannedData);
-      codeToUse =
-          uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
-    } catch (e) {
-      codeToUse = scannedData;
-    }
-    if (kDebugMode) {
-      print('Processed URL: $fullUrl');
-      print('Extracted code: $codeToUse');
-    }
-    _showOptionsModal(fullUrl, codeToUse);
-    scanTimer = Timer(const Duration(seconds: 3), () {
-      setState(() {
-        hasScanned = false;
-      });
-    });
-  }
+  // ---------- API Calls for preloading ----------
 
-  /// Displays the options modal after scanning
-  void _showOptionsModal(String fullUrl, String codeToUse) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Wählen Sie eine Aktion aus',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.open_in_browser),
-                title: const Text('Werkzeug- oder Maschinendetails öffnen'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _navigateToUrl(fullUrl);
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.add_alert),
-                title: const Text('Störfall anlegen'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _reportIssue(codeToUse);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// Navigates to the specified URL using WebViewModule
-  void _navigateToUrl(String url) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WebViewModule(url: url),
-      ),
-    );
-  }
-
-  /// Opens the profile directory URL based on the entered number
-  void _openUrlWithNumber() async {
-    final String number = _numberController.text.trim().toUpperCase();
-
-    if (number.isNotEmpty) {
-      final url = '$wim/$number';
-
-      if (await canLaunch(url)) {
-        _navigateToUrl(url);
-        _addRecentItem(url);
-      } else {
-        if (kDebugMode) {
-          print('Could not launch $url');
-        }
-        // Optionally, show an error message to the user here
-      }
-    }
-  }
-
-  /// Adds an item to the recent items list and saves it
-  void _addRecentItem(String item) async {
-    final Uri uri = Uri.parse(item);
-    final String profileNumber = uri.pathSegments.last;
-
-    setState(() {
-      if (!recentItems.contains(profileNumber)) {
-        recentItems.insert(0, profileNumber);
-        if (recentItems.length > 10) {
-          recentItems.removeLast();
-        }
-      }
-    });
-
-    await _saveRecentItems();
-  }
-
-  /// Saves the recent items list to shared preferences
-  Future<void> _saveRecentItems() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('recentItems', recentItems);
-  }
-
-  /// Clears the recent items list
-  void _clearRecentItems() {
-    setState(() {
-      recentItems.clear();
-    });
-    _saveRecentItems();
-  }
-
-  /// Fetches area centers from the API
   Future<List<String>> _fetchAreaCenters() async {
     final response = await http.get(
       Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
+      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      if (kDebugMode) {
-        print('Fetched Area Centers: $data');
-      }
+      final data = json.decode(response.body) as List<dynamic>;
       return data.map((e) => e['name'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch area centers');
     }
+    throw Exception('Failed to fetch area centers');
   }
 
-  /// Fetches lines from the API
   Future<List<String>> _fetchLines() async {
     final response = await http.get(
       Uri.parse('http://wim-solution.sip.local:3006/salamanderline'),
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
+      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      if (kDebugMode) {
-        print('Fetched Lines: $data');
-      }
+      final data = json.decode(response.body) as List<dynamic>;
       return data.map((e) => e['number'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch lines');
     }
+    throw Exception('Failed to fetch lines');
   }
 
-  /// Fetches tools from the API
   Future<List<String>> _fetchTools() async {
     final response = await http.get(
       Uri.parse('http://wim-solution.sip.local:3006/projects'),
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
+      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      if (kDebugMode) {
-        print('Fetched Tools: $data');
-      }
+      final data = json.decode(response.body) as List<dynamic>;
       return data.map((e) => e['number'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch tools');
     }
+    throw Exception('Failed to fetch tools');
   }
 
-  /// Fetches machines from the API and parses them into Machine objects
   Future<List<Machine>> _fetchMachines() async {
     final response = await http.get(
       Uri.parse('http://wim-solution.sip.local:3006/machines'),
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
+      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      List<Machine> fetchedMachines =
-          data.map((e) => Machine.fromJson(e)).toList();
-      if (kDebugMode) {
-        print('Fetched Machines:');
-        for (var machine in fetchedMachines) {
-          print(
-              'Number: ${machine.number}, Pitch: ${machine.salamandermachinepitch}, Line: ${machine.salamanderlineNumber}');
-        }
-      }
-      return fetchedMachines;
-    } else {
-      throw Exception('Failed to fetch machines');
+      final data = json.decode(response.body) as List<dynamic>;
+      return data.map((json) => Machine.fromJson(json)).toList();
     }
+    throw Exception('Failed to fetch machines');
   }
 
-  /// Fetches materials from the API
   Future<List<String>> _fetchMaterials() async {
     final response = await http.get(
       Uri.parse('http://wim-solution.sip.local:3006/material'),
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
+      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      if (kDebugMode) {
-        print('Fetched Materials: $data');
-      }
-      return data.map((e) => e['name'].toString()).toList();
-    } else {
-      throw Exception('Failed to fetch materials');
+      final data = json.decode(response.body) as List<dynamic>;
+      return data.map((m) => m['name'].toString()).toList();
     }
+    throw Exception('Failed to fetch materials');
   }
 
-  /// Fetches employees from the API
   Future<List<String>> _fetchEmployees() async {
     final response = await http.get(
       Uri.parse('http://wim-solution.sip.local:3006/employee'),
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
+      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body);
-      if (kDebugMode) {
-        print('Fetched Employees: $data');
-      }
+      final data = json.decode(response.body) as List<dynamic>;
       return data
           .map((e) =>
               '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
           .toList();
-    } else {
-      throw Exception('Failed to fetch employees');
     }
+    throw Exception('Failed to fetch employees');
   }
 
-  /// Fetches profile suggestions based on the search query
   Future<void> _fetchProfileSuggestions(String query) async {
     if (query.isEmpty) {
-      setState(() {
-        profileSuggestions = [];
-      });
+      setState(() => profileSuggestions = []);
       return;
     }
-
     try {
       final ioClient = io_http.IOClient(
-          HttpClient()..badCertificateCallback = ((_, __, ___) => true));
+          HttpClient()..badCertificateCallback = (_, __, ___) => true);
+
       final response = await ioClient.get(
         Uri.parse('$apiUrl&q=$query'),
         headers: {
@@ -771,50 +601,41 @@ class _NumberInputPageState extends State<NumberInputPage>
           'X-Api-Key': apiKey,
         },
       );
-
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
-        final List<dynamic> data = jsonResponse['shortUrls']['data'];
-
+        final data = jsonResponse['shortUrls']['data'] as List<dynamic>;
+        final userEnteredValue = query.trim();
         setState(() {
-          final userEnteredValue = query.trim();
           profileSuggestions = [
             userEnteredValue,
             ...data
                 .map<String>((item) => item['title']?.toString() ?? '')
-                .where((suggestion) => suggestion.isNotEmpty),
+                .where((s) => s.isNotEmpty),
           ];
         });
-      } else {
-        if (kDebugMode) {
-          print(
-              'Error fetching profile suggestions. Status code: ${response.statusCode}');
-        }
       }
-
       ioClient.close();
     } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching profile suggestions: $e');
-      }
+      if (kDebugMode) print('Error fetching profile suggestions: $e');
     }
   }
 }
 
-/// Modal for creating an issue
+/// Modal for creating an issue (same code you provided, now inlined)
 class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
   final String? selectedMachineNumber;
   final String? selectedMachinePitch;
-  final String? correspondingLine; // New parameter
+  final String? correspondingLine;
+
   final List<String> areaCenters;
   final List<String> lines;
   final List<String> tools;
   final List<Machine> machines;
   final List<String> materials;
   final List<String> employees;
-  final Map<String, String> machinePitchToLineMap; // Added mapping
+  final Map<String, String> machinePitchToLineMap;
 
   const CreateIssueModal({
     super.key,
@@ -838,6 +659,7 @@ class CreateIssueModal extends StatefulWidget {
 
 class _CreateIssueModalState extends State<CreateIssueModal> {
   bool operable = true;
+
   String? selectedAreaCenter;
   String? selectedLine;
   String? selectedToolBreakdown;
@@ -855,51 +677,30 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   final TextEditingController machineController = TextEditingController();
   final TextEditingController materialController = TextEditingController();
 
-  // --- New variables for the comment field ---
   late TextEditingController _commentController;
   late FocusNode commentFocusNode;
-
-  /// Controls whether the comment field is unlocked for free text editing.
-  bool freeText = false;
-  // ------------------------------------------------
 
   @override
   void initState() {
     super.initState();
 
-    if (widget.selectedToolBreakdown != null &&
-        widget.selectedToolBreakdown!.isNotEmpty) {
+    // Prefill
+    if (widget.selectedToolBreakdown?.isNotEmpty ?? false) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
-      if (kDebugMode) {
-        print('CreateIssueModal: Set tool breakdown to $selectedToolBreakdown');
-      }
     }
-    if (widget.selectedMachineNumber != null &&
-        widget.selectedMachineNumber!.isNotEmpty) {
+    if (widget.selectedMachineNumber?.isNotEmpty ?? false) {
       selectedMachineNumber = widget.selectedMachineNumber;
       machineController.text = selectedMachineNumber!;
-      if (kDebugMode) {
-        print('CreateIssueModal: Set machine number to $selectedMachineNumber');
-      }
     }
-    if (widget.correspondingLine != null &&
-        widget.correspondingLine!.isNotEmpty) {
+    if (widget.correspondingLine?.isNotEmpty ?? false) {
       selectedLine = widget.correspondingLine;
       lineController.text = selectedLine!;
-      if (kDebugMode) {
-        print('CreateIssueModal: Set line to $selectedLine');
-      }
     }
-    if (widget.selectedMachinePitch != null &&
-        widget.selectedMachinePitch!.isNotEmpty) {
+    if (widget.selectedMachinePitch?.isNotEmpty ?? false) {
       selectedMachinePitch = widget.selectedMachinePitch;
-      if (kDebugMode) {
-        print('CreateIssueModal: Set machine pitch to $selectedMachinePitch');
-      }
     }
 
-    // Initialize the comment controller and focus node.
     _commentController = TextEditingController(text: workCardComment ?? '');
     commentFocusNode = FocusNode();
   }
@@ -917,7 +718,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     super.dispose();
   }
 
-  /// Validates the form fields (unchanged)
   bool _validateForm({
     required bool operable,
     required String? areaCenter,
@@ -947,38 +747,37 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Störfall anlegen',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            const Text('Störfall anlegen',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             Row(
               children: [
                 Checkbox(
                   value: operable,
-                  onChanged: (value) {
-                    setState(() {
-                      operable = value!;
-                    });
-                  },
+                  onChanged: (val) => setState(() => operable = val ?? true),
                 ),
                 const Text('Betrieb möglich?'),
               ],
             ),
-            // Employee selection
+
+            // Employee
             TypeAheadField<String>(
               controller: employeeController,
-              builder: (context, textController, focusNode) {
+              builder: (ctx, textCtrl, fn) {
                 return TextField(
-                  controller: textController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Ersteller Störfall',
-                  ),
+                  controller: textCtrl,
+                  focusNode: fn,
+                  decoration:
+                      const InputDecoration(labelText: 'Ersteller Störfall'),
                 );
               },
               suggestionsCallback: (pattern) async {
@@ -987,137 +786,119 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                         (e) => e.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(title: Text(suggestion));
-              },
+              itemBuilder: (ctx, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSelected: (suggestion) {
                 employeeController.text = suggestion;
                 selectedEmployee = suggestion;
-                if (kDebugMode) {
-                  print('CreateIssueModal: Selected employee: $suggestion');
-                }
               },
             ),
             const SizedBox(height: 16),
-            // Area Center selection
+
+            // Area Center
             TypeAheadField<String>(
               controller: areaCenterController,
-              builder: (context, textController, focusNode) {
+              builder: (ctx, textCtrl, fn) {
                 return TextField(
-                  controller: textController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Zuständige Stelle',
-                  ),
+                  controller: textCtrl,
+                  focusNode: fn,
+                  decoration:
+                      const InputDecoration(labelText: 'Zuständige Stelle'),
                 );
               },
               suggestionsCallback: (pattern) async {
                 return widget.areaCenters
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .where((ac) =>
+                        ac.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(title: Text(suggestion));
-              },
+              itemBuilder: (ctx, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSelected: (suggestion) {
                 areaCenterController.text = suggestion;
                 selectedAreaCenter = suggestion;
-                if (kDebugMode) {
-                  print('CreateIssueModal: Selected area center: $suggestion');
-                }
               },
             ),
             const SizedBox(height: 16),
-            // Line selection
+
+            // Line
             TypeAheadField<String>(
               controller: lineController,
-              builder: (context, textController, focusNode) {
+              builder: (ctx, textCtrl, fn) {
                 return TextField(
-                  controller: textController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Linie oder Stellplatz',
-                  ),
+                  controller: textCtrl,
+                  focusNode: fn,
+                  decoration:
+                      const InputDecoration(labelText: 'Linie oder Stellplatz'),
                 );
               },
               suggestionsCallback: (pattern) async {
                 return widget.lines
                     .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                        (l) => l.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(title: Text(suggestion));
-              },
+              itemBuilder: (ctx, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSelected: (suggestion) {
                 lineController.text = suggestion;
                 selectedLine = suggestion;
-                if (kDebugMode) {
-                  print('CreateIssueModal: Selected line: $suggestion');
-                }
               },
             ),
             const SizedBox(height: 16),
-            // Tool selection
+
+            // Tool
             TypeAheadField<String>(
               controller: toolController,
-              builder: (context, textController, focusNode) {
+              builder: (ctx, textCtrl, fn) {
                 return TextField(
-                  controller: textController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Werkzeug',
-                  ),
+                  controller: textCtrl,
+                  focusNode: fn,
+                  decoration: const InputDecoration(labelText: 'Werkzeug'),
                 );
               },
               suggestionsCallback: (pattern) async {
                 return widget.tools
                     .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                        (t) => t.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(title: Text(suggestion));
-              },
+              itemBuilder: (ctx, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSelected: (suggestion) {
                 toolController.text = suggestion;
                 selectedToolBreakdown = suggestion;
-                if (kDebugMode) {
-                  print('CreateIssueModal: Selected tool: $suggestion');
-                }
               },
             ),
             const SizedBox(height: 16),
-            // Machine selection
+
+            // Machine
             TypeAheadField<String>(
               controller: machineController,
-              builder: (context, textController, focusNode) {
+              builder: (ctx, textCtrl, fn) {
                 return TextField(
-                  controller: textController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Maschine / Anlage',
-                  ),
+                  controller: textCtrl,
+                  focusNode: fn,
+                  decoration:
+                      const InputDecoration(labelText: 'Maschine / Anlage'),
                 );
               },
               suggestionsCallback: (pattern) async {
                 return widget.machines
-                    .where((machine) => machine.number
-                        .toLowerCase()
-                        .contains(pattern.toLowerCase()))
-                    .map((machine) => machine.number)
+                    .where((m) =>
+                        m.number.toLowerCase().contains(pattern.toLowerCase()))
+                    .map((m) => m.number)
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(title: Text(suggestion));
-              },
+              itemBuilder: (ctx, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSelected: (suggestion) {
                 machineController.text = suggestion;
                 selectedMachineNumber = suggestion;
-                // Find the machine object based on the selected number
-                Machine? selectedMachine = widget.machines.firstWhere(
-                  (machine) => machine.number == suggestion,
+
+                // Attempt mapping
+                final found = widget.machines.firstWhere(
+                  (m) => m.number == suggestion,
                   orElse: () => Machine(
                     number: '',
                     salamandermachinepitch: '',
@@ -1126,172 +907,131 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   ),
                 );
                 String? machineCode;
-                if (selectedMachine.salamanderlineNumber != null &&
-                    selectedMachine.salamanderlineNumber!.isNotEmpty) {
-                  machineCode = selectedMachine.salamanderlineNumber!
-                      .trim()
-                      .toUpperCase();
-                } else if (selectedMachine.productionworkplaceNumber
+                if ((found.salamanderlineNumber?.isNotEmpty ?? false)) {
+                  machineCode =
+                      found.salamanderlineNumber!.trim().toUpperCase();
+                } else if (found.productionworkplaceNumber
                     .toUpperCase()
                     .startsWith('S0')) {
                   machineCode =
-                      'TTP-${selectedMachine.productionworkplaceNumber.toUpperCase()}';
+                      'TTP-${found.productionworkplaceNumber.toUpperCase()}';
                 }
+
                 if (machineCode != null && machineCode.isNotEmpty) {
-                  String? mappedLine =
-                      widget.machinePitchToLineMap[machineCode];
+                  final mappedLine = widget.machinePitchToLineMap[machineCode];
                   if (mappedLine != null && mappedLine.isNotEmpty) {
                     setState(() {
                       selectedLine = mappedLine;
-                      lineController.text = selectedLine!;
+                      lineController.text = mappedLine;
                     });
-                    if (kDebugMode) {
-                      print(
-                          'CreateIssueModal: Mapped machine code $machineCode to line $mappedLine');
-                    }
                   } else {
                     setState(() {
                       selectedLine = '';
                       lineController.text = '';
                     });
-                    if (kDebugMode) {
-                      print(
-                          'No corresponding line found for machine code: $machineCode');
-                    }
                   }
                 } else {
-                  // Handle cases where no valid machineCode is found
+                  // no valid code
                   setState(() {
                     selectedLine = '';
                     lineController.text = '';
                   });
-                  if (kDebugMode) {
-                    print(
-                        'salamanderline_number is null or productionworkplace_number does not start with S0 for machine: $suggestion');
-                  }
                 }
               },
             ),
             const SizedBox(height: 16),
-            // Material selection
+
+            // Material
             TypeAheadField<String>(
               controller: materialController,
-              builder: (context, textController, focusNode) {
+              builder: (ctx, textCtrl, fn) {
                 return TextField(
-                  controller: textController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Material',
-                  ),
+                  controller: textCtrl,
+                  focusNode: fn,
+                  decoration: const InputDecoration(labelText: 'Material'),
                 );
               },
               suggestionsCallback: (pattern) async {
                 return widget.materials
-                    .where(
-                        (e) => e.toLowerCase().contains(pattern.toLowerCase()))
+                    .where((mat) =>
+                        mat.toLowerCase().contains(pattern.toLowerCase()))
                     .toList();
               },
-              itemBuilder: (context, suggestion) {
-                return ListTile(title: Text(suggestion));
-              },
+              itemBuilder: (ctx, suggestion) =>
+                  ListTile(title: Text(suggestion)),
               onSelected: (suggestion) {
                 materialController.text = suggestion;
                 selectedMaterialBreakdown = suggestion;
-                if (kDebugMode) {
-                  print('CreateIssueModal: Selected material: $suggestion');
-                }
               },
             ),
             const SizedBox(height: 16),
+
+            // Comment / Fehlerbeschreibung
             TextField(
               controller: _commentController,
               focusNode: commentFocusNode,
-              // The field remains editable so the user can type freely.
               maxLines: 5,
               minLines: 5,
-              readOnly: false,
               decoration: InputDecoration(
                 labelText: 'Fehlerbeschreibung',
                 hintText: 'Kommentar eingeben oder Vorschlag wählen',
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.arrow_drop_down),
                   onPressed: () async {
-                    // Always show the selection dialog regardless of previous selection.
-                    final selection = await showDialog<String>(
+                    final choice = await showDialog<String>(
                       context: context,
-                      builder: (context) {
+                      builder: (ctx) {
                         return SimpleDialog(
                           title: const Text('Kommentar Typ wählen'),
                           children: [
                             SimpleDialogOption(
-                              onPressed: () =>
-                                  Navigator.pop(context, 'suggestion'),
+                              onPressed: () => Navigator.pop(ctx, 'suggestion'),
                               child: const Text('Text auswählen'),
                             ),
                             SimpleDialogOption(
-                              onPressed: () => Navigator.pop(context, 'free'),
+                              onPressed: () => Navigator.pop(ctx, 'free'),
                               child: const Text('Freier Text'),
                             ),
                           ],
                         );
                       },
                     );
-                    if (selection != null) {
-                      // For "Textbaustein auswählen", load the suggestions modal.
-                      if (selection == 'suggestion') {
-                        final selectedText = await showPredefinedTextsModal(
-                          context,
-                          initialText: _commentController.text,
-                        );
-                        if (selectedText != null) {
-                          setState(() {
-                            _commentController.text = selectedText;
-                            workCardComment = selectedText;
-                          });
-                        }
+                    if (choice == 'suggestion') {
+                      final selectedText = await showPredefinedTextsModal(
+                        context,
+                        initialText: _commentController.text,
+                      );
+                      if (selectedText != null) {
+                        setState(() {
+                          _commentController.text = selectedText;
+                          workCardComment = selectedText;
+                        });
                       }
-                      // Always return focus to the field for further editing.
-                      FocusScope.of(context).requestFocus(commentFocusNode);
+                      commentFocusNode.requestFocus();
                     }
                   },
                 ),
               ),
-              onTap: () {
-                // Just set focus; the dialog can be opened via the suffix icon.
-                FocusScope.of(context).requestFocus(commentFocusNode);
-              },
-              onChanged: (value) {
-                workCardComment = value;
-              },
+              onChanged: (val) => workCardComment = val,
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 16),
+
             ElevatedButton(
-              onPressed: () async {
-                final pickedImage = await _pickImage();
-                if (pickedImage != null) {
-                  setState(() {
-                    imagePath = pickedImage.path;
-                    if (kDebugMode) {
-                      print('CreateIssueModal: Image selected at $imagePath');
-                    }
-                  });
-                }
-              },
+              onPressed: _pickImage,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
                   Icon(Icons.camera_alt),
-                  SizedBox(width: 8.0),
-                  Text(
-                    'Bild auswählen\noder Foto aufnehmen',
-                    textAlign: TextAlign.center,
-                  ),
+                  SizedBox(width: 8),
+                  Text('Bild auswählen\noder Foto aufnehmen',
+                      textAlign: TextAlign.center),
                 ],
               ),
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 16),
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: 16),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -1301,52 +1041,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () async {
-                    if (imagePath != null) {
-                      File imageFile = File(imagePath!);
-                      bool isValid = await _isImageFileValid(imageFile);
-                      if (!isValid) {
-                        showOverlayMessage(
-                            context, 'Das Bild ist ungültig oder beschädigt.');
-                        return;
-                      }
-                    }
-                    if (_validateForm(
-                      operable: operable,
-                      areaCenter: selectedAreaCenter,
-                      line: selectedLine,
-                      employee: selectedEmployee,
-                      toolBreakdown: toolController.text,
-                      machineBreakdown: machineController.text,
-                      materialBreakdown: materialController.text,
-                      workCardComment: workCardComment,
-                    )) {
-                      _submitIssue({
-                        'operable': operable.toString(),
-                        'areaCenter': selectedAreaCenter!,
-                        'line': selectedLine!,
-                        'employee': selectedEmployee!,
-                        'toolBreakdown': toolController.text,
-                        'machineBreakdown': machineController.text,
-                        'materialBreakdown': materialController.text,
-                        'workCardComment': workCardComment!,
-                        'imageFile': imagePath!,
-                      });
-                      Navigator.pop(context);
-                      showOverlayMessage(context, 'Störfall angelegt!',
-                          backgroundColor: Colors.green);
-                      if (kDebugMode) {
-                        print(
-                            'CreateIssueModal: Issue submitted successfully.');
-                      }
-                    } else {
-                      showOverlayMessage(context,
-                          'Bitte alle erforderlichen Felder ausfüllen.');
-                      if (kDebugMode) {
-                        print('CreateIssueModal: Form validation failed.');
-                      }
-                    }
-                  },
+                  onPressed: _onSubmitIssue,
                   child: const Text('An IKOffice senden'),
                 ),
               ],
@@ -1357,47 +1052,11 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     );
   }
 
-  /// Shows an overlay message at the top of the screen
-  void showOverlayMessage(BuildContext context, String message,
-      {Color backgroundColor = Colors.red}) {
-    final overlay = Navigator.of(context, rootNavigator: true).overlay;
-    if (overlay == null) return;
-
-    final overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: 50.0,
-        left: 20.0,
-        right: 20.0,
-        child: Material(
-          elevation: 10.0,
-          borderRadius: BorderRadius.circular(8.0),
-          color: backgroundColor, // Use the passed background color
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(
-              message,
-              style: const TextStyle(color: Colors.white, fontSize: 16.0),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
-    );
-
-    overlay.insert(overlayEntry);
-
-    Future.delayed(const Duration(seconds: 3), () {
-      overlayEntry.remove();
-    });
-  }
-
-  /// Picks an image from the camera or gallery
-  Future<File?> _pickImage() async {
-    final picker = ImagePicker();
-
+  /// Picks an image from camera/gallery
+  Future<void> _pickImage() async {
     final source = await showDialog<ImageSource>(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
+      builder: (_) => AlertDialog(
         title: const Text('Bildquelle wählen'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1416,108 +1075,160 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         ),
       ),
     );
+    if (source == null) return;
 
-    if (source == null) return null;
-
+    final picker = ImagePicker();
     final XFile? pickedFile = await picker.pickImage(source: source);
     if (pickedFile == null) {
       if (kDebugMode) print('No image selected.');
-      return null;
+      return;
     }
 
-    // Convert XFile to File
-    File imageFile = File(pickedFile.path);
-
-    // Ensure the picked file is valid
-    final isValid = await _isImageFileValid(imageFile);
-    if (!isValid) {
-      if (kDebugMode) print('Image file is invalid or corrupted.');
-      return null;
+    final file = File(pickedFile.path);
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty) {
+      if (kDebugMode) print('File is empty or invalid.');
+      return;
     }
 
-    // Optional: Save a copy before sending
     final tempDir = await getTemporaryDirectory();
     final savedFilePath =
         path.join(tempDir.path, '${DateTime.now().millisecondsSinceEpoch}.jpg');
-    final savedFile = await imageFile.copy(savedFilePath);
+    final savedFile = await file.copy(savedFilePath);
 
-    if (kDebugMode) print('Image saved locally at: $savedFilePath');
-    return savedFile;
+    setState(() => imagePath = savedFile.path);
+    if (kDebugMode) print('Image saved at: $imagePath');
   }
 
-  /// Validates if the image file is valid
-  Future<bool> _isImageFileValid(File file) async {
-    try {
-      final bytes = await file.readAsBytes();
-      return bytes.isNotEmpty;
-    } catch (e) {
-      if (kDebugMode) print('Error reading image file: $e');
-      return false;
+  /// Validate the form data & send to server
+  void _onSubmitIssue() async {
+    if (!_validateForm(
+      operable: operable,
+      areaCenter: selectedAreaCenter,
+      line: selectedLine,
+      employee: selectedEmployee,
+      toolBreakdown: toolController.text,
+      machineBreakdown: machineController.text,
+      materialBreakdown: materialController.text,
+      workCardComment: workCardComment,
+    )) {
+      _showOverlayMessage('Bitte alle erforderlichen Felder ausfüllen.');
+      return;
     }
+
+    // If image present, ensure it's valid
+    if (imagePath != null) {
+      final file = File(imagePath!);
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) {
+        _showOverlayMessage('Das Bild ist ungültig oder beschädigt.');
+        return;
+      }
+    }
+
+    // Build the payload
+    final issueData = <String, String>{
+      'operable': operable.toString(),
+      'areaCenter': selectedAreaCenter ?? '',
+      'line': selectedLine ?? '',
+      'employee': selectedEmployee ?? '',
+      'toolBreakdown': toolController.text,
+      'machineBreakdown': machineController.text,
+      'materialBreakdown': materialController.text,
+      'workCardComment': workCardComment ?? '',
+      'imageFile': imagePath ?? '',
+    };
+
+    await _submitIssue(issueData);
+
+    Navigator.pop(context);
+    _showOverlayMessage('Störfall angelegt!', backgroundColor: Colors.green);
+    if (kDebugMode) print('Issue submitted successfully.');
   }
 
-  /// Submits the issue to the server
-  void _submitIssue(Map<String, String> issueData) async {
+  /// Actually submit the issue to server
+  Future<void> _submitIssue(Map<String, String> data) async {
     final uri = Uri.parse('http://wim-solution.sip.local:3006/report-issue');
     final request = http.MultipartRequest('POST', uri);
 
-    issueData.forEach((key, value) {
+    // Add text fields
+    data.forEach((key, value) {
       if (key != 'imageFile') {
         request.fields[key] = value;
       }
     });
 
-    final imageFile = File(issueData['imageFile']!);
+    // Add image if present
+    final imgPath = data['imageFile'];
+    if (imgPath != null && imgPath.isNotEmpty) {
+      final imageFile = File(imgPath);
+      String mimeType = 'application/octet-stream';
+      final ext = path.extension(imgPath).toLowerCase();
+      if (ext == '.jpg' || ext == '.jpeg') {
+        mimeType = 'image/jpeg';
+      } else if (ext == '.png') {
+        mimeType = 'image/png';
+      } else if (ext == '.gif') {
+        mimeType = 'image/gif';
+      }
 
-    // Determine MIME type based on file extension
-    String mimeType = 'application/octet-stream'; // Default MIME type
-    String extension = imageFile.path.split('.').last.toLowerCase();
-    if (extension == 'jpg' || extension == 'jpeg') {
-      mimeType = 'image/jpeg';
-    } else if (extension == 'png') {
-      mimeType = 'image/png';
-    } else if (extension == 'gif') {
-      mimeType = 'image/gif';
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'imageFile',
+          imageFile.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
     }
-
-    request.files.add(await http.MultipartFile.fromPath(
-      'imageFile',
-      imageFile.path,
-      contentType: MediaType.parse(mimeType),
-    ));
 
     try {
       final response = await request.send();
-      if (response.statusCode == 201) {
-        // Success handling if needed
-        if (kDebugMode) {
-          print('Issue successfully submitted.');
-        }
+      if (response.statusCode != 201) {
+        final errMsg = await response.stream.bytesToString();
+        _showOverlayMessage('Fehler: $errMsg');
+        if (kDebugMode) print('Failed: $errMsg');
       } else {
-        final errorMessage = await response.stream.bytesToString();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $errorMessage')),
-        );
-        if (kDebugMode) {
-          print('Failed to submit issue. Status code: ${response.statusCode}');
-          print('Error message: $errorMessage');
-        }
+        if (kDebugMode) print('Issue successfully submitted.');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Exception during issue submission: $e');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler beim Senden des Störfalls: $e')),
-      );
+      _showOverlayMessage('Fehler beim Senden des Störfalls: $e');
+      if (kDebugMode) print('Exception: $e');
     }
+  }
+
+  /// Show an overlay message
+  void _showOverlayMessage(String msg, {Color backgroundColor = Colors.red}) {
+    final overlay = Navigator.of(context, rootNavigator: true).overlay;
+    if (overlay == null) return;
+
+    final entry = OverlayEntry(
+      builder: (_) => Positioned(
+        top: 50,
+        left: 20,
+        right: 20,
+        child: Material(
+          elevation: 10,
+          borderRadius: BorderRadius.circular(8),
+          color: backgroundColor,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Text(
+              msg,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 3), () => entry.remove());
   }
 }
 
-/// ScanWindowOverlay draws a rounded square with open corner lines
+/// Overlay for scan window
 class ScanWindowOverlay extends StatelessWidget {
   final Rect scanWindow;
-
   const ScanWindowOverlay({super.key, required this.scanWindow});
 
   @override
@@ -1540,53 +1251,53 @@ class _ScanWindowPainter extends CustomPainter {
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
 
-    final cornerLength = 30.0;
+    final corner = 30.0;
 
-    // Top-left corner
+    // top-left
     canvas.drawLine(
       Offset(scanWindow.left, scanWindow.top),
-      Offset(scanWindow.left + cornerLength, scanWindow.top),
+      Offset(scanWindow.left + corner, scanWindow.top),
       paint,
     );
     canvas.drawLine(
       Offset(scanWindow.left, scanWindow.top),
-      Offset(scanWindow.left, scanWindow.top + cornerLength),
+      Offset(scanWindow.left, scanWindow.top + corner),
       paint,
     );
 
-    // Top-right corner
+    // top-right
     canvas.drawLine(
       Offset(scanWindow.right, scanWindow.top),
-      Offset(scanWindow.right - cornerLength, scanWindow.top),
+      Offset(scanWindow.right - corner, scanWindow.top),
       paint,
     );
     canvas.drawLine(
       Offset(scanWindow.right, scanWindow.top),
-      Offset(scanWindow.right, scanWindow.top + cornerLength),
+      Offset(scanWindow.right, scanWindow.top + corner),
       paint,
     );
 
-    // Bottom-left corner
+    // bottom-left
     canvas.drawLine(
       Offset(scanWindow.left, scanWindow.bottom),
-      Offset(scanWindow.left + cornerLength, scanWindow.bottom),
+      Offset(scanWindow.left + corner, scanWindow.bottom),
       paint,
     );
     canvas.drawLine(
       Offset(scanWindow.left, scanWindow.bottom),
-      Offset(scanWindow.left, scanWindow.bottom - cornerLength),
+      Offset(scanWindow.left, scanWindow.bottom - corner),
       paint,
     );
 
-    // Bottom-right corner
+    // bottom-right
     canvas.drawLine(
       Offset(scanWindow.right, scanWindow.bottom),
-      Offset(scanWindow.right - cornerLength, scanWindow.bottom),
+      Offset(scanWindow.right - corner, scanWindow.bottom),
       paint,
     );
     canvas.drawLine(
       Offset(scanWindow.right, scanWindow.bottom),
-      Offset(scanWindow.right, scanWindow.bottom - cornerLength),
+      Offset(scanWindow.right, scanWindow.bottom - corner),
       paint,
     );
   }
