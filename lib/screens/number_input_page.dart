@@ -927,7 +927,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     required String? machineBreakdown,
     required String? materialBreakdown,
     required String? workCardComment,
-    required String? imagePath,
   }) {
     bool hasBreakdown = ((toolBreakdown != null && toolBreakdown.isNotEmpty) ||
         (machineBreakdown != null && machineBreakdown.isNotEmpty) ||
@@ -941,8 +940,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         employee.isNotEmpty &&
         hasBreakdown &&
         workCardComment != null &&
-        workCardComment.isNotEmpty &&
-        imagePath != null;
+        workCardComment.isNotEmpty;
   }
 
   @override
@@ -1320,7 +1318,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                       machineBreakdown: machineController.text,
                       materialBreakdown: materialController.text,
                       workCardComment: workCardComment,
-                      imagePath: imagePath,
                     )) {
                       _submitIssue({
                         'operable': operable.toString(),
