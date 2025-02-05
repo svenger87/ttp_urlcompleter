@@ -50,6 +50,116 @@ class Machine {
   }
 }
 
+//
+// ====================
+// Top-level Parsing Functions
+// ====================
+//
+
+List<String> parseAreaCenters(String responseBody) {
+  final data = json.decode(responseBody) as List<dynamic>;
+  return data.map((e) => e['name'].toString()).toList();
+}
+
+List<String> parseLines(String responseBody) {
+  final data = json.decode(responseBody) as List<dynamic>;
+  return data.map((e) => e['number'].toString()).toList();
+}
+
+List<String> parseTools(String responseBody) {
+  final data = json.decode(responseBody) as List<dynamic>;
+  return data.map((e) => e['number'].toString()).toList();
+}
+
+List<Machine> parseMachines(String responseBody) {
+  final data = json.decode(responseBody) as List<dynamic>;
+  return data.map((json) => Machine.fromJson(json)).toList();
+}
+
+List<String> parseMaterials(String responseBody) {
+  final data = json.decode(responseBody) as List<dynamic>;
+  return data.map((m) => m['name'].toString()).toList();
+}
+
+List<String> parseEmployees(String responseBody) {
+  final data = json.decode(responseBody) as List<dynamic>;
+  return data
+      .map((e) => '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
+      .toList();
+}
+
+//
+// ====================
+// Updated API Fetch Functions Using compute
+// ====================
+//
+
+Future<List<String>> _fetchAreaCenters() async {
+  final response = await http.get(
+    Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
+    headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+  );
+  if (response.statusCode == 200) {
+    return compute(parseAreaCenters, response.body);
+  }
+  throw Exception('Failed to fetch area centers');
+}
+
+Future<List<String>> _fetchLines() async {
+  final response = await http.get(
+    Uri.parse('http://wim-solution.sip.local:3006/salamanderline'),
+    headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+  );
+  if (response.statusCode == 200) {
+    return compute(parseLines, response.body);
+  }
+  throw Exception('Failed to fetch lines');
+}
+
+Future<List<String>> _fetchTools() async {
+  final response = await http.get(
+    Uri.parse('http://wim-solution.sip.local:3006/projects'),
+    headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+  );
+  if (response.statusCode == 200) {
+    return compute(parseTools, response.body);
+  }
+  throw Exception('Failed to fetch tools');
+}
+
+Future<List<Machine>> _fetchMachines() async {
+  final response = await http.get(
+    Uri.parse('http://wim-solution.sip.local:3006/machines'),
+    headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+  );
+  if (response.statusCode == 200) {
+    return compute(parseMachines, response.body);
+  }
+  throw Exception('Failed to fetch machines');
+}
+
+Future<List<String>> _fetchMaterials() async {
+  final response = await http.get(
+    Uri.parse('http://wim-solution.sip.local:3006/material'),
+    headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+  );
+  if (response.statusCode == 200) {
+    return compute(parseMaterials, response.body);
+  }
+  throw Exception('Failed to fetch materials');
+}
+
+Future<List<String>> _fetchEmployees() async {
+  final response = await http.get(
+    Uri.parse('http://wim-solution.sip.local:3006/employee'),
+    headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+  );
+  if (response.statusCode == 200) {
+    return compute(parseEmployees, response.body);
+  }
+  throw Exception('Failed to fetch employees');
+}
+
 class NumberInputPage extends StatefulWidget {
   const NumberInputPage({super.key});
 
@@ -506,119 +616,6 @@ class _NumberInputPageState extends State<NumberInputPage>
     scanTimer = Timer(const Duration(seconds: 3), () {
       setState(() => hasScanned = false);
     });
-  }
-
-  // -------------------
-// Parsing functions
-// -------------------
-
-// Area Centers
-  List<String> parseAreaCenters(String responseBody) {
-    final data = json.decode(responseBody) as List<dynamic>;
-    return data.map((e) => e['name'].toString()).toList();
-  }
-
-// Lines
-  List<String> parseLines(String responseBody) {
-    final data = json.decode(responseBody) as List<dynamic>;
-    return data.map((e) => e['number'].toString()).toList();
-  }
-
-// Tools (Projects)
-  List<String> parseTools(String responseBody) {
-    final data = json.decode(responseBody) as List<dynamic>;
-    return data.map((e) => e['number'].toString()).toList();
-  }
-
-// Machines
-  List<Machine> parseMachines(String responseBody) {
-    final data = json.decode(responseBody) as List<dynamic>;
-    return data.map((json) => Machine.fromJson(json)).toList();
-  }
-
-// Materials
-  List<String> parseMaterials(String responseBody) {
-    final data = json.decode(responseBody) as List<dynamic>;
-    return data.map((m) => m['name'].toString()).toList();
-  }
-
-// Employees
-  List<String> parseEmployees(String responseBody) {
-    final data = json.decode(responseBody) as List<dynamic>;
-    return data
-        .map((e) =>
-            '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
-        .toList();
-  }
-
-// -------------------
-// Updated API fetch functions using compute
-// -------------------
-
-  Future<List<String>> _fetchAreaCenters() async {
-    final response = await http.get(
-      Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
-      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
-    );
-    if (response.statusCode == 200) {
-      return compute(parseAreaCenters, response.body);
-    }
-    throw Exception('Failed to fetch area centers');
-  }
-
-  Future<List<String>> _fetchLines() async {
-    final response = await http.get(
-      Uri.parse('http://wim-solution.sip.local:3006/salamanderline'),
-      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
-    );
-    if (response.statusCode == 200) {
-      return compute(parseLines, response.body);
-    }
-    throw Exception('Failed to fetch lines');
-  }
-
-  Future<List<String>> _fetchTools() async {
-    final response = await http.get(
-      Uri.parse('http://wim-solution.sip.local:3006/projects'),
-      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
-    );
-    if (response.statusCode == 200) {
-      return compute(parseTools, response.body);
-    }
-    throw Exception('Failed to fetch tools');
-  }
-
-  Future<List<Machine>> _fetchMachines() async {
-    final response = await http.get(
-      Uri.parse('http://wim-solution.sip.local:3006/machines'),
-      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
-    );
-    if (response.statusCode == 200) {
-      return compute(parseMachines, response.body);
-    }
-    throw Exception('Failed to fetch machines');
-  }
-
-  Future<List<String>> _fetchMaterials() async {
-    final response = await http.get(
-      Uri.parse('http://wim-solution.sip.local:3006/material'),
-      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
-    );
-    if (response.statusCode == 200) {
-      return compute(parseMaterials, response.body);
-    }
-    throw Exception('Failed to fetch materials');
-  }
-
-  Future<List<String>> _fetchEmployees() async {
-    final response = await http.get(
-      Uri.parse('http://wim-solution.sip.local:3006/employee'),
-      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
-    );
-    if (response.statusCode == 200) {
-      return compute(parseEmployees, response.body);
-    }
-    throw Exception('Failed to fetch employees');
   }
 
   Future<void> _fetchProfileSuggestions(String query) async {
