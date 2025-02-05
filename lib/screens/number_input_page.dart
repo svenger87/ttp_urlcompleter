@@ -508,7 +508,52 @@ class _NumberInputPageState extends State<NumberInputPage>
     });
   }
 
-  // ---------- API Calls for preloading ----------
+  // -------------------
+// Parsing functions
+// -------------------
+
+// Area Centers
+  List<String> parseAreaCenters(String responseBody) {
+    final data = json.decode(responseBody) as List<dynamic>;
+    return data.map((e) => e['name'].toString()).toList();
+  }
+
+// Lines
+  List<String> parseLines(String responseBody) {
+    final data = json.decode(responseBody) as List<dynamic>;
+    return data.map((e) => e['number'].toString()).toList();
+  }
+
+// Tools (Projects)
+  List<String> parseTools(String responseBody) {
+    final data = json.decode(responseBody) as List<dynamic>;
+    return data.map((e) => e['number'].toString()).toList();
+  }
+
+// Machines
+  List<Machine> parseMachines(String responseBody) {
+    final data = json.decode(responseBody) as List<dynamic>;
+    return data.map((json) => Machine.fromJson(json)).toList();
+  }
+
+// Materials
+  List<String> parseMaterials(String responseBody) {
+    final data = json.decode(responseBody) as List<dynamic>;
+    return data.map((m) => m['name'].toString()).toList();
+  }
+
+// Employees
+  List<String> parseEmployees(String responseBody) {
+    final data = json.decode(responseBody) as List<dynamic>;
+    return data
+        .map((e) =>
+            '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
+        .toList();
+  }
+
+// -------------------
+// Updated API fetch functions using compute
+// -------------------
 
   Future<List<String>> _fetchAreaCenters() async {
     final response = await http.get(
@@ -516,8 +561,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as List<dynamic>;
-      return data.map((e) => e['name'].toString()).toList();
+      return compute(parseAreaCenters, response.body);
     }
     throw Exception('Failed to fetch area centers');
   }
@@ -528,8 +572,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as List<dynamic>;
-      return data.map((e) => e['number'].toString()).toList();
+      return compute(parseLines, response.body);
     }
     throw Exception('Failed to fetch lines');
   }
@@ -540,8 +583,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as List<dynamic>;
-      return data.map((e) => e['number'].toString()).toList();
+      return compute(parseTools, response.body);
     }
     throw Exception('Failed to fetch tools');
   }
@@ -552,8 +594,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as List<dynamic>;
-      return data.map((json) => Machine.fromJson(json)).toList();
+      return compute(parseMachines, response.body);
     }
     throw Exception('Failed to fetch machines');
   }
@@ -564,8 +605,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as List<dynamic>;
-      return data.map((m) => m['name'].toString()).toList();
+      return compute(parseMaterials, response.body);
     }
     throw Exception('Failed to fetch materials');
   }
@@ -576,11 +616,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
     );
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as List<dynamic>;
-      return data
-          .map((e) =>
-              '${e['employeenumber']} - ${e['firstname']} ${e['lastname']}')
-          .toList();
+      return compute(parseEmployees, response.body);
     }
     throw Exception('Failed to fetch employees');
   }
