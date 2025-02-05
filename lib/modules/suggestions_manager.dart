@@ -119,7 +119,7 @@ class _SuggestionsManagerState extends State<SuggestionsManager> {
   bool _authenticated = false;
 
   // Hard-coded PIN. In production, use a secure method.
-  static const String correctPin = '1234';
+  static const String correctPin = '4444';
 
   @override
   void initState() {
