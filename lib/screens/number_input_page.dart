@@ -1536,7 +1536,7 @@ class _ScanWindowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white
+      ..color = Colors.lightBlue
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
 
