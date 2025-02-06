@@ -20,7 +20,7 @@
         </intent>
     </queries>
     <application
-        android:label="ttp_app"
+        android:label="ttpApp"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
