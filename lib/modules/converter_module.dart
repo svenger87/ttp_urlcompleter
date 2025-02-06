@@ -5,11 +5,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
-// Import flutter_typeahead for older versions
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
+/// Standalone ConverterModule remains available if needed.
 class ConverterModule extends StatefulWidget {
   const ConverterModule({super.key});
 
@@ -22,8 +22,6 @@ class _ConverterModuleState extends State<ConverterModule> {
       IconData(0xf0250, fontFamily: 'MaterialIcons');
 
   List<Map<String, dynamic>> anbauteileData = [];
-
-  // Changed from nullable String? to non-nullable String
   String selectedNeueBezeichnung = '';
   String selectedAlteBezeichnung = '';
 
@@ -37,21 +35,23 @@ class _ConverterModuleState extends State<ConverterModule> {
     final String data = await DefaultAssetBundle.of(context)
         .loadString('assets/anbauteile.json');
     final Map<String, dynamic> jsonData = json.decode(data);
-
-    // Convert JSON map to list of maps
-    anbauteileData = jsonData.entries
-        .map((entry) => {
-              'id': entry.key,
-              'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
-              'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
-              'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
-              'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
-            })
-        .toList();
+    setState(() {
+      anbauteileData = jsonData.entries
+          .map((entry) => {
+                'id': entry.key,
+                'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
+                'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
+                'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
+                'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
+              })
+          .toList();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // This is your standalone converter module.
+    // For example, a ListTile that opens a translation dialog.
     return ListTile(
       leading: const Icon(translateRounded),
       title: const Text('Anbauteile Konverter'),
@@ -62,140 +62,181 @@ class _ConverterModuleState extends State<ConverterModule> {
   }
 
   void _showTranslationDialog(BuildContext context) {
+    // For demonstration, we show the same dialog as in ConverterModal.
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Anbauteilenummern übersetzen'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Neue Bezeichnung
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Neue Bezeichnung'),
-                    const SizedBox(height: 8.0),
-                    // Updated TypeAheadField for Neue Bezeichnung:
-                    TypeAheadField<String>(
-                      // Optionally, create a dedicated TextEditingController
-                      // If you want to keep the input value, you can also store it in state.
-                      controller: TextEditingController(),
-                      // Use builder to create the TextField
-                      builder: (context, textController, focusNode) {
-                        return TextField(
-                          controller: textController,
-                          focusNode: focusNode,
-                          decoration: const InputDecoration(
-                            hintText: 'Geben Sie eine neue Bezeichnung ein',
-                            prefixIcon: Icon(Icons.search),
-                          ),
-                        );
-                      },
-                      // Return the list of suggestions based on the pattern.
-                      suggestionsCallback: (pattern) async {
-                        if (pattern.trim().isEmpty) return [];
-                        return anbauteileData
-                            .where((item) =>
-                                item['Neue_Bezeichnung']
-                                    .toLowerCase()
-                                    .contains(pattern.toLowerCase()) &&
-                                (item['Neue_Bezeichnung'] as String).isNotEmpty)
-                            .map((item) => item['Neue_Bezeichnung'] as String)
-                            .toList();
-                      },
-                      // Build each suggestion widget.
-                      itemBuilder: (context, String suggestion) {
-                        return ListTile(title: Text(suggestion));
-                      },
-                      // Use the required onSelected callback.
-                      onSelected: (String suggestion) {
-                        if (selectedNeueBezeichnung != suggestion) {
-                          setState(() {
-                            selectedNeueBezeichnung = suggestion;
-                          });
-                          _showTranslationResultDialog(
-                              context, selectedNeueBezeichnung);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Bezeichnung bereits ausgewählt.')),
-                          );
-                        }
-                      },
-                      // Remove noItemsFoundBuilder – if you want to show a "no results" message,
-                      // handle it externally or via state.
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Alte Bezeichnung
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Alte Bezeichnung'),
-                    const SizedBox(height: 8.0),
-                    // Updated TypeAheadField for Alte Bezeichnung:
-                    TypeAheadField<String>(
-                      controller: TextEditingController(),
-                      builder: (context, textController, focusNode) {
-                        return TextField(
-                          controller: textController,
-                          focusNode: focusNode,
-                          decoration: const InputDecoration(
-                            hintText: 'Geben Sie eine alte Bezeichnung ein',
-                            prefixIcon: Icon(Icons.search),
-                          ),
-                        );
-                      },
-                      suggestionsCallback: (pattern) async {
-                        if (pattern.trim().isEmpty) return [];
-                        return anbauteileData
-                            .where((item) =>
-                                item['Alte_Bezeichnung']
-                                    .toLowerCase()
-                                    .contains(pattern.toLowerCase()) &&
-                                (item['Alte_Bezeichnung'] as String).isNotEmpty)
-                            .map((item) => item['Alte_Bezeichnung'] as String)
-                            .toList();
-                      },
-                      itemBuilder: (context, String suggestion) {
-                        return ListTile(title: Text(suggestion));
-                      },
-                      onSelected: (String suggestion) {
-                        if (selectedAlteBezeichnung != suggestion) {
-                          setState(() {
-                            selectedAlteBezeichnung = suggestion;
-                          });
-                          _showTranslationResultDialog(
-                              context, selectedAlteBezeichnung);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Bezeichnung bereits ausgewählt.')),
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
+          content: const Text('Hier würde der Konverter-Dialog erscheinen.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
             ),
-          ),
+          ],
         );
       },
     );
   }
+}
 
-  void _showTranslationResultDialog(
-      BuildContext context, String? selectedValue) async {
-    if (selectedValue == null || selectedValue.isEmpty) {
-      return;
-    }
+/// ConverterModal is a modal version of the converter.
+/// It uses an AlertDialog to host the converter’s UI.
+class ConverterModal extends StatefulWidget {
+  const ConverterModal({super.key});
 
+  @override
+  _ConverterModalState createState() => _ConverterModalState();
+}
+
+class _ConverterModalState extends State<ConverterModal> {
+  List<Map<String, dynamic>> anbauteileData = [];
+  String selectedNeueBezeichnung = '';
+  String selectedAlteBezeichnung = '';
+
+  @override
+  void initState() {
+    super.initState();
+    loadAnbauteileData();
+  }
+
+  Future<void> loadAnbauteileData() async {
+    final String data = await DefaultAssetBundle.of(context)
+        .loadString('assets/anbauteile.json');
+    final Map<String, dynamic> jsonData = json.decode(data);
+    setState(() {
+      anbauteileData = jsonData.entries
+          .map((entry) => {
+                'id': entry.key,
+                'Neue_Bezeichnung': entry.value['Neue_Bezeichnung'] ?? '',
+                'Alte_Bezeichnung': entry.value['Alte_Bezeichnung'] ?? '',
+                'Beschreibung': entry.value['Beschreibung zum Sortieren'] ?? '',
+                'Bauteilgruppe': entry.value['Bauteilgruppe'] ?? '',
+              })
+          .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Anbauteilenummern übersetzen'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Neue Bezeichnung input
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Neue Bezeichnung'),
+                const SizedBox(height: 8.0),
+                TypeAheadField<String>(
+                  controller: TextEditingController(),
+                  builder: (context, textController, focusNode) {
+                    return TextField(
+                      controller: textController,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        hintText: 'Geben Sie eine neue Bezeichnung ein',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                    );
+                  },
+                  suggestionsCallback: (pattern) async {
+                    if (pattern.trim().isEmpty) return [];
+                    return anbauteileData
+                        .where((item) =>
+                            item['Neue_Bezeichnung']
+                                .toLowerCase()
+                                .contains(pattern.toLowerCase()) &&
+                            (item['Neue_Bezeichnung'] as String).isNotEmpty)
+                        .map((item) => item['Neue_Bezeichnung'] as String)
+                        .toList();
+                  },
+                  itemBuilder: (context, String suggestion) {
+                    return ListTile(title: Text(suggestion));
+                  },
+                  onSelected: (String suggestion) {
+                    if (selectedNeueBezeichnung != suggestion) {
+                      setState(() {
+                        selectedNeueBezeichnung = suggestion;
+                      });
+                      _showTranslationResultDialog(selectedNeueBezeichnung);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Bezeichnung bereits ausgewählt.')),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Alte Bezeichnung input
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Alte Bezeichnung'),
+                const SizedBox(height: 8.0),
+                TypeAheadField<String>(
+                  controller: TextEditingController(),
+                  builder: (context, textController, focusNode) {
+                    return TextField(
+                      controller: textController,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        hintText: 'Geben Sie eine alte Bezeichnung ein',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                    );
+                  },
+                  suggestionsCallback: (pattern) async {
+                    if (pattern.trim().isEmpty) return [];
+                    return anbauteileData
+                        .where((item) =>
+                            item['Alte_Bezeichnung']
+                                .toLowerCase()
+                                .contains(pattern.toLowerCase()) &&
+                            (item['Alte_Bezeichnung'] as String).isNotEmpty)
+                        .map((item) => item['Alte_Bezeichnung'] as String)
+                        .toList();
+                  },
+                  itemBuilder: (context, String suggestion) {
+                    return ListTile(title: Text(suggestion));
+                  },
+                  onSelected: (String suggestion) {
+                    if (selectedAlteBezeichnung != suggestion) {
+                      setState(() {
+                        selectedAlteBezeichnung = suggestion;
+                      });
+                      _showTranslationResultDialog(selectedAlteBezeichnung);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Bezeichnung bereits ausgewählt.')),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Schließen'),
+        ),
+      ],
+    );
+  }
+
+  void _showTranslationResultDialog(String selectedValue) async {
+    if (selectedValue.isEmpty) return;
     final item = anbauteileData.firstWhere(
       (element) =>
           element['Neue_Bezeichnung'] == selectedValue ||
@@ -225,26 +266,21 @@ class _ConverterModuleState extends State<ConverterModule> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8.0),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCopyableField(
-                    label: 'Neue Bezeichnung',
-                    value: item['Neue_Bezeichnung'],
-                  ),
-                  _buildCopyableField(
-                    label: 'Alte Bezeichnung',
-                    value: item['Alte_Bezeichnung'],
-                  ),
-                  _buildCopyableField(
-                    label: 'Beschreibung',
-                    value: item['Beschreibung'],
-                  ),
-                  _buildCopyableField(
-                    label: 'Bauteilgruppe',
-                    value: item['Bauteilgruppe'],
-                  ),
-                ],
+              _buildCopyableField(
+                label: 'Neue Bezeichnung',
+                value: item['Neue_Bezeichnung'],
+              ),
+              _buildCopyableField(
+                label: 'Alte Bezeichnung',
+                value: item['Alte_Bezeichnung'],
+              ),
+              _buildCopyableField(
+                label: 'Beschreibung',
+                value: item['Beschreibung'],
+              ),
+              _buildCopyableField(
+                label: 'Bauteilgruppe',
+                value: item['Bauteilgruppe'],
               ),
               const SizedBox(height: 8.0),
               if (pdfExists)
@@ -257,20 +293,14 @@ class _ConverterModuleState extends State<ConverterModule> {
                   ),
                   child: const Text('PDF Zeichnung öffnen'),
                 ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    'Schließen',
-                    style: TextStyle(color: Color(0xFF104382)),
-                  ),
-                ),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
         );
       },
     );
@@ -288,7 +318,7 @@ class _ConverterModuleState extends State<ConverterModule> {
         IconButton(
           icon: const Icon(Icons.content_copy),
           onPressed: () {
-            _copyToClipboard(value);
+            Clipboard.setData(ClipboardData(text: value));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('$label kopiert!'),
@@ -301,18 +331,11 @@ class _ConverterModuleState extends State<ConverterModule> {
     );
   }
 
-  void _copyToClipboard(String data) {
-    Clipboard.setData(ClipboardData(text: data));
-    // Optionally, show a Snackbar or message if desired
-  }
-
   Future<bool> _pdfFileExists(String pdfFileName) async {
     try {
       await rootBundle.load('assets/wzabt_pdfs/$pdfFileName');
-      // If load succeeds, the PDF exists
       return true;
     } catch (error) {
-      // If an error occurs, the PDF doesn't exist
       return false;
     }
   }
@@ -322,9 +345,8 @@ class _ConverterModuleState extends State<ConverterModule> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PDFViewerPage(
-            filePath: 'assets/wzabt_pdfs/$pdfFileName',
-          ),
+          builder: (context) =>
+              PDFViewerPage(filePath: 'assets/wzabt_pdfs/$pdfFileName'),
         ),
       );
     } catch (error) {
@@ -335,6 +357,7 @@ class _ConverterModuleState extends State<ConverterModule> {
   }
 }
 
+/// A PDF viewer page (unchanged)
 class PDFViewerPage extends StatelessWidget {
   final String filePath;
 

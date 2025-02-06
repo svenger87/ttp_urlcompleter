@@ -17,18 +17,15 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:ttp_app/modules/torsteuerung_module.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
 
 import '../modules/webview_module.dart';
 import 'package:ttp_app/constants.dart';
-import 'package:ttp_app/widgets/drawer_widget.dart';
+import 'package:ttp_app/widgets/drawer_widget.dart'; // Import to use getModuleCategories and ModuleItem.
 import '../modules/suggestions_module.dart';
 
-// ----------------------------
-// Model class for Machine
-// ----------------------------
+// Model class for Machine.
 class Machine {
   final String number;
   final String salamandermachinepitch;
@@ -52,9 +49,7 @@ class Machine {
   }
 }
 
-// ----------------------------
-// Parsing Functions
-// ----------------------------
+// Top-level Parsing Functions.
 List<String> parseAreaCenters(String responseBody) {
   final data = json.decode(responseBody) as List<dynamic>;
   return data.map((e) => e['name'].toString()).toList();
@@ -87,9 +82,7 @@ List<String> parseEmployees(String responseBody) {
       .toList();
 }
 
-// ----------------------------
-// Updated API Fetch Functions (using compute)
-// ----------------------------
+// Updated API Fetch Functions Using compute.
 Future<List<String>> _fetchAreaCenters() async {
   final response = await http.get(
     Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
@@ -156,23 +149,23 @@ Future<List<String>> _fetchEmployees() async {
   throw Exception('Failed to fetch employees');
 }
 
-// ----------------------------
-// Helper class for Favorites
-// ----------------------------
-class FavoriteModule {
-  final String title;
-  final Widget icon;
-  final VoidCallback onTap;
-  FavoriteModule({
-    required this.title,
-    required this.icon,
-    required this.onTap,
-  });
+// List of favorite module titles.
+List<String> _favoriteTitles = [];
+
+Future<void> _saveFavorites() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('favorites', _favoriteTitles);
+  } catch (e) {
+    if (kDebugMode) print('Error saving favorites: $e');
+  }
 }
 
-// ----------------------------
-// Main Page: NumberInputPage
-// ----------------------------
+/// Helper to flatten a list of ModuleCategory into a list of ModuleItem.
+List<ModuleItem> flattenCategories(List<ModuleCategory> categories) {
+  return categories.expand((cat) => cat.items).toList();
+}
+
 class NumberInputPage extends StatefulWidget {
   const NumberInputPage({super.key});
 
@@ -185,7 +178,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   final TextEditingController _numberController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Scanner
+  // Scanner.
   final MobileScannerController mobileScannerController =
       MobileScannerController();
 
@@ -194,7 +187,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> recentItems = [];
   List<String> profileSuggestions = [];
 
-  // Data lists
+  // Data lists.
   List<String> areaCenters = [];
   List<String> lines = [];
   List<String> tools = [];
@@ -203,18 +196,15 @@ class _NumberInputPageState extends State<NumberInputPage>
   List<String> employees = [];
   bool isDataLoaded = false;
 
-  // Mapping
+  // Mapping.
   Map<String, String> machinePitchToLineMap = {};
-
-  // ----------------------------
-  // Favorites list (initially empty)
-  final List<FavoriteModule> _favorites = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadRecentItems();
+    _loadFavorites();
     _preloadData();
   }
 
@@ -234,6 +224,18 @@ class _NumberInputPageState extends State<NumberInputPage>
       mobileScannerController.stop();
     } else if (state == AppLifecycleState.resumed) {
       mobileScannerController.start();
+    }
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedFavs = prefs.getStringList('favorites') ?? [];
+      setState(() {
+        _favoriteTitles = savedFavs;
+      });
+    } catch (e) {
+      if (kDebugMode) print('Error loading favorites: $e');
     }
   }
 
@@ -326,10 +328,62 @@ class _NumberInputPageState extends State<NumberInputPage>
     });
   }
 
-  /// ----------------------------
+  /// Show a dialog to add a favorite.
+  /// Uses the global list of available modules from the drawer (flattened from categories).
+  void _showAddFavoriteDialog() {
+    // Get the available modules by flattening the categories.
+    final modules = flattenCategories(getModuleCategories(context))
+      ..sort((a, b) => a.title.compareTo(b.title));
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return SimpleDialog(
+          title: const Text('Favoriten hinzufügen'),
+          children: modules.map((module) {
+            return SimpleDialogOption(
+              onPressed: () {
+                if (!_favoriteTitles.contains(module.title)) {
+                  setState(() {
+                    _favoriteTitles.add(module.title);
+                    _favoriteTitles.sort((a, b) => a.compareTo(b));
+                  });
+                  _saveFavorites();
+                }
+                Navigator.pop(ctx);
+              },
+              child: Row(
+                children: [
+                  module.icon,
+                  const SizedBox(width: 12),
+                  Text(module.title),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
   /// Favorites area widget.
-  /// ----------------------------
   Widget _buildFavoritesArea() {
+    // Get the complete list of available modules.
+    final availableModules = flattenCategories(getModuleCategories(context));
+    // Filter and order only those that are favorites (using _favoriteTitles order).
+    final favoriteModules = _favoriteTitles.map((title) {
+      return availableModules.firstWhere(
+        (module) => module.title == title,
+        orElse: () => ModuleItem(
+          title: title,
+          icon: const Icon(Icons.star),
+          onTap: () {},
+        ),
+      );
+    }).toList();
+
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final tileColor = isDarkMode ? Colors.grey[800] : Colors.grey[200];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -350,134 +404,182 @@ class _NumberInputPageState extends State<NumberInputPage>
             ],
           ),
         ),
-        // Horizontal list of favorite modules.
+        // Horizontal reorderable list of favorite modules.
         SizedBox(
           height: 100,
-          child: ListView.separated(
+          child: ReorderableListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _favorites.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final fav = _favorites[index];
-              return GestureDetector(
-                onTap: fav.onTap,
-                child: Container(
-                  width: 80,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      fav.icon,
-                      const SizedBox(height: 8),
-                      Text(
-                        fav.title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 12),
+            buildDefaultDragHandles: false, // Disable the default drag handle.
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--;
+                final String movedItem = _favoriteTitles.removeAt(oldIndex);
+                _favoriteTitles.insert(newIndex, movedItem);
+              });
+              _saveFavorites();
+            },
+            children: List.generate(favoriteModules.length, (index) {
+              final fav = favoriteModules[index];
+              return Padding(
+                key: ValueKey(_favoriteTitles[index]),
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: ReorderableDragStartListener(
+                  index: index,
+                  // The ReorderableDragStartListener will start dragging on a long press.
+                  child: GestureDetector(
+                    onTap: fav.onTap,
+                    // You can choose to use onLongPress for deletion or let the drag be initiated.
+                    // If you want to differentiate deletion from dragging, you might use a separate
+                    // onLongPressEnd or a dedicated delete icon.
+                    // For this example, we'll assume that a long press (without dragging) shows a delete dialog.
+                    onLongPress: () async {
+                      // Show a delete confirmation dialog on long press (if the user isn't dragging).
+                      final shouldDelete = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text("Favorit entfernen"),
+                          content: Text(
+                              "Möchten Sie '${fav.title}' aus den Favoriten entfernen?"),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text("Abbrechen"),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text("Löschen"),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (shouldDelete == true) {
+                        setState(() {
+                          _favoriteTitles.removeAt(index);
+                        });
+                        _saveFavorites();
+                      }
+                    },
+                    child: Container(
+                      width: 80,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: tileColor,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          fav.icon,
+                          const SizedBox(height: 8),
+                          Text(
+                            fav.title,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               );
-            },
+            }),
           ),
         ),
       ],
     );
   }
 
-  /// Show a dialog to add a favorite.
-  /// (For simplicity, we provide a fixed list of available modules.)
-  void _showAddFavoriteDialog() {
-    // A list of available modules.
-    final availableModules = <FavoriteModule>[
-      FavoriteModule(
-        title: 'Störfall anlegen',
-        icon: const Icon(Icons.add_alert, size: 32, color: Colors.red),
-        onTap: _openIssueModal,
-      ),
-      FavoriteModule(
-        title: 'Torsteuerung',
-        icon: const Icon(Icons.door_sliding, size: 32),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  const TorsteuerungModule(initialUrl: 'https://google.de'),
-            ),
-          );
-        },
-      ),
-      // Add more available modules as needed…
-    ];
+  void _processScannedData(String scannedData) {
+    String fullUrl = scannedData;
+    if (scannedData.length == 5) {
+      fullUrl = 'https://wim-solution.sip.local:8081/$scannedData';
+    }
+    String codeToUse;
+    try {
+      final uri = Uri.parse(scannedData);
+      codeToUse =
+          uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
+    } catch (_) {
+      codeToUse = scannedData;
+    }
+    _showOptionsModal(fullUrl, codeToUse);
 
+    scanTimer = Timer(const Duration(seconds: 3), () {
+      setState(() => hasScanned = false);
+    });
+  }
+
+  void _showOptionsModal(String fullUrl, String codeToUse) {
     showDialog(
       context: context,
-      builder: (ctx) {
-        return SimpleDialog(
-          title: const Text('Favoriten hinzufügen'),
-          children: availableModules.map((module) {
-            return SimpleDialogOption(
-              onPressed: () {
-                setState(() {
-                  // Add if not already present.
-                  if (!_favorites.any((fav) => fav.title == module.title)) {
-                    _favorites.add(module);
-                  }
-                });
-                Navigator.pop(ctx);
+      builder: (_) => AlertDialog(
+        title: const Text(
+          'Wählen Sie eine Aktion aus',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.open_in_browser),
+              title: const Text('Werkzeug- oder Maschinendetails öffnen'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToUrl(fullUrl);
               },
-              child: Row(
-                children: [
-                  module.icon,
-                  const SizedBox(width: 12),
-                  Text(module.title),
-                ],
-              ),
-            );
-          }).toList(),
-        );
-      },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.add_alert),
+              title: const Text('Störfall anlegen'),
+              onTap: () {
+                Navigator.pop(context);
+                _reportIssue(codeToUse);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  /// Open the Issue Modal directly (without scanning) using a dummy code.
-  void _openIssueModal() {
-    // Here we use an empty code or a placeholder.
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: CreateIssueModal(
-            scannedCode: '',
-            selectedToolBreakdown: null,
-            selectedMachineNumber: null,
-            selectedMachinePitch: null,
-            correspondingLine: null,
-            areaCenters: areaCenters,
-            lines: lines,
-            tools: tools,
-            machines: machines,
-            materials: materials,
-            employees: employees,
-            machinePitchToLineMap: machinePitchToLineMap,
-          ),
-        );
-      },
+  void _navigateToUrl(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WebViewModule(url: url)),
     );
   }
 
-  // ----------------------------
-  // Build method.
-  // ----------------------------
+  void _openUrlWithNumber() async {
+    final number = _numberController.text.trim().toUpperCase();
+    if (number.isNotEmpty) {
+      final url = '$wim/$number';
+      if (await canLaunch(url)) {
+        _navigateToUrl(url);
+        _addRecentItem(url);
+      } else {
+        if (kDebugMode) print('Could not launch $url');
+      }
+    }
+  }
+
+  void _addRecentItem(String url) async {
+    final uri = Uri.parse(url);
+    final profileNum = uri.pathSegments.last;
+
+    setState(() {
+      if (!recentItems.contains(profileNum)) {
+        recentItems.insert(0, profileNum);
+        if (recentItems.length > 10) {
+          recentItems.removeLast();
+        }
+      }
+    });
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('recentItems', recentItems);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!isDataLoaded) {
@@ -587,133 +689,14 @@ class _NumberInputPageState extends State<NumberInputPage>
                 },
               ),
             ),
-            // Favorites area added here.
+            // Favorites area.
             _buildFavoritesArea(),
-            // IKOffice link cards.
-            _buildLinkCard('PZE', ikOfficePZE),
-            _buildLinkCard('Linienkonfiguration', ikOfficeLineConfig),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLinkCard(String title, String url) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => WebViewModule(url: url)),
-            );
-          },
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset('assets/IKOffice.ico', width: 72, height: 72),
-              const SizedBox(width: 16),
-              Text(title),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _processScannedData(String scannedData) {
-    String fullUrl = scannedData;
-    if (scannedData.length == 5) {
-      fullUrl = 'https://wim-solution.sip.local:8081/$scannedData';
-    }
-    String codeToUse;
-    try {
-      final uri = Uri.parse(scannedData);
-      codeToUse =
-          uri.pathSegments.isNotEmpty ? uri.pathSegments.last : scannedData;
-    } catch (_) {
-      codeToUse = scannedData;
-    }
-    _showOptionsModal(fullUrl, codeToUse);
-
-    scanTimer = Timer(const Duration(seconds: 3), () {
-      setState(() => hasScanned = false);
-    });
-  }
-
-  void _showOptionsModal(String fullUrl, String codeToUse) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text(
-          'Wählen Sie eine Aktion aus',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.open_in_browser),
-              title: const Text('Werkzeug- oder Maschinendetails öffnen'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToUrl(fullUrl);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.add_alert),
-              title: const Text('Störfall anlegen'),
-              onTap: () {
-                Navigator.pop(context);
-                _reportIssue(codeToUse);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _navigateToUrl(String url) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => WebViewModule(url: url)),
-    );
-  }
-
-  void _openUrlWithNumber() async {
-    final number = _numberController.text.trim().toUpperCase();
-    if (number.isNotEmpty) {
-      final url = '$wim/$number';
-      if (await canLaunch(url)) {
-        _navigateToUrl(url);
-        _addRecentItem(url);
-      } else {
-        if (kDebugMode) print('Could not launch $url');
-      }
-    }
-  }
-
-  void _addRecentItem(String url) async {
-    final uri = Uri.parse(url);
-    final profileNum = uri.pathSegments.last;
-
-    setState(() {
-      if (!recentItems.contains(profileNum)) {
-        recentItems.insert(0, profileNum);
-        if (recentItems.length > 10) {
-          recentItems.removeLast();
-        }
-      }
-    });
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setStringList('recentItems', recentItems);
-  }
-
-  /// Called when user chooses “Störfall anlegen” for a scanned code.
   void _reportIssue(String scannedCode) {
     if (kDebugMode) {
       print('Reporting issue for: $scannedCode');
@@ -747,7 +730,6 @@ class _NumberInputPageState extends State<NumberInputPage>
       }
     }
 
-    // If machine found, find line via machinePitchToLineMap.
     if (selectedMachineNumber != null) {
       final key = selectedMachineNumber.trim().toUpperCase();
       correspondingLine = machinePitchToLineMap[key];
@@ -826,9 +808,7 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 }
 
-/// ----------------------------
 /// Modal for creating an issue.
-/// ----------------------------
 class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
@@ -891,7 +871,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   @override
   void initState() {
     super.initState();
-
     if (widget.selectedToolBreakdown?.isNotEmpty ?? false) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
@@ -907,7 +886,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     if (widget.selectedMachinePitch?.isNotEmpty ?? false) {
       selectedMachinePitch = widget.selectedMachinePitch;
     }
-
     _commentController = TextEditingController(text: '');
     commentFocusNode = FocusNode();
   }
@@ -1411,9 +1389,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   }
 }
 
-/// ----------------------------
 /// Overlay for scan window.
-/// ----------------------------
 class ScanWindowOverlay extends StatelessWidget {
   final Rect scanWindow;
   const ScanWindowOverlay({super.key, required this.scanWindow});
