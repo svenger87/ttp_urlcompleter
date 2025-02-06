@@ -28,11 +28,14 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
 
   bool _isProvidedCollapsed = true;
   bool _isForecastCollapsed = false;
+  bool _isProvidedWithoutOrdersCollapsed =
+      true; // New panel is collapsed by default
 
-  // We store the separated data for Provided and Forecast in state,
+  // We store the separated data for Provided, Forecast and Provided Without Orders in state,
   // so we can sort them as needed.
   late List<Map<String, dynamic>> _providedData;
   late List<Map<String, dynamic>> _forecastData;
+  late List<Map<String, dynamic>> _providedWithoutOrdersData;
 
   // Track which column is sorted and ascending/descending for provided data
   int _sortColumnIndexProvided = 0; // Default to Starttermin column index
@@ -41,6 +44,10 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
   // Track which column is sorted and ascending/descending for forecast data
   int _sortColumnIndexForecast = 0; // Default to Starttermin column index
   bool _sortAscendingForecast = true; // Default ascending
+
+  // Track which column is sorted and ascending/descending for provided without orders data
+  int _sortColumnIndexProvidedWithoutOrders = 0;
+  bool _sortAscendingProvidedWithoutOrders = true;
 
   @override
   void initState() {
@@ -51,9 +58,34 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     _forecastData =
         widget.forecastData.where((tool) => tool['provided'] != true).toList();
 
-    // Default sort by Starttermin (column index 0) ascending
+    // Create the new list: provided tools without production orders.
+    // Here we assume that if the tool contains a non-empty 'Auftragsnummer' key, it has a production order.
+    // Also, exclude tools whose PlanStartDatum falls into the current week.
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+
+    _providedWithoutOrdersData = _providedData.where((tool) {
+      // Check for a production order
+      bool hasOrder = tool.containsKey('Auftragsnummer') &&
+          tool['Auftragsnummer'] != null &&
+          tool['Auftragsnummer'].toString().trim().isNotEmpty;
+
+      // Check if the tool's PlanStartDatum falls in the current week
+      final toolDate = _tryParseDate(tool['PlanStartDatum']);
+      bool inCurrentWeek =
+          toolDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+              toolDate.isBefore(endOfWeek.add(const Duration(days: 1)));
+
+      // Include the tool only if it does NOT have a production order and is not in the current week.
+      return !hasOrder && !inCurrentWeek;
+    }).toList();
+
+    // Default sort by Starttermin (column index 0) ascending for all tables
     _sortProvidedData(_sortColumnIndexProvided, _sortAscendingProvided);
     _sortForecastData(_sortColumnIndexForecast, _sortAscendingForecast);
+    _sortProvidedWithoutOrdersData(_sortColumnIndexProvidedWithoutOrders,
+        _sortAscendingProvidedWithoutOrders);
   }
 
   @override
@@ -77,6 +109,7 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
           children: [
             _buildProvidedSection(),
             _buildForecastSection(),
+            _buildProvidedWithoutOrdersSection(), // New section added here
           ],
         ),
       ),
@@ -121,6 +154,8 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
                   columnSpacing: 20,
                   columns: _buildColumns(
                     isProvidedTable: true,
+                    onSort: (columnIndex, ascending) =>
+                        _sortProvidedData(columnIndex, ascending),
                   ),
                   rows:
                       _providedData.map((tool) => _buildDataRow(tool)).toList(),
@@ -172,6 +207,8 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
                   columnSpacing: 20,
                   columns: _buildColumns(
                     isProvidedTable: false,
+                    onSort: (columnIndex, ascending) =>
+                        _sortForecastData(columnIndex, ascending),
                   ),
                   rows:
                       _forecastData.map((tool) => _buildDataRow(tool)).toList(),
@@ -185,116 +222,123 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     );
   }
 
+  // -- Provided Without Orders Section
+
+  Widget _buildProvidedWithoutOrdersSection() {
+    if (kDebugMode) {
+      print(
+        "Provided Without Orders Data includes: ${_providedWithoutOrdersData.map((tool) => tool['Equipment']).toList()}",
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: ExpansionPanelList(
+        expansionCallback: (int index, bool isExpanded) {
+          setState(() {
+            _isProvidedWithoutOrdersCollapsed = !isExpanded;
+          });
+        },
+        children: [
+          ExpansionPanel(
+            headerBuilder: (BuildContext context, bool isExpanded) {
+              return const ListTile(
+                title: Text(
+                  'Bereitgestellte Werkzeuge ohne Produktionsaufträge\nab nächster Woche',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              );
+            },
+            body: Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  sortColumnIndex: _sortColumnIndexProvidedWithoutOrders,
+                  sortAscending: _sortAscendingProvidedWithoutOrders,
+                  showCheckboxColumn: false,
+                  columnSpacing: 20,
+                  columns: _buildColumns(
+                    isProvidedTable: true,
+                    onSort: (columnIndex, ascending) =>
+                        _sortProvidedWithoutOrdersData(columnIndex, ascending),
+                  ),
+                  rows: _providedWithoutOrdersData
+                      .map((tool) => _buildDataRow(tool))
+                      .toList(),
+                ),
+              ),
+            ),
+            isExpanded: !_isProvidedWithoutOrdersCollapsed,
+          ),
+        ],
+      ),
+    );
+  }
+
   // -- Build Columns
 
-  /// The only difference between the Provided and Forecast tables is which data
-  /// list they sort. So we use `isProvidedTable` to distinguish in [onSort].
-  List<DataColumn> _buildColumns({required bool isProvidedTable}) {
+  /// Build columns and accept an onSort callback.
+  List<DataColumn> _buildColumns({
+    required bool isProvidedTable,
+    required void Function(int columnIndex, bool ascending) onSort,
+  }) {
     return [
       DataColumn(
         label: const Text(
           'Starttermin',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        // We set the onSort callback for each column
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
       DataColumn(
         label: const Text(
           'Bereitstellung',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
       DataColumn(
         label: const Text(
           'Hauptartikel',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
       DataColumn(
         label: const Text(
           'Werkzeug',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
       DataColumn(
         label: const Text(
           'Arbeitsplatz',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
       DataColumn(
         label: const Text(
           'Längswzgr',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
       DataColumn(
         label: const Text(
           'Verpwzgr',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
       DataColumn(
         label: const Text(
           'Status',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        onSort: (columnIndex, ascending) {
-          if (isProvidedTable) {
-            _sortProvidedData(columnIndex, ascending);
-          } else {
-            _sortForecastData(columnIndex, ascending);
-          }
-        },
+        onSort: onSort,
       ),
     ];
   }
@@ -321,6 +365,17 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     });
   }
 
+  /// Sort the Provided Without Orders Data
+  void _sortProvidedWithoutOrdersData(int columnIndex, bool ascending) {
+    setState(() {
+      _sortColumnIndexProvidedWithoutOrders = columnIndex;
+      _sortAscendingProvidedWithoutOrders = ascending;
+
+      _providedWithoutOrdersData
+          .sort((a, b) => _compareCells(a, b, columnIndex, ascending));
+    });
+  }
+
   /// A helper method to compare row data based on which column was tapped.
   int _compareCells(
     Map<String, dynamic> a,
@@ -338,16 +393,11 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         compareResult = dateA.compareTo(dateB);
         break;
 
-      // Bereitstellung
+      // Bereitstellung (boolean comparison)
       case 1:
-        // This is a boolean comparison: 'provided' = true/false
         final bool valA = (a['provided'] == true);
         final bool valB = (b['provided'] == true);
-        compareResult = valA == valB
-            ? 0
-            : (valA
-                ? 1
-                : -1); // you could also invert if you prefer false first
+        compareResult = valA == valB ? 0 : (valA ? 1 : -1);
         break;
 
       // Hauptartikel
@@ -455,7 +505,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     bool isInactive,
     List<DataCell> cells,
   ) {
-    // Always print something when the method is called, so we know it's invoked.
     if (kDebugMode) {
       print(
         '[DEBUG] _buildPulsatingRow called. '
@@ -469,7 +518,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     final bool isFreeStatusBlue =
         (tool['freestatus_id'] == 37 || tool['freestatus_id'] == 133);
 
-    // If the tool is inactive, return a red pulsating row.
     if (isInactive) {
       if (kDebugMode) {
         print('[DEBUG] --> Using RED pulsating row (tool is inactive).');
@@ -497,27 +545,23 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         }).toList(),
         color: MaterialStateProperty.resolveWith<Color?>(
           (Set<MaterialState> states) {
-            return Colors.red.withOpacity(0.3); // Highlight in red for inactive
+            return Colors.red.withOpacity(0.3);
           },
         ),
       );
-    }
-    // Else if freestatus_id = 37 or 133, highlight in blueAccent.
-    else if (isFreeStatusBlue) {
+    } else if (isFreeStatusBlue) {
       if (kDebugMode) {
         print('[DEBUG] --> Using BLUE accent row (freestatus_id = 37 or 133).');
       }
       return DataRow(
         color: MaterialStateProperty.resolveWith<Color?>(
           (Set<MaterialState> states) {
-            return Colors.blueAccent.withOpacity(0.3); // Highlight in blue
+            return Colors.blueAccent.withOpacity(0.3);
           },
         ),
         cells: cells,
       );
-    }
-    // Else if "highlightRow" is true, highlight in orange.
-    else if (highlightRow) {
+    } else if (highlightRow) {
       if (kDebugMode) {
         print('[DEBUG] --> Using ORANGE highlight row (highlightRow=true).');
       }
@@ -529,9 +573,7 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         ),
         cells: cells,
       );
-    }
-    // Otherwise, no special highlight.
-    else {
+    } else {
       if (kDebugMode) {
         print('[DEBUG] --> Using NO special highlight.');
       }

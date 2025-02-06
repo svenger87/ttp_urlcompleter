@@ -32,9 +32,14 @@ class PredefinedTextNode {
   }
 }
 
+/// A simple model to hold both versions of a structured comment.
+class StructuredComment {
+  final String plain;
+  final String html;
+  StructuredComment({required this.plain, required this.html});
+}
+
 /// Change this URL to your actual backend endpoint.
-/// Make sure your backend sorts root nodes by sort_order
-/// and children by sort_order as well.
 const String suggestionsApiUrl =
     'http://wim-solution.sip.local:3006/suggestions';
 
@@ -53,7 +58,7 @@ Future<List<PredefinedTextNode>> fetchPredefinedTexts() async {
 
 /// A modal widget that allows the user to either enter custom text
 /// or navigate a sorted tree of suggestions. Tapping a leaf will
-/// build a chain from the root (e.g., "Extrusion\n//Heizbänder\n//Heizband defekt\nBuchse abgerissen")
+/// build a chain from the root (e.g., "Extrusion\nHeizbänder\nHeizband defekt\nBuchse abgerissen")
 /// and prepend it to the comment text.
 class PredefinedTextsModal extends StatefulWidget {
   /// An optional initial text for the comment.
@@ -69,6 +74,10 @@ class PredefinedTextsModal extends StatefulWidget {
 class _PredefinedTextsModalState extends State<PredefinedTextsModal> {
   late TextEditingController _textController;
   late Future<List<PredefinedTextNode>> _futureNodes;
+  // Holds the HTML-formatted version of the suggestion.
+  String? _latestHtmlComment;
+  // Holds the plain text version.
+  String? _latestPlainComment;
 
   @override
   void initState() {
@@ -95,13 +104,24 @@ class _PredefinedTextsModalState extends State<PredefinedTextsModal> {
         onTap: () {
           // Find the path from root to this leaf.
           final path = _findPathToNode(allNodes, node.id);
-          // Build the comment string from the path.
-          final structuredComment = _buildStructuredComment(path);
+          // Build the plain text comment (for display in the text field).
+          final plainComment = _buildPlainStructuredComment(path);
+          // Build the HTML formatted comment (to send to the API).
+          final htmlComment = _buildHtmlStructuredComment(path);
 
           setState(() {
-            // Prepend it to the top of the existing comment.
+            // Prepend the plain text comment to the existing comment.
             final existingText = _textController.text;
-            _textController.text = '$structuredComment\n$existingText';
+            _textController.text = plainComment.isNotEmpty
+                ? '$plainComment\n$existingText'
+                : existingText;
+            // Store both versions.
+            _latestPlainComment = plainComment.isNotEmpty
+                ? '$plainComment\n${_latestPlainComment ?? ''}'
+                : _latestPlainComment;
+            _latestHtmlComment = htmlComment.isNotEmpty
+                ? '$htmlComment\n${_latestHtmlComment ?? ''}'
+                : _latestHtmlComment;
           });
         },
       );
@@ -183,8 +203,11 @@ class _PredefinedTextsModalState extends State<PredefinedTextsModal> {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: () {
-                    // Return the final comment.
-                    Navigator.of(context).pop(_textController.text);
+                    // Return a StructuredComment with both plain and HTML versions.
+                    Navigator.of(context).pop(StructuredComment(
+                      plain: _latestPlainComment ?? _textController.text,
+                      html: _latestHtmlComment ?? _textController.text,
+                    ));
                   },
                   child: const Text('Auswählen'),
                 ),
@@ -196,57 +219,71 @@ class _PredefinedTextsModalState extends State<PredefinedTextsModal> {
     );
   }
 
-  /// Builds a structured comment from the root path to the tapped leaf.
-  /// Example:
-  ///   If path = [Extrusion, Heizbänder, Heizband defekt] and
-  ///   text = 'Buchse abgerissen'
-  /// We produce:
-  ///   Extrusion
-  ///   //Heizbänder
-  ///   //Heizband defekt
-  ///   Buchse abgerissen
-  /// Builds a structured comment from the root path to the tapped leaf.
-  ///
-  /// Example:
-  ///   If path = [Extrusion, Heizbänder, Heizband defekt] and
-  ///       leaf.text = 'Buchse abgerissen'
-  ///   We produce:
-  ///       Extrusion
-  ///       // Heizbänder
-  ///       // Heizband defekt.
-  ///       Buchse abgerissen.
-  String _buildStructuredComment(List<PredefinedTextNode> path) {
+  /// Builds a plain-text structured comment from the root path to the tapped leaf.
+  /// No separators are added and no extra break appears at the end.
+  String _buildPlainStructuredComment(List<PredefinedTextNode> path) {
     if (path.isEmpty) return '';
 
-    final buffer = StringBuffer();
+    final List<String> lines = [];
 
-    // Print the root node's title (without any prefix).
-    buffer.writeln(path.first.title);
+    // Add the root node's title.
+    lines.add(path.first.title);
 
-    // Print all nodes except the leaf node.
+    // Add all intermediate nodes.
     for (int i = 1; i < path.length - 1; i++) {
-      buffer.writeln('// ${path[i].title}');
+      lines.add(path[i].title);
     }
 
     // Process the leaf node.
     final leaf = path.last;
-    // Always add a dot after the leaf's title.
-    final leafTitleWithDot = '${leaf.title.trim()}.';
-    buffer.writeln('// $leafTitleWithDot');
+    final leafTitle = leaf.title.trim();
+    final leafTitleWithDot =
+        leafTitle.endsWith('.') ? leafTitle : '$leafTitle.';
+    lines.add(leafTitleWithDot);
 
-    // If the leaf node has text, print it on its own line,
-    // appending a period if not already present.
+    // If the leaf node has associated text, add it as a separate line.
     if (leaf.text != null && leaf.text!.trim().isNotEmpty) {
       final leafText = leaf.text!.trim();
-      buffer.writeln(leafText.endsWith('.') ? leafText : '$leafText.');
+      final leafTextWithDot = leafText.endsWith('.') ? leafText : '$leafText.';
+      lines.add(leafTextWithDot);
     }
 
-    return buffer.toString();
+    return lines.join('\n');
+  }
+
+  /// Builds an HTML formatted structured comment from the root path to the tapped leaf.
+  /// No "//" separator is used and no trailing <br/> is added.
+  String _buildHtmlStructuredComment(List<PredefinedTextNode> path) {
+    if (path.isEmpty) return '';
+
+    final List<String> lines = [];
+
+    // Add the root node's title wrapped in <b> tags.
+    lines.add('<b>${path.first.title}</b>');
+
+    // Add all intermediate nodes wrapped in <b> tags.
+    for (int i = 1; i < path.length - 1; i++) {
+      lines.add('<b>${path[i].title}</b>');
+    }
+
+    // Process the leaf node.
+    final leaf = path.last;
+    final leafTitle = leaf.title.trim();
+    final leafTitleWithDot =
+        leafTitle.endsWith('.') ? leafTitle : '$leafTitle.';
+    lines.add('<b>$leafTitleWithDot</b>');
+
+    // If the leaf node has associated text, add it as plain text.
+    if (leaf.text != null && leaf.text!.trim().isNotEmpty) {
+      final leafText = leaf.text!.trim();
+      final leafTextWithDot = leafText.endsWith('.') ? leafText : '$leafText.';
+      lines.add(leafTextWithDot);
+    }
+
+    return lines.join('<br/>');
   }
 
   /// Finds the path from any top-level node to the specified nodeId.
-  /// If not found, returns an empty list.
-  /// The returned list is [root, child, ..., leaf].
   List<PredefinedTextNode> _findPathToNode(
       List<PredefinedTextNode> roots, String nodeId) {
     for (final root in roots) {
@@ -256,8 +293,7 @@ class _PredefinedTextsModalState extends State<PredefinedTextsModal> {
     return [];
   }
 
-  /// Recursively searches for nodeId starting at current node.
-  /// Returns the path if found, or empty list if not found.
+  /// Recursively searches for nodeId starting at the current node.
   List<PredefinedTextNode> _searchPath(
       PredefinedTextNode current, String nodeId) {
     if (current.id == nodeId) {
@@ -274,11 +310,11 @@ class _PredefinedTextsModalState extends State<PredefinedTextsModal> {
 }
 
 /// A helper function to show the predefined texts modal.
-/// Returns the comment (a [String]) that the user selected or typed,
+/// Returns a [StructuredComment] (both plain and HTML) that the user selected or typed,
 /// or null if the user cancelled.
-Future<String?> showPredefinedTextsModal(BuildContext context,
+Future<StructuredComment?> showPredefinedTextsModal(BuildContext context,
     {String initialText = ''}) {
-  return showModalBottomSheet<String>(
+  return showModalBottomSheet<StructuredComment>(
     context: context,
     isScrollControlled: true,
     builder: (ctx) => SizedBox(

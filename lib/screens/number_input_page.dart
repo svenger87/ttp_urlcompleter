@@ -17,6 +17,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:ttp_app/modules/torsteuerung_module.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vibration/vibration.dart';
 
@@ -25,7 +26,9 @@ import 'package:ttp_app/constants.dart';
 import 'package:ttp_app/widgets/drawer_widget.dart';
 import '../modules/suggestions_module.dart';
 
-/// Model class for Machine
+// ----------------------------
+// Model class for Machine
+// ----------------------------
 class Machine {
   final String number;
   final String salamandermachinepitch;
@@ -39,7 +42,6 @@ class Machine {
     required this.productionworkplaceNumber,
   });
 
-  /// Add a factory fromJson to parse machine data
   factory Machine.fromJson(Map<String, dynamic> json) {
     return Machine(
       number: json['number'] ?? '',
@@ -50,12 +52,9 @@ class Machine {
   }
 }
 
-//
-// ====================
-// Top-level Parsing Functions
-// ====================
-//
-
+// ----------------------------
+// Parsing Functions
+// ----------------------------
 List<String> parseAreaCenters(String responseBody) {
   final data = json.decode(responseBody) as List<dynamic>;
   return data.map((e) => e['name'].toString()).toList();
@@ -88,12 +87,9 @@ List<String> parseEmployees(String responseBody) {
       .toList();
 }
 
-//
-// ====================
-// Updated API Fetch Functions Using compute
-// ====================
-//
-
+// ----------------------------
+// Updated API Fetch Functions (using compute)
+// ----------------------------
 Future<List<String>> _fetchAreaCenters() async {
   final response = await http.get(
     Uri.parse('http://wim-solution.sip.local:3006/salamanderareacenter'),
@@ -160,6 +156,23 @@ Future<List<String>> _fetchEmployees() async {
   throw Exception('Failed to fetch employees');
 }
 
+// ----------------------------
+// Helper class for Favorites
+// ----------------------------
+class FavoriteModule {
+  final String title;
+  final Widget icon;
+  final VoidCallback onTap;
+  FavoriteModule({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+}
+
+// ----------------------------
+// Main Page: NumberInputPage
+// ----------------------------
 class NumberInputPage extends StatefulWidget {
   const NumberInputPage({super.key});
 
@@ -193,6 +206,10 @@ class _NumberInputPageState extends State<NumberInputPage>
   // Mapping
   Map<String, String> machinePitchToLineMap = {};
 
+  // ----------------------------
+  // Favorites list (initially empty)
+  final List<FavoriteModule> _favorites = [];
+
   @override
   void initState() {
     super.initState();
@@ -220,7 +237,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
-  /// Preload all necessary data
+  /// Preload all necessary data.
   void _preloadData() async {
     try {
       final fetchedAreaCenters = await _fetchAreaCenters();
@@ -239,7 +256,7 @@ class _NumberInputPageState extends State<NumberInputPage>
         materials = fetchedMaterials;
         isDataLoaded = true;
 
-        // Build the machine->line map
+        // Build the machine->line map.
         machinePitchToLineMap = _buildMachineToLineMap(lines, machines);
         if (kDebugMode) {
           print('Machine to Line Map: $machinePitchToLineMap');
@@ -252,7 +269,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     }
   }
 
-  /// Builds a mapping from machine number -> line
+  /// Builds a mapping from machine number -> line.
   Map<String, String> _buildMachineToLineMap(
       List<String> lines, List<Machine> machines) {
     Map<String, String> map = {};
@@ -280,7 +297,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     return map;
   }
 
-  /// Load recent items
+  /// Load recent items.
   void _loadRecentItems() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -309,6 +326,158 @@ class _NumberInputPageState extends State<NumberInputPage>
     });
   }
 
+  /// ----------------------------
+  /// Favorites area widget.
+  /// ----------------------------
+  Widget _buildFavoritesArea() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header with title and an add button.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              const Text(
+                'Favoriten',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: _showAddFavoriteDialog,
+              ),
+            ],
+          ),
+        ),
+        // Horizontal list of favorite modules.
+        SizedBox(
+          height: 100,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _favorites.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final fav = _favorites[index];
+              return GestureDetector(
+                onTap: fav.onTap,
+                child: Container(
+                  width: 80,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      fav.icon,
+                      const SizedBox(height: 8),
+                      Text(
+                        fav.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Show a dialog to add a favorite.
+  /// (For simplicity, we provide a fixed list of available modules.)
+  void _showAddFavoriteDialog() {
+    // A list of available modules.
+    final availableModules = <FavoriteModule>[
+      FavoriteModule(
+        title: 'Störfall anlegen',
+        icon: const Icon(Icons.add_alert, size: 32, color: Colors.red),
+        onTap: _openIssueModal,
+      ),
+      FavoriteModule(
+        title: 'Torsteuerung',
+        icon: const Icon(Icons.door_sliding, size: 32),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const TorsteuerungModule(initialUrl: 'https://google.de'),
+            ),
+          );
+        },
+      ),
+      // Add more available modules as needed…
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return SimpleDialog(
+          title: const Text('Favoriten hinzufügen'),
+          children: availableModules.map((module) {
+            return SimpleDialogOption(
+              onPressed: () {
+                setState(() {
+                  // Add if not already present.
+                  if (!_favorites.any((fav) => fav.title == module.title)) {
+                    _favorites.add(module);
+                  }
+                });
+                Navigator.pop(ctx);
+              },
+              child: Row(
+                children: [
+                  module.icon,
+                  const SizedBox(width: 12),
+                  Text(module.title),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  /// Open the Issue Modal directly (without scanning) using a dummy code.
+  void _openIssueModal() {
+    // Here we use an empty code or a placeholder.
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) {
+        return Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: CreateIssueModal(
+            scannedCode: '',
+            selectedToolBreakdown: null,
+            selectedMachineNumber: null,
+            selectedMachinePitch: null,
+            correspondingLine: null,
+            areaCenters: areaCenters,
+            lines: lines,
+            tools: tools,
+            machines: machines,
+            materials: materials,
+            employees: employees,
+            machinePitchToLineMap: machinePitchToLineMap,
+          ),
+        );
+      },
+    );
+  }
+
+  // ----------------------------
+  // Build method.
+  // ----------------------------
   @override
   Widget build(BuildContext context) {
     if (!isDataLoaded) {
@@ -418,6 +587,9 @@ class _NumberInputPageState extends State<NumberInputPage>
                 },
               ),
             ),
+            // Favorites area added here.
+            _buildFavoritesArea(),
+            // IKOffice link cards.
             _buildLinkCard('PZE', ikOfficePZE),
             _buildLinkCard('Linienkonfiguration', ikOfficeLineConfig),
           ],
@@ -541,7 +713,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     prefs.setStringList('recentItems', recentItems);
   }
 
-  /// Called when user chooses “Störfall anlegen” for a scanned code
+  /// Called when user chooses “Störfall anlegen” for a scanned code.
   void _reportIssue(String scannedCode) {
     if (kDebugMode) {
       print('Reporting issue for: $scannedCode');
@@ -556,7 +728,7 @@ class _NumberInputPageState extends State<NumberInputPage>
     String? selectedMachinePitch;
     String? correspondingLine;
 
-    // Match tool first
+    // Match tool first.
     for (var t in tools) {
       if (t.trim().toUpperCase() == normalized) {
         selectedToolBreakdown = t;
@@ -564,7 +736,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       }
     }
 
-    // If not a tool, check machines
+    // If not a tool, check machines.
     if (selectedToolBreakdown == null) {
       for (var m in machines) {
         if (m.number.trim().toUpperCase() == normalized) {
@@ -575,7 +747,7 @@ class _NumberInputPageState extends State<NumberInputPage>
       }
     }
 
-    // If machine found, find line via machinePitchToLineMap
+    // If machine found, find line via machinePitchToLineMap.
     if (selectedMachineNumber != null) {
       final key = selectedMachineNumber.trim().toUpperCase();
       correspondingLine = machinePitchToLineMap[key];
@@ -654,7 +826,9 @@ class _NumberInputPageState extends State<NumberInputPage>
   }
 }
 
-/// Modal for creating an issue (same code you provided, now inlined)
+/// ----------------------------
+/// Modal for creating an issue.
+/// ----------------------------
 class CreateIssueModal extends StatefulWidget {
   final String scannedCode;
   final String? selectedToolBreakdown;
@@ -700,6 +874,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   String? selectedMachinePitch;
   String? selectedMaterialBreakdown;
   String? selectedEmployee;
+  // This variable will hold the HTML version (to be submitted)
   String? workCardComment;
   String? imagePath;
 
@@ -717,7 +892,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   void initState() {
     super.initState();
 
-    // Prefill
     if (widget.selectedToolBreakdown?.isNotEmpty ?? false) {
       selectedToolBreakdown = widget.selectedToolBreakdown;
       toolController.text = selectedToolBreakdown!;
@@ -734,7 +908,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       selectedMachinePitch = widget.selectedMachinePitch;
     }
 
-    _commentController = TextEditingController(text: workCardComment ?? '');
+    _commentController = TextEditingController(text: '');
     commentFocusNode = FocusNode();
   }
 
@@ -801,8 +975,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                 const Text('Betrieb möglich?'),
               ],
             ),
-
-            // Employee
             TypeAheadField<String>(
               controller: employeeController,
               builder: (ctx, textCtrl, fn) {
@@ -827,8 +999,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Area Center
             TypeAheadField<String>(
               controller: areaCenterController,
               builder: (ctx, textCtrl, fn) {
@@ -853,8 +1023,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Line
             TypeAheadField<String>(
               controller: lineController,
               builder: (ctx, textCtrl, fn) {
@@ -879,8 +1047,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Tool
             TypeAheadField<String>(
               controller: toolController,
               builder: (ctx, textCtrl, fn) {
@@ -904,8 +1070,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Machine
             TypeAheadField<String>(
               controller: machineController,
               builder: (ctx, textCtrl, fn) {
@@ -928,8 +1092,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               onSelected: (suggestion) {
                 machineController.text = suggestion;
                 selectedMachineNumber = suggestion;
-
-                // Attempt mapping
                 final found = widget.machines.firstWhere(
                   (m) => m.number == suggestion,
                   orElse: () => Machine(
@@ -949,7 +1111,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   machineCode =
                       'TTP-${found.productionworkplaceNumber.toUpperCase()}';
                 }
-
                 if (machineCode != null && machineCode.isNotEmpty) {
                   final mappedLine = widget.machinePitchToLineMap[machineCode];
                   if (mappedLine != null && mappedLine.isNotEmpty) {
@@ -964,7 +1125,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                     });
                   }
                 } else {
-                  // no valid code
                   setState(() {
                     selectedLine = '';
                     lineController.text = '';
@@ -973,8 +1133,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Material
             TypeAheadField<String>(
               controller: materialController,
               builder: (ctx, textCtrl, fn) {
@@ -998,8 +1156,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
               },
             ),
             const SizedBox(height: 16),
-
-            // Comment / Fehlerbeschreibung
             TextField(
               controller: _commentController,
               focusNode: commentFocusNode,
@@ -1019,7 +1175,11 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                           children: [
                             SimpleDialogOption(
                               onPressed: () => Navigator.pop(ctx, 'suggestion'),
-                              child: const Text('Text auswählen'),
+                              child: const Text(
+                                'Text auswählen',
+                                style: TextStyle(
+                                    fontSize: 22, fontWeight: FontWeight.bold),
+                              ),
                             ),
                             SimpleDialogOption(
                               onPressed: () => Navigator.pop(ctx, 'free'),
@@ -1030,14 +1190,14 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                       },
                     );
                     if (choice == 'suggestion') {
-                      final selectedText = await showPredefinedTextsModal(
+                      final selectedComment = await showPredefinedTextsModal(
                         context,
                         initialText: _commentController.text,
                       );
-                      if (selectedText != null) {
+                      if (selectedComment != null) {
                         setState(() {
-                          _commentController.text = selectedText;
-                          workCardComment = selectedText;
+                          _commentController.text = selectedComment.plain;
+                          workCardComment = selectedComment.html;
                         });
                       }
                       commentFocusNode.requestFocus();
@@ -1045,10 +1205,11 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                   },
                 ),
               ),
-              onChanged: (val) => workCardComment = val,
+              onChanged: (val) {
+                workCardComment = val;
+              },
             ),
             const SizedBox(height: 16),
-
             ElevatedButton(
               onPressed: _pickImage,
               child: Row(
@@ -1064,7 +1225,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
             const SizedBox(height: 16),
             if (imagePath != null) Text('Ausgewählt: $imagePath'),
             const SizedBox(height: 16),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -1085,7 +1245,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     );
   }
 
-  /// Picks an image from camera/gallery
   Future<void> _pickImage() async {
     final source = await showDialog<ImageSource>(
       context: context,
@@ -1133,7 +1292,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     if (kDebugMode) print('Image saved at: $imagePath');
   }
 
-  /// Validate the form data & send to server
   void _onSubmitIssue() async {
     if (!_validateForm(
       operable: operable,
@@ -1149,7 +1307,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       return;
     }
 
-    // If image present, ensure it's valid
     if (imagePath != null) {
       final file = File(imagePath!);
       final bytes = await file.readAsBytes();
@@ -1159,7 +1316,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       }
     }
 
-    // Build the payload
     final issueData = <String, String>{
       'operable': operable.toString(),
       'areaCenter': selectedAreaCenter ?? '',
@@ -1179,19 +1335,16 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     if (kDebugMode) print('Issue submitted successfully.');
   }
 
-  /// Actually submit the issue to server
   Future<void> _submitIssue(Map<String, String> data) async {
     final uri = Uri.parse('http://wim-solution.sip.local:3006/report-issue');
     final request = http.MultipartRequest('POST', uri);
 
-    // Add text fields
     data.forEach((key, value) {
       if (key != 'imageFile') {
         request.fields[key] = value;
       }
     });
 
-    // Add image if present
     final imgPath = data['imageFile'];
     if (imgPath != null && imgPath.isNotEmpty) {
       final imageFile = File(imgPath);
@@ -1229,7 +1382,6 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
     }
   }
 
-  /// Show an overlay message
   void _showOverlayMessage(String msg, {Color backgroundColor = Colors.red}) {
     final overlay = Navigator.of(context, rootNavigator: true).overlay;
     if (overlay == null) return;
@@ -1259,7 +1411,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
   }
 }
 
-/// Overlay for scan window
+/// ----------------------------
+/// Overlay for scan window.
+/// ----------------------------
 class ScanWindowOverlay extends StatelessWidget {
   final Rect scanWindow;
   const ScanWindowOverlay({super.key, required this.scanWindow});
