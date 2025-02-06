@@ -365,6 +365,34 @@ class _NumberInputPageState extends State<NumberInputPage>
     );
   }
 
+  /// New helper method to open the issue modal manually without a scanned QR code.
+  void _openIssueModalManually() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) {
+        return Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: CreateIssueModal(
+            scannedCode: '', // no code from scanning
+            selectedToolBreakdown: null,
+            selectedMachineNumber: null,
+            selectedMachinePitch: null,
+            correspondingLine: null,
+            areaCenters: areaCenters,
+            lines: lines,
+            tools: tools,
+            machines: machines,
+            materials: materials,
+            employees: employees,
+            machinePitchToLineMap: machinePitchToLineMap,
+          ),
+        );
+      },
+    );
+  }
+
   /// Favorites area widget.
   Widget _buildFavoritesArea() {
     // Get the complete list of available modules.
@@ -387,6 +415,18 @@ class _NumberInputPageState extends State<NumberInputPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Fixed top element to open the issue modal manually.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ElevatedButton.icon(
+            onPressed: _openIssueModalManually,
+            icon: const Icon(Icons.report_problem, color: Colors.red),
+            label: const Text('Störfall anlegen'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+            ),
+          ),
+        ),
         // Header with title and an add button.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -429,12 +469,8 @@ class _NumberInputPageState extends State<NumberInputPage>
                   // The ReorderableDragStartListener will start dragging on a long press.
                   child: GestureDetector(
                     onTap: fav.onTap,
-                    // You can choose to use onLongPress for deletion or let the drag be initiated.
-                    // If you want to differentiate deletion from dragging, you might use a separate
-                    // onLongPressEnd or a dedicated delete icon.
-                    // For this example, we'll assume that a long press (without dragging) shows a delete dialog.
+                    // On long press (without dragging) show a delete confirmation dialog.
                     onLongPress: () async {
-                      // Show a delete confirmation dialog on long press (if the user isn't dragging).
                       final shouldDelete = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
@@ -531,7 +567,7 @@ class _NumberInputPageState extends State<NumberInputPage>
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.add_alert),
+              leading: const Icon(Icons.report_problem, color: Colors.red),
               title: const Text('Störfall anlegen'),
               onTap: () {
                 Navigator.pop(context);
@@ -609,6 +645,12 @@ class _NumberInputPageState extends State<NumberInputPage>
         ),
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
+          // New icon button next to the recents button to open the issue modal manually.
+          IconButton(
+            icon: const Icon(Icons.report_problem, color: Colors.red),
+            tooltip: 'Störfall anlegen',
+            onPressed: _openIssueModalManually,
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
@@ -689,7 +731,7 @@ class _NumberInputPageState extends State<NumberInputPage>
                 },
               ),
             ),
-            // Favorites area.
+            // Favorites area including the fixed "Störfall anlegen" button.
             _buildFavoritesArea(),
           ],
         ),
@@ -1155,8 +1197,7 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
                               onPressed: () => Navigator.pop(ctx, 'suggestion'),
                               child: const Text(
                                 'Text auswählen',
-                                style: TextStyle(
-                                    fontSize: 22, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                             ),
                             SimpleDialogOption(

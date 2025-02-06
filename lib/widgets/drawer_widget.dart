@@ -412,6 +412,7 @@ class MainDrawer extends StatelessWidget {
               ],
             ),
           ),
+
           // Build an ExpansionTile for each category.
           ...categories.map((category) {
             return ExpansionTile(
