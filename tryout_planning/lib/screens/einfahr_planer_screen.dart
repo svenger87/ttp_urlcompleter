@@ -198,7 +198,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     _autoUpdateTimer?.cancel();
     _autoUpdateTimer =
         Timer.periodic(Duration(seconds: _autoUpdateInterval), (timer) {
-      if (!isLoading) {
+      // Only fetch data if not already loading and not in edit mode.
+      if (!isLoading && !_editModeEnabled) {
         _fetchDataForWeek(_selectedWeek, _selectedYear);
       }
     });
