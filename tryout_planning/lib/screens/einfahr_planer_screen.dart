@@ -118,7 +118,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     if (kDebugMode) {
       print('Window event: $eventName');
     }
-
     // Update fullscreen state
     if (eventName == 'enter-full-screen' || eventName == 'fullscreen') {
       setState(() {
@@ -129,7 +128,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         _isFullscreen = false;
       });
     }
-
     // Ensure standalone state is always accurate
     bool isStandalone =
         !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
@@ -192,7 +190,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   // --------------------------------------------
   //      AUTOMATIC UPDATE TIMER FUNCTIONS
   // --------------------------------------------
-
   /// Starts the periodic auto-update timer.
   void _startAutoUpdateTimer() {
     _autoUpdateTimer?.cancel();
@@ -259,7 +256,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                   onPressed: () {
                     int? newInterval = int.tryParse(intervalController.text);
                     if (newInterval == null || newInterval <= 0) {
-                      // You can optionally display an error message here.
+                      // Optionally display an error.
                       return;
                     }
                     setState(() {
@@ -290,7 +287,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   Future<void> _fetchAndBuildMaps() async {
     try {
       setState(() => isLoading = true);
-
       // Fetch secondary projects
       final allTools = await ApiService.fetchSecondaryProjects();
       _secondaryProjectsMap.clear();
@@ -307,7 +303,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           _secondaryProjectsMap[number]!['extrudermain_id'] = extrudermainId;
         }
       }
-
       // Fetch machines
       final machines = await ApiService.fetchMachines();
       _machineNumberMap.clear();
@@ -346,7 +341,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       final result =
           await ApiService.fetchEinfahrPlan(week: weekNumber, year: year);
       _initializeEmptySchedule();
-
       for (var row in result) {
         int? extrudermainId = row['extrudermain_id'];
         final toolNumber = row['tool_number'];
@@ -354,13 +348,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           extrudermainId =
               _secondaryProjectsMap[toolNumber]?['extrudermain_id'];
         }
-
         // Machine
         String? machineNumber;
         if (extrudermainId != null) {
           machineNumber = _machineNumberMap[extrudermainId];
         }
-
         // Image
         String? rowImageUri = row['imageuri'] as String?;
         if ((rowImageUri == null || rowImageUri.isEmpty) &&
@@ -368,7 +360,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           rowImageUri = _secondaryProjectsMap[toolNumber]?['imageuri'];
         }
         final finalImageUri = _parseIkOfficeUri(rowImageUri);
-
         final item = FahrversuchItem(
           id: row['id'],
           projectName: row['project_name'],
@@ -385,24 +376,19 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           extrudermainId: extrudermainId,
           machineNumber: machineNumber,
         );
-
         final validDay =
             days.contains(item.dayName) ? item.dayName : days.first;
         item.dayName = validDay;
-
         final validTryIndex = (item.tryoutIndex >= 0 &&
                 item.tryoutIndex < schedule[validDay]!.length)
             ? item.tryoutIndex
             : 0;
-
         schedule[validDay]![validTryIndex].add(item);
-
         // Download image if present
         if (item.imageUri != null) {
           await _downloadItemImage(item, forceRedownload: forceRedownload);
         }
       }
-
       // Clear image cache after all downloads
       if (forceRedownload) {
         PaintingBinding.instance.imageCache.clear();
@@ -451,7 +437,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         toIndex: newTryIndex,
       ));
     });
-
     try {
       await ApiService.updateEinfahrPlan(
         id: item.id,
@@ -529,15 +514,12 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     try {
       final allTools = await ApiService.fetchSecondaryProjects();
       if (allTools.isEmpty) return;
-
       final selectedTool = await _showToolSelectionDialog(context, allTools);
       if (selectedTool == null) return;
-
       final projectName = selectedTool['name'] ?? 'Unbenannt';
       final toolNumber = selectedTool['number'] ?? '';
       final finalImageUri =
           _parseIkOfficeUri(selectedTool['imageuri'] as String?);
-
       final response = await ApiService.updateEinfahrPlan(
         id: null,
         projectName: projectName,
@@ -552,7 +534,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       );
       final newId = response['newId'];
       if (newId == null) throw Exception('No newId returned from server.');
-
       final newItem = FahrversuchItem(
         id: newId,
         projectName: projectName,
@@ -571,7 +552,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                     _secondaryProjectsMap[toolNumber]!['extrudermain_id']]
                 : null,
       );
-
       setState(() {
         schedule[day]![tryIndex].add(newItem);
         _actionHistory.add(ScheduleAction.add(
@@ -580,7 +560,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           toIndex: tryIndex,
         ));
       });
-
       if (newItem.imageUri != null) {
         await _downloadItemImage(newItem, forceRedownload: true);
       }
@@ -605,9 +584,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   // --------------------------------------------
   Future<void> _editItemDialog(FahrversuchItem item) async {
     final oldStatus = item.status;
-    final statuses = ["In Arbeit", "In Änderung", "Erledigt"];
+    // UPDATED: Added "Materialversuch" as a valid status option.
+    final statuses = [
+      "In Arbeit",
+      "In Änderung",
+      "Erledigt",
+      "Materialversuch"
+    ];
     String selectedStatus = oldStatus;
-
     final result = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -667,9 +651,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         );
       },
     );
-
     if (result == null) return;
-
     if (result == 'delete') {
       await _confirmDeleteItem(item);
       return;
@@ -714,7 +696,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       }
       return;
     }
-
     // If user changed status
     if (result != oldStatus) {
       setState(() => item.status = result);
@@ -805,7 +786,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     final maxWeeks = has53 ? 53 : 52;
     final maybeNewYear = (newWeek > maxWeeks) ? oldYear + 1 : oldYear;
     final finalNewWeek = (newWeek > maxWeeks) ? 1 : newWeek;
-
     try {
       // 1) Mark old item as moved
       await ApiService.updateEinfahrPlan(
@@ -828,7 +808,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         toDay: item.dayName,
         toIndex: item.tryoutIndex,
       ));
-
       // 2) Insert a new copy for the next week
       final response = await ApiService.updateEinfahrPlan(
         id: null,
@@ -844,7 +823,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       );
       final newId = response['newId'];
       if (newId == null) throw Exception('No newId returned from server.');
-
       final newItem = FahrversuchItem(
         id: newId,
         projectName: item.projectName,
@@ -920,27 +898,22 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       {bool forceRedownload = false}) async {
     final uri = item.imageUri;
     if (uri == null || uri.isEmpty) return null;
-
     const int maxRetries = 3;
     int attempt = 0;
     File? downloadedFile;
-
     while (attempt < maxRetries && downloadedFile == null) {
       try {
         final imagePath = await item.getUniqueImagePath();
         final imageFile = File(imagePath);
-
         // If we do NOT want to force a new download, and we already have the file, just use it.
         if (!forceRedownload && await imageFile.exists()) {
           setState(() => item.localImagePath = imagePath);
           return imageFile;
         }
-
         // Optionally: If forcing a re-download, delete the old file:
         if (forceRedownload && await imageFile.exists()) {
           await imageFile.delete();
         }
-
         // Attempt the download from the API service
         downloadedFile = await ApiService.downloadIkofficeFile(uri, imagePath);
         if (downloadedFile != null) {
@@ -969,7 +942,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           if (kDebugMode) {
             print('!! _downloadItemImage: Attempt $attempt failed: $e');
           }
-          // Optionally, wait before retrying
           await Future.delayed(const Duration(seconds: 1));
         }
       }
@@ -983,7 +955,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   ) async {
     TextEditingController searchController = TextEditingController();
     List<Map<String, dynamic>> filteredTools = allTools;
-
     return showDialog<Map<String, dynamic>>(
       context: context,
       builder: (BuildContext context) {
@@ -1031,8 +1002,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                               },
                             )
                           : const Center(
-                              child: Text('Keine Werkzeuge gefunden'),
-                            ),
+                              child: Text('Keine Werkzeuge gefunden')),
                     ),
                   ],
                 ),
@@ -1051,7 +1021,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     final position = details.globalPosition;
     final size = MediaQuery.of(context).size;
     final edgeMargin = _autoScrollThreshold;
-
     // Vertical
     if (position.dy < edgeMargin) {
       if (_autoScrollVerticalTimer == null ||
@@ -1061,10 +1030,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           if (_verticalScrollCtrl.hasClients) {
             final newOffset = _verticalScrollCtrl.offset - _autoScrollSpeed;
             _verticalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _verticalScrollCtrl.position.minScrollExtent,
-                _verticalScrollCtrl.position.maxScrollExtent,
-              ),
+              newOffset.clamp(_verticalScrollCtrl.position.minScrollExtent,
+                  _verticalScrollCtrl.position.maxScrollExtent),
               duration: const Duration(milliseconds: 100),
               curve: Curves.linear,
             );
@@ -1079,10 +1046,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           if (_verticalScrollCtrl.hasClients) {
             final newOffset = _verticalScrollCtrl.offset + _autoScrollSpeed;
             _verticalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _verticalScrollCtrl.position.minScrollExtent,
-                _verticalScrollCtrl.position.maxScrollExtent,
-              ),
+              newOffset.clamp(_verticalScrollCtrl.position.minScrollExtent,
+                  _verticalScrollCtrl.position.maxScrollExtent),
               duration: const Duration(milliseconds: 100),
               curve: Curves.linear,
             );
@@ -1093,7 +1058,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       _autoScrollVerticalTimer?.cancel();
       _autoScrollVerticalTimer = null;
     }
-
     // Horizontal
     if (position.dx < edgeMargin) {
       if (_autoScrollHorizontalTimer == null ||
@@ -1103,10 +1067,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           if (_horizontalScrollCtrl.hasClients) {
             final newOffset = _horizontalScrollCtrl.offset - _autoScrollSpeed;
             _horizontalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _horizontalScrollCtrl.position.minScrollExtent,
-                _horizontalScrollCtrl.position.maxScrollExtent,
-              ),
+              newOffset.clamp(_horizontalScrollCtrl.position.minScrollExtent,
+                  _horizontalScrollCtrl.position.maxScrollExtent),
               duration: const Duration(milliseconds: 100),
               curve: Curves.linear,
             );
@@ -1121,10 +1083,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           if (_horizontalScrollCtrl.hasClients) {
             final newOffset = _horizontalScrollCtrl.offset + _autoScrollSpeed;
             _horizontalScrollCtrl.animateTo(
-              newOffset.clamp(
-                _horizontalScrollCtrl.position.minScrollExtent,
-                _horizontalScrollCtrl.position.maxScrollExtent,
-              ),
+              newOffset.clamp(_horizontalScrollCtrl.position.minScrollExtent,
+                  _horizontalScrollCtrl.position.maxScrollExtent),
               duration: const Duration(milliseconds: 100),
               curve: Curves.linear,
             );
@@ -1157,7 +1117,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   Future<void> _promptForPIN() async {
     String enteredPIN = '';
     bool isError = false;
-
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -1224,7 +1183,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         );
       },
     );
-
     if (result == true) {
       setState(() {
         _editModeEnabled = true;
@@ -1241,7 +1199,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   Future<void> _undoLastAction() async {
     if (_actionHistory.isEmpty) return;
     final lastAction = _actionHistory.removeLast();
-
     switch (lastAction.type) {
       case ActionType.add:
         // Undo Add -> remove item + call delete
@@ -1258,10 +1215,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           if (kDebugMode) {
             print('!! _undoLastAction: error undoing add: $err');
           }
-          // Can't do much more if that fails
         }
         break;
-
       case ActionType.delete:
         // Undo Delete -> re-insert item + undelete on server
         setState(() {
@@ -1283,7 +1238,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           });
         }
         break;
-
       case ActionType.move:
         // Undo Move -> move the item back
         setState(() {
@@ -1321,17 +1275,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           });
         }
         break;
-
       case ActionType.statusChange:
         // Undo Status Change -> revert to old status
         final item = lastAction.item;
         final oldStatus = lastAction.oldStatus;
         final newStatus = lastAction.newStatus;
-
         setState(() {
           item.status = oldStatus;
         });
-
         try {
           await ApiService.updateEinfahrPlan(
             id: item.id,
@@ -1365,6 +1316,62 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     }
   }
 
+  // NEW: Helper method to map status to a color.
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'In Arbeit':
+        return Colors.orange;
+      case 'In Änderung':
+        return Colors.yellow;
+      case 'Erledigt':
+        return Colors.green;
+      case 'Materialversuch':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // NEW: Build legend widget for statuses.
+  Widget _buildLegend() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 20.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          _buildLegendItem("In Arbeit", _getStatusColor("In Arbeit")),
+          const SizedBox(width: 16),
+          _buildLegendItem("In Änderung", _getStatusColor("In Änderung")),
+          const SizedBox(width: 16),
+          _buildLegendItem("Erledigt", _getStatusColor("Erledigt")),
+          const SizedBox(width: 16),
+          _buildLegendItem(
+              "Materialversuch", _getStatusColor("Materialversuch")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String status, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          status,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
+    );
+  }
+
   // --------------------------------------------
   //        BUILD
   // --------------------------------------------
@@ -1376,6 +1383,10 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einfahr Planer'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(30),
+          child: _buildLegend(),
+        ),
         actions: [
           // Undo button
           IconButton(
@@ -1542,7 +1553,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                         ],
                       ),
                     ),
-
                     // === Right: Box 1 "Werkzeuge in Änderung" ===
                     _buildTryoutCell(
                       tryoutIndex: 5, // Index for "Werkzeuge in Änderung"
@@ -1558,7 +1568,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                           .toList(),
                       moveItemHandler: (item) => _moveItemToTryout(item, 5),
                     ),
-
                     // === Right: Box 2 "Bereit für Einfahrversuch" ===
                     _buildTryoutCell(
                       tryoutIndex: 6, // Index for "Bereit für Einfahrversuch"
@@ -1686,7 +1695,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                           : (dayName != null
                               ? schedule[dayName]![tryoutIndex]
                               : <FahrversuchItem>[]);
-
                       if (items.isEmpty) {
                         return const Center(
                           child: Text(
@@ -1745,7 +1753,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       // Trigger async download if not yet done
       _downloadItemImage(item, forceRedownload: true);
     }
-
     return LongPressDraggable<FahrversuchItem>(
       data: item,
       onDragUpdate: (details) => _handleDragUpdate(details),
@@ -1755,7 +1762,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         child: Container(
           width: 180,
           padding: const EdgeInsets.all(8),
-          color: item.color,
+          // Use the helper method to determine the color based on status.
+          color: _getStatusColor(item.status),
           child: Text(
             '${item.projectName} (${item.toolNumber})',
             style: const TextStyle(color: Colors.white),
@@ -1765,7 +1773,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       childWhenDragging: Opacity(
         opacity: 0.5,
         child: Card(
-          color: item.color,
+          // Use the helper method to determine the color.
+          color: _getStatusColor(item.status),
           margin: const EdgeInsets.only(bottom: 4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: SizedBox(
@@ -1776,7 +1785,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         ),
       ),
       child: Card(
-        color: item.color,
+        // Use the helper method to determine the color.
+        color: _getStatusColor(item.status),
         margin: const EdgeInsets.only(bottom: 4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         child: SizedBox(
@@ -1847,7 +1857,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
               Text(
                 'Maschine: ${item.machineNumber}',
                 style: const TextStyle(
-                    color: Colors.yellowAccent, fontWeight: FontWeight.bold),
+                    color: Colors.red, fontWeight: FontWeight.bold),
               )
             else
               const Text(
@@ -1858,7 +1868,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                 style: const TextStyle(color: Colors.black)),
           ],
         ),
-
         // Edit button if in edit mode
         if (_editModeEnabled)
           Positioned(
@@ -1869,7 +1878,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
               onPressed: () => _editItemDialog(item),
             ),
           ),
-
         // Cross-out if item hasBeenMoved
         if (item.hasBeenMoved)
           Positioned(
@@ -1888,7 +1896,6 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   // --------------------------------------------
   //        CONFIRM EXIT DIALOG
   // --------------------------------------------
-  // Ensure this method is defined only once
   Future<bool> _confirmExit() async {
     return (await showDialog<bool>(
           context: context,
@@ -1898,17 +1905,16 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
             content: const Text('Möchten Sie die Anwendung wirklich beenden?'),
             actions: [
               TextButton(
-                onPressed: () =>
-                    Navigator.of(context).pop(false), // Return false
+                onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('Abbrechen'),
               ),
               ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true), // Return true
+                onPressed: () => Navigator.of(context).pop(true),
                 child: const Text('Beenden'),
               ),
             ],
           ),
         )) ??
-        false; // Default to false if dialog is dismissed unexpectedly
+        false;
   }
 }
