@@ -73,6 +73,11 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   bool _isFullscreen = false;
   bool _isStandalone = false;
 
+  // === NEW: Automatic Update Variables ===
+  Timer? _autoUpdateTimer;
+  int _autoUpdateInterval = 240; // default interval in seconds
+  bool _autoUpdateEnabled = false;
+
   @override
   void initState() {
     super.initState();
@@ -83,6 +88,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
 
   @override
   void dispose() {
+    _autoUpdateTimer?.cancel();
     _autoScrollVerticalTimer?.cancel();
     _autoScrollHorizontalTimer?.cancel();
     _horizontalScrollCtrl.dispose();
@@ -144,7 +150,14 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         _selectedWeek = prefs.getInt('selectedWeek') ??
             _isoWeekNumber(DateTime.now()).clamp(1, 53);
         _selectedYear = prefs.getInt('selectedYear') ?? DateTime.now().year;
+        _autoUpdateInterval = prefs.getInt('autoUpdateInterval') ?? 60;
+        _autoUpdateEnabled = prefs.getBool('autoUpdateEnabled') ?? false;
       });
+
+      // Start auto update timer if enabled
+      if (_autoUpdateEnabled) {
+        _startAutoUpdateTimer();
+      }
 
       _initializeEmptySchedule();
       await _fetchAndBuildMaps();
@@ -164,6 +177,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('selectedWeek', _selectedWeek);
       await prefs.setInt('selectedYear', _selectedYear);
+      await prefs.setInt('autoUpdateInterval', _autoUpdateInterval);
+      await prefs.setBool('autoUpdateEnabled', _autoUpdateEnabled);
     } catch (e) {
       if (kDebugMode) {
         print('!! _saveUserPreferences: Error saving preferences: $e');
@@ -172,6 +187,100 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
         SnackBar(content: Text('Fehler beim Speichern der Präferenzen: $e')),
       );
     }
+  }
+
+  // --------------------------------------------
+  //      AUTOMATIC UPDATE TIMER FUNCTIONS
+  // --------------------------------------------
+
+  /// Starts the periodic auto-update timer.
+  void _startAutoUpdateTimer() {
+    _autoUpdateTimer?.cancel();
+    _autoUpdateTimer =
+        Timer.periodic(Duration(seconds: _autoUpdateInterval), (timer) {
+      if (!isLoading) {
+        _fetchDataForWeek(_selectedWeek, _selectedYear);
+      }
+    });
+  }
+
+  /// Stops the periodic auto-update timer.
+  void _stopAutoUpdateTimer() {
+    _autoUpdateTimer?.cancel();
+    _autoUpdateTimer = null;
+  }
+
+  /// Prompts the user to configure the auto-update interval and enable/disable auto-update.
+  Future<void> _promptAutoUpdateConfig() async {
+    bool newAutoUpdateEnabled = _autoUpdateEnabled;
+    TextEditingController intervalController =
+        TextEditingController(text: _autoUpdateInterval.toString());
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text("Auto Update Konfiguration"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                          child: Text("Automatische Aktualisierung")),
+                      Switch(
+                        value: newAutoUpdateEnabled,
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            newAutoUpdateEnabled = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (newAutoUpdateEnabled)
+                    TextField(
+                      controller: intervalController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          labelText: "Intervall (Sekunden)"),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text("Abbrechen"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    int? newInterval = int.tryParse(intervalController.text);
+                    if (newInterval == null || newInterval <= 0) {
+                      // You can optionally display an error message here.
+                      return;
+                    }
+                    setState(() {
+                      _autoUpdateEnabled = newAutoUpdateEnabled;
+                      _autoUpdateInterval = newInterval;
+                    });
+                    _saveUserPreferences();
+                    if (_autoUpdateEnabled) {
+                      _startAutoUpdateTimer();
+                    } else {
+                      _stopAutoUpdateTimer();
+                    }
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("Speichern"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   // --------------------------------------------
@@ -1342,8 +1451,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
             onPressed: () => _fetchDataForWeek(_selectedWeek, _selectedYear,
                 forceRedownload: true),
           ),
+          // NEW: Auto Update Config Button
+          IconButton(
+            icon: const Icon(Icons.timer),
+            tooltip: 'Auto Update Konfiguration',
+            onPressed: _promptAutoUpdateConfig,
+          ),
           // === Power Button Integration ===
-          // The following button appears only when the app is in fullscreen and standalone mode
           if (_isFullscreen && _isStandalone)
             IconButton(
               icon: const Icon(Icons.power_settings_new),
