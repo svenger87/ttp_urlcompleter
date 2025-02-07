@@ -439,6 +439,7 @@ class _NumberInputPageState extends State<NumberInputPage>
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.add),
+                tooltip: "Favoriten hinzufügen",
                 onPressed: _showAddFavoriteDialog,
               ),
             ],
