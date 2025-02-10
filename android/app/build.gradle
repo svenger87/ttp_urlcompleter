@@ -8,7 +8,7 @@ def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file("key.properties")
 println("Looking for key.properties at " + keystorePropertiesFile)
 if (keystorePropertiesFile.exists()) {
-    println("key.properties found, loading....")
+    println("key.properties found, loading...")
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 } else {
     println("key.properties not found! Check your path.")
