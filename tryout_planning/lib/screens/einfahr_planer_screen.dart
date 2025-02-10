@@ -413,7 +413,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     for (var day in days) {
       // +2 to accommodate the two special boxes if storing in same structure
       schedule[day] =
-          List.generate(tryouts.length + 2, (_) => <FahrversuchItem>[]);
+          List.generate(tryouts.length + 3, (_) => <FahrversuchItem>[]);
     }
   }
 
@@ -1320,15 +1320,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   Color _getStatusColor(String status) {
     switch (status) {
       case 'In Arbeit':
-        return Colors.cyan.shade600;
+        return Colors.orange.shade200;
       case 'In Änderung':
-        return Colors.yellow;
+        return Colors.teal.shade200;
       case 'Erledigt':
-        return Colors.green;
+        return Colors.green.shade200;
       case 'Materialversuch':
-        return Colors.blue;
+        return Colors.purple.shade200;
       default:
-        return Colors.grey;
+        return Colors.grey.shade300;
     }
   }
 
@@ -1590,6 +1590,21 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                           .expand((entry) => entry.value[6])
                           .toList(),
                       moveItemHandler: (item) => _moveItemToTryout(item, 6),
+                    ),
+                    // === Right: Box 3 "Bereit für Einfahrversuch" ===
+                    _buildTryoutCell(
+                      tryoutIndex: 7, // New index for the additional column
+                      width: 210,
+                      height: (days.length * 172).toDouble() + 35,
+                      bgColor: Colors.grey.shade100,
+                      dayName: null,
+                      title: '   Bereit für Einfahrversuch',
+                      onAdd:
+                          _editModeEnabled ? () => _addToSeparateBox(7) : null,
+                      itemsSupplier: () => schedule.entries
+                          .expand((entry) => entry.value[7])
+                          .toList(),
+                      moveItemHandler: (item) => _moveItemToTryout(item, 7),
                     ),
                   ],
                 ),
