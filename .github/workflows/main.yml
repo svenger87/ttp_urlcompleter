@@ -163,7 +163,7 @@ jobs:
       # 6. Build Windows Installer with Inno Setup
       #    Assuming your .iss is stored at windows/windows_installer.iss
       - name: Create Windows Installer
-        run: iscc windows\\windows_installer.iss
+        run: iscc windows\\ttpApp.iss
 
       # 7. Upload Windows Installer Artifact
       #    The .exe installer will be generated under the OutputDir specified in .iss (e.g., windows/installer/ttp_App.exe)
