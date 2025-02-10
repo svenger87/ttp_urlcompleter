@@ -1,0 +1,1466 @@
+{
+   "1": {
+      "Neue_Bezeichnung": "EA-50/ME60/S1",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "2": {
+      "Neue_Bezeichnung": "EA-50/ME90/S1",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "3": {
+      "Neue_Bezeichnung": "HK-3.0/CE5/S2",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "4": {
+      "Neue_Bezeichnung": "HK-3.0/CE5/S3",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "5": {
+      "Neue_Bezeichnung": "HK-3.0/ME60",
+      "Alte_Bezeichnung": "KU-78-S-3.0",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "6": {
+      "Neue_Bezeichnung": "HK-3.0/ME60/S1",
+      "Alte_Bezeichnung": "Mit Lochscheibe",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "7": {
+      "Neue_Bezeichnung": "HK-3.5/ME60/S1",
+      "Alte_Bezeichnung": "Mit Lochscheibe",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "8": {
+      "Neue_Bezeichnung": "HK-4.0/ME60/S1",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "9": {
+      "Neue_Bezeichnung": "LS-50/50/S4",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "10": {
+      "Neue_Bezeichnung": "RÖ-12/12/S15",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "11": {
+      "Neue_Bezeichnung": "RÖ-12/12/S17",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "12": {
+      "Neue_Bezeichnung": "Rö-20/15/",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "13": {
+      "Neue_Bezeichnung": "VR-H",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "14": {
+      "Neue_Bezeichnung": "VR-Y",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "15": {
+      "Neue_Bezeichnung": "ZH-80/50/S1",
+      "Alte_Bezeichnung": "200.01.007.01.056",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "16": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.001.01.060 1 ",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderanschluss"
+   },
+   "17": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.014.01.179",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": ""
+   },
+   "18": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.014.01.154",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": ""
+   },
+   "19": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.014.01.155",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": ""
+   },
+   "20": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.014.01.179",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": ""
+   },
+   "21": {
+      "Neue_Bezeichnung": "AH-78/103,5",
+      "Alte_Bezeichnung": "200.01.009.01.009",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Aufnahmehülse"
+   },
+   "22": {
+      "Neue_Bezeichnung": "AH-78/116",
+      "Alte_Bezeichnung": "200.01.009.01.018",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Aufnahmehülse"
+   },
+   "23": {
+      "Neue_Bezeichnung": "AH-78/122",
+      "Alte_Bezeichnung": "200.01.009.01.010",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Aufnahmehülse"
+   },
+   "24": {
+      "Neue_Bezeichnung": "AH-78/138",
+      "Alte_Bezeichnung": "200.01.009.01.012",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Aufnahmehülse"
+   },
+   "25": {
+      "Neue_Bezeichnung": "AH-XX/130",
+      "Alte_Bezeichnung": "200.01.009.01.002",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Aufnahmehülse"
+   },
+   "26": {
+      "Neue_Bezeichnung": "BÖ-12/12",
+      "Alte_Bezeichnung": "200.01.014.01.016",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Bombe "
+   },
+   "27": {
+      "Neue_Bezeichnung": "BO-20/20",
+      "Alte_Bezeichnung": "200.01.014.01.017",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Bombe "
+   },
+   "28": {
+      "Neue_Bezeichnung": "BO-20/20/S1",
+      "Alte_Bezeichnung": "200.01.014.01.004",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Bombe "
+   },
+   "29": {
+      "Neue_Bezeichnung": "BP-80/80",
+      "Alte_Bezeichnung": "200.01.011.01.083",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Brecherplatte"
+   },
+   "30": {
+      "Neue_Bezeichnung": "CA-12/Stork",
+      "Alte_Bezeichnung": "200.01.014.03.035",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "31": {
+      "Neue_Bezeichnung": "CA-12/ZE45",
+      "Alte_Bezeichnung": "200.01.014.03.006",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "32": {
+      "Neue_Bezeichnung": "CA-15/C28",
+      "Alte_Bezeichnung": "200.01.014.03.029",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "33": {
+      "Neue_Bezeichnung": "CA-15/ZE45",
+      "Alte_Bezeichnung": "200.01.014.03.031",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "34": {
+      "Neue_Bezeichnung": "CA-20/CE3",
+      "Alte_Bezeichnung": "200.01.014.03.020",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "35": {
+      "Neue_Bezeichnung": "CA-20/CE5",
+      "Alte_Bezeichnung": "200.01.001.01.082",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "36": {
+      "Neue_Bezeichnung": "CA-20/CE5.2",
+      "Alte_Bezeichnung": "200.01.001.01.129",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "37": {
+      "Neue_Bezeichnung": "CA-20/ZE45",
+      "Alte_Bezeichnung": "200.01.014.03.015",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "38": {
+      "Neue_Bezeichnung": "CA-25/CE5",
+      "Alte_Bezeichnung": "200.01.001.01.062",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "39": {
+      "Neue_Bezeichnung": "CA-25/ZF45",
+      "Alte_Bezeichnung": "200.01.014.03.034",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "40": {
+      "Neue_Bezeichnung": "CA-30/",
+      "Alte_Bezeichnung": "200.01.014.02.168",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "41": {
+      "Neue_Bezeichnung": "CA-30/GC40F",
+      "Alte_Bezeichnung": "200.01.014.02.176",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "42": {
+      "Neue_Bezeichnung": "CA-30/GC40F/S1",
+      "Alte_Bezeichnung": "200.01.014.02.175",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "43": {
+      "Neue_Bezeichnung": "CA-30/GC40F/S2",
+      "Alte_Bezeichnung": "200.01.014.02.174",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "44": {
+      "Neue_Bezeichnung": "CA-30/KMD50",
+      "Alte_Bezeichnung": "200.01.001.01.017",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "45": {
+      "Neue_Bezeichnung": "CA-30/ZE45",
+      "Alte_Bezeichnung": "200.01.014.03.018A",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "46": {
+      "Neue_Bezeichnung": "CA-35/CE5",
+      "Alte_Bezeichnung": "200.01.014.02.169",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "47": {
+      "Neue_Bezeichnung": "CA-40/ZE45",
+      "Alte_Bezeichnung": "200.01.014.03.018B",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "48": {
+      "Neue_Bezeichnung": "CA-50/ZE50",
+      "Alte_Bezeichnung": "200.01.001.01.149",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "49": {
+      "Neue_Bezeichnung": "CA-8/Stork",
+      "Alte_Bezeichnung": "200.01.014.03.011",
+      "Beschreibung": "",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "50": {
+      "Neue_Bezeichnung": "CA-8/Stork/S1",
+      "Alte_Bezeichnung": "200.01.014.03.010",
+      "Beschreibung": "",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "51": {
+      "Neue_Bezeichnung": "CA-8/ZE45",
+      "Alte_Bezeichnung": "200.01.014.03.016",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coex-Anschluss"
+   },
+   "52": {
+      "Neue_Bezeichnung": "DH-100/80",
+      "Alte_Bezeichnung": "200.01.008.01.114",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "53": {
+      "Neue_Bezeichnung": "DH-50/35",
+      "Alte_Bezeichnung": "200.01.008.01.077",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "54": {
+      "Neue_Bezeichnung": "DH-50/50",
+      "Alte_Bezeichnung": "200.01.008.01.111",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "55": {
+      "Neue_Bezeichnung": "DH-50/50/S1",
+      "Alte_Bezeichnung": "200.01.008.01.107",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "56": {
+      "Neue_Bezeichnung": "DH-50/60",
+      "Alte_Bezeichnung": "200.01.008.01.105",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "57": {
+      "Neue_Bezeichnung": "DH-50/60/S1",
+      "Alte_Bezeichnung": "200.01.008.01.099",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "58": {
+      "Neue_Bezeichnung": "DH-50/60/S2",
+      "Alte_Bezeichnung": "200.01.008.01.109",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "59": {
+      "Neue_Bezeichnung": "DH-60/14",
+      "Alte_Bezeichnung": "200.4.2.86",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "60": {
+      "Neue_Bezeichnung": "DH-60/30",
+      "Alte_Bezeichnung": "200.01.008.01.037",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "61": {
+      "Neue_Bezeichnung": "DH-60/30/S1",
+      "Alte_Bezeichnung": "200.01.008.01.116",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "62": {
+      "Neue_Bezeichnung": "DH-60/35",
+      "Alte_Bezeichnung": "200.01.008.01.108",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "63": {
+      "Neue_Bezeichnung": "DH-60/35/S1",
+      "Alte_Bezeichnung": "200.01.008.01.115",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "64": {
+      "Neue_Bezeichnung": "DH-60/40",
+      "Alte_Bezeichnung": "200.01.008.01.035",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "65": {
+      "Neue_Bezeichnung": "DH-60/60",
+      "Alte_Bezeichnung": "200.01.008.01.101",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "66": {
+      "Neue_Bezeichnung": "DH-60/60/S1",
+      "Alte_Bezeichnung": "200.01.008.01.055",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "67": {
+      "Neue_Bezeichnung": "DH-75/50",
+      "Alte_Bezeichnung": "200.01.008.01.118",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "68": {
+      "Neue_Bezeichnung": "DH-80/50",
+      "Alte_Bezeichnung": "200.01.002.03.011",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "69": {
+      "Neue_Bezeichnung": "DH-80/60",
+      "Alte_Bezeichnung": "200.01.008.01.098",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "70": {
+      "Neue_Bezeichnung": "DH-80/60/S1",
+      "Alte_Bezeichnung": "200.01.002.03.010",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "71": {
+      "Neue_Bezeichnung": "DH-80/80",
+      "Alte_Bezeichnung": "200.01.008.01.097",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "72": {
+      "Neue_Bezeichnung": "DH-80/80/S1",
+      "Alte_Bezeichnung": "200.01.008.01.103",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Durchgangshülse"
+   },
+   "73": {
+      "Neue_Bezeichnung": "EA-35/CE5",
+      "Alte_Bezeichnung": "200.01.001.01.010",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "74": {
+      "Neue_Bezeichnung": "EA-35/ME60",
+      "Alte_Bezeichnung": "200.01.001.01.090",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "75": {
+      "Neue_Bezeichnung": "EA-35/ME60/S1",
+      "Alte_Bezeichnung": "200.01.001.01.111",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "76": {
+      "Neue_Bezeichnung": "EA-35/SKETmatik",
+      "Alte_Bezeichnung": "200.01.001.01.156",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "77": {
+      "Neue_Bezeichnung": "EA-42/CE3",
+      "Alte_Bezeichnung": "200.01.001.01.143",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "78": {
+      "Neue_Bezeichnung": "EA-45/ZE45",
+      "Alte_Bezeichnung": "200.01.001.01.150",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "79": {
+      "Neue_Bezeichnung": "EA-45/ZE45/S1",
+      "Alte_Bezeichnung": "200.01.001.01.153",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "80": {
+      "Neue_Bezeichnung": "EA-50/",
+      "Alte_Bezeichnung": "200.01.001.01.060",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "81": {
+      "Neue_Bezeichnung": "EA-50/BEX54",
+      "Alte_Bezeichnung": "200.01.001.01.123",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "82": {
+      "Neue_Bezeichnung": "EA-50/BEX54/S1",
+      "Alte_Bezeichnung": "200.01.001.01.124",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "83": {
+      "Neue_Bezeichnung": "EA-50/CE5",
+      "Alte_Bezeichnung": "200.01.001.01.130",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "84": {
+      "Neue_Bezeichnung": "EA-50/CE7",
+      "Alte_Bezeichnung": "200.01.001.01.100",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "85": {
+      "Neue_Bezeichnung": "EA-50/CE7/S1",
+      "Alte_Bezeichnung": "200.01.001.01.131",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "86": {
+      "Neue_Bezeichnung": "EA-50/CE7/S2",
+      "Alte_Bezeichnung": "200.01.001.01.145",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "87": {
+      "Neue_Bezeichnung": "EA-50/CM60",
+      "Alte_Bezeichnung": "200.01.001.01.119",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "88": {
+      "Neue_Bezeichnung": "EA-50/DS72",
+      "Alte_Bezeichnung": "200.01.001.01.136",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "89": {
+      "Neue_Bezeichnung": "EA-50/DS85",
+      "Alte_Bezeichnung": "200.01.001.01.121",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "90": {
+      "Neue_Bezeichnung": "EA-50/ES60",
+      "Alte_Bezeichnung": "200.01.001.01.155",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "91": {
+      "Neue_Bezeichnung": "EA-50/ES60/S1",
+      "Alte_Bezeichnung": "200.01.001.01.133",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "92": {
+      "Neue_Bezeichnung": "EA-50/IDE60",
+      "Alte_Bezeichnung": "200.01.001.01.154",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "93": {
+      "Neue_Bezeichnung": "EA-50/ME60",
+      "Alte_Bezeichnung": "200.01.001.01.115",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "94": {
+      "Neue_Bezeichnung": "EA-50/ME90",
+      "Alte_Bezeichnung": "200.01.001.01.158",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "95": {
+      "Neue_Bezeichnung": "EA-60",
+      "Alte_Bezeichnung": "200.01.001.01.030",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "96": {
+      "Neue_Bezeichnung": "EA-60/IDE60",
+      "Alte_Bezeichnung": "200.01.001.01.147",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "97": {
+      "Neue_Bezeichnung": "EA-60/IDE60/S1",
+      "Alte_Bezeichnung": "200.01.001.01.151",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "98": {
+      "Neue_Bezeichnung": "EA-60/ZE45",
+      "Alte_Bezeichnung": "200.01.001.01.028",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "99": {
+      "Neue_Bezeichnung": "EA-78/SM",
+      "Alte_Bezeichnung": "200.01.001.01.141",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "100": {
+      "Neue_Bezeichnung": "EA-80/BEX54",
+      "Alte_Bezeichnung": "200.01.001.01.128",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "101": {
+      "Neue_Bezeichnung": "EA-80/CE7",
+      "Alte_Bezeichnung": "200.01.001.01.132",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "102": {
+      "Neue_Bezeichnung": "EA-80/CE7/S1",
+      "Alte_Bezeichnung": "200.01.001.01.146",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "103": {
+      "Neue_Bezeichnung": "EA-80/DS72",
+      "Alte_Bezeichnung": "200.01.001.01.137",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "104": {
+      "Neue_Bezeichnung": "EA-80/DS85",
+      "Alte_Bezeichnung": "200.01.001.01.122",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "105": {
+      "Neue_Bezeichnung": "EA-80/DS85/S1",
+      "Alte_Bezeichnung": "200.01.001.01.126",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "106": {
+      "Neue_Bezeichnung": "EA-80/DS9",
+      "Alte_Bezeichnung": "200.01.001.01.139",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Extruderadapter"
+   },
+   "107": {
+      "Neue_Bezeichnung": "HK-3.0/CE5",
+      "Alte_Bezeichnung": "KU-78-S-3.0",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "108": {
+      "Neue_Bezeichnung": "HK-3.25/ME60",
+      "Alte_Bezeichnung": "KU-78-S-3.25",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "109": {
+      "Neue_Bezeichnung": "HK-3.5/CE5",
+      "Alte_Bezeichnung": "KU-78-S-3.5",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "110": {
+      "Neue_Bezeichnung": "HK-4.0/CE5",
+      "Alte_Bezeichnung": "KU-78-S-4.0",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "111": {
+      "Neue_Bezeichnung": "HK-4.5/CE5",
+      "Alte_Bezeichnung": "KU-78-S-4.5",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "112": {
+      "Neue_Bezeichnung": "HK-4.5/ME60",
+      "Alte_Bezeichnung": "KU-78-S-4.5",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "113": {
+      "Neue_Bezeichnung": "HK-6.5/CE5",
+      "Alte_Bezeichnung": "KU-78-S-6.5",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "114": {
+      "Neue_Bezeichnung": "HK-KL/CE5",
+      "Alte_Bezeichnung": "Kugelkopf_Klein",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Heimkopf"
+   },
+   "115": {
+      "Neue_Bezeichnung": "KR-12",
+      "Alte_Bezeichnung": "200.01.014.02.165",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Krücke"
+   },
+   "116": {
+      "Neue_Bezeichnung": "KR-12/S1",
+      "Alte_Bezeichnung": "200.01.014.01.010",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Krücke"
+   },
+   "117": {
+      "Neue_Bezeichnung": "KR-15",
+      "Alte_Bezeichnung": "200.01.014.01.009",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Krücke"
+   },
+   "118": {
+      "Neue_Bezeichnung": "KR-15/S1",
+      "Alte_Bezeichnung": "200.01.014.01.012",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Krücke"
+   },
+   "119": {
+      "Neue_Bezeichnung": "KR-20",
+      "Alte_Bezeichnung": "200.01.014.01.007",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Krücke"
+   },
+   "120": {
+      "Neue_Bezeichnung": "KR-8",
+      "Alte_Bezeichnung": "200.01.014.01.001",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Krücke"
+   },
+   "121": {
+      "Neue_Bezeichnung": "KR-8/S1",
+      "Alte_Bezeichnung": "200.01.014.01.023",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Krücke"
+   },
+   "122": {
+      "Neue_Bezeichnung": "LS-12/12",
+      "Alte_Bezeichnung": "200.01.011.01.074",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "123": {
+      "Neue_Bezeichnung": "LS-15/45",
+      "Alte_Bezeichnung": "200.01.011.01.014",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "124": {
+      "Neue_Bezeichnung": "LS-30/20/Stork",
+      "Alte_Bezeichnung": "200.01.011.01.079",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "125": {
+      "Neue_Bezeichnung": "LS-30/30",
+      "Alte_Bezeichnung": "200.01.011.01.029",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "126": {
+      "Neue_Bezeichnung": "LS-35/20/S1",
+      "Alte_Bezeichnung": "200.01.011.01.077",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "127": {
+      "Neue_Bezeichnung": "LS-35/35",
+      "Alte_Bezeichnung": "200.01.011.01.027",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "128": {
+      "Neue_Bezeichnung": "LS-35/35/S1",
+      "Alte_Bezeichnung": "200.01.011.01.082",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "129": {
+      "Neue_Bezeichnung": "LS-50/35",
+      "Alte_Bezeichnung": "200.01.011.01.078",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "130": {
+      "Neue_Bezeichnung": "LS-50/50",
+      "Alte_Bezeichnung": "200.01.011.01.066",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "131": {
+      "Neue_Bezeichnung": "LS-50/50/S1",
+      "Alte_Bezeichnung": "200.01.011.01.063",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "132": {
+      "Neue_Bezeichnung": "LS-50/50/S2",
+      "Alte_Bezeichnung": "200.01.011.01.076",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "133": {
+      "Neue_Bezeichnung": "LS-50/50/S3",
+      "Alte_Bezeichnung": "200.01.011.01.075",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "134": {
+      "Neue_Bezeichnung": "LS-60/25",
+      "Alte_Bezeichnung": "200.01.011.01.016",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "135": {
+      "Neue_Bezeichnung": "LS-60/30",
+      "Alte_Bezeichnung": "200.01.011.01.017",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "136": {
+      "Neue_Bezeichnung": "LS-60/35",
+      "Alte_Bezeichnung": "200.01.011.01.081",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "137": {
+      "Neue_Bezeichnung": "LS-60/35/S1",
+      "Alte_Bezeichnung": "200.01.011.01.018",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "138": {
+      "Neue_Bezeichnung": "LS-60/40",
+      "Alte_Bezeichnung": "200.01.011.01.019",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "139": {
+      "Neue_Bezeichnung": "LS-60/40/S1",
+      "Alte_Bezeichnung": "200.01.011.01.046",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "140": {
+      "Neue_Bezeichnung": "LS-60/45",
+      "Alte_Bezeichnung": "200.01.011.01.020",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "141": {
+      "Neue_Bezeichnung": "LS-60/50",
+      "Alte_Bezeichnung": "200.01.011.01.021",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "142": {
+      "Neue_Bezeichnung": "LS-60/55",
+      "Alte_Bezeichnung": "200.01.011.01.022",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "143": {
+      "Neue_Bezeichnung": "LS-60/60",
+      "Alte_Bezeichnung": "200.01.011.01.068",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "144": {
+      "Neue_Bezeichnung": "LS-60/60/S1",
+      "Alte_Bezeichnung": "200.01.011.01.023",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "145": {
+      "Neue_Bezeichnung": "LS-80/80",
+      "Alte_Bezeichnung": "200.01.011.01.071",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "146": {
+      "Neue_Bezeichnung": "LS-80/80/S1",
+      "Alte_Bezeichnung": "200.01.011.01.056",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "147": {
+      "Neue_Bezeichnung": "LS-80/80/S2",
+      "Alte_Bezeichnung": "200.01.011.01.069",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Lochscheibe"
+   },
+   "148": {
+      "Neue_Bezeichnung": "RÖ-12/12",
+      "Alte_Bezeichnung": "200.01.014.02.015",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "149": {
+      "Neue_Bezeichnung": "RÖ-12/12/S1",
+      "Alte_Bezeichnung": "200.01.014.02.144",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "150": {
+      "Neue_Bezeichnung": "RÖ-12/12/S10",
+      "Alte_Bezeichnung": "200.01.014.02.121",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "151": {
+      "Neue_Bezeichnung": "RÖ-12/12/S11",
+      "Alte_Bezeichnung": "200.01.014.02.060",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "152": {
+      "Neue_Bezeichnung": "RÖ-12/12/S12",
+      "Alte_Bezeichnung": "200.01.014.02.058",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "153": {
+      "Neue_Bezeichnung": "RÖ-12/12/S13",
+      "Alte_Bezeichnung": "200.01.014.02.098",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "154": {
+      "Neue_Bezeichnung": "RÖ-12/12/S14",
+      "Alte_Bezeichnung": "200.01.014.02.166",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "155": {
+      "Neue_Bezeichnung": "RÖ-12/12/S16",
+      "Alte_Bezeichnung": "200.01.014.02.181",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "156": {
+      "Neue_Bezeichnung": "RÖ-12/12/S2",
+      "Alte_Bezeichnung": "200.01.014.02.144A",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "157": {
+      "Neue_Bezeichnung": "RÖ-12/12/S4",
+      "Alte_Bezeichnung": "200.01.014.02.132",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "158": {
+      "Neue_Bezeichnung": "RÖ-12/12/S5",
+      "Alte_Bezeichnung": "200.01.014.02.002",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "159": {
+      "Neue_Bezeichnung": "RÖ-12/12/S6",
+      "Alte_Bezeichnung": "200.01.014.02.120",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "160": {
+      "Neue_Bezeichnung": "RÖ-12/12/S7",
+      "Alte_Bezeichnung": "200.01.014.02.120A",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "161": {
+      "Neue_Bezeichnung": "RÖ-12/12/S8",
+      "Alte_Bezeichnung": "200.01.014.02.037",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "162": {
+      "Neue_Bezeichnung": "RÖ-12/8",
+      "Alte_Bezeichnung": "200.01.014.02.150",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "163": {
+      "Neue_Bezeichnung": "RÖ-12/8/S1",
+      "Alte_Bezeichnung": "200.01.014.02.147",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "164": {
+      "Neue_Bezeichnung": "RÖ-12/8/S2",
+      "Alte_Bezeichnung": "200.01.014.02.155",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "165": {
+      "Neue_Bezeichnung": "RÖ-12/8/S3",
+      "Alte_Bezeichnung": "200.01.014.02.155A",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "166": {
+      "Neue_Bezeichnung": "RÖ-12/8/S4",
+      "Alte_Bezeichnung": "200.01.014.02.150A",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "167": {
+      "Neue_Bezeichnung": "RÖ-15/12",
+      "Alte_Bezeichnung": "200.01.014.02.149",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "168": {
+      "Neue_Bezeichnung": "RÖ-15/12/S1",
+      "Alte_Bezeichnung": "200.01.014.02.153",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "169": {
+      "Neue_Bezeichnung": "RÖ-15/15",
+      "Alte_Bezeichnung": "200.01.014.02.045",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "170": {
+      "Neue_Bezeichnung": "RÖ-15/8",
+      "Alte_Bezeichnung": "200.01.014.02.167",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "171": {
+      "Neue_Bezeichnung": "RÖ-16/12",
+      "Alte_Bezeichnung": "200.01.014.02.170",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "172": {
+      "Neue_Bezeichnung": "RÖ-16/12/S1",
+      "Alte_Bezeichnung": "200.01.014.02.171",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "173": {
+      "Neue_Bezeichnung": "RÖ-16/12/S2",
+      "Alte_Bezeichnung": "200.01.014.02.172",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "174": {
+      "Neue_Bezeichnung": "RÖ-16/12/S3",
+      "Alte_Bezeichnung": "200.01.014.02.110",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "175": {
+      "Neue_Bezeichnung": "RÖ-16/16",
+      "Alte_Bezeichnung": "200.01.014.02.111",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "176": {
+      "Neue_Bezeichnung": "RÖ-16/16/S1",
+      "Alte_Bezeichnung": "200.01.014.02.179",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "177": {
+      "Neue_Bezeichnung": "RÖ-16/8",
+      "Alte_Bezeichnung": "200.01.014.02.095",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "178": {
+      "Neue_Bezeichnung": "RÖ-16/8/S1",
+      "Alte_Bezeichnung": "200.01.014.02.164",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "179": {
+      "Neue_Bezeichnung": "RÖ-20/12",
+      "Alte_Bezeichnung": "200.01.014.02.141",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "180": {
+      "Neue_Bezeichnung": "RÖ-20/12/S1",
+      "Alte_Bezeichnung": "200.01.014.02.180",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "181": {
+      "Neue_Bezeichnung": "RÖ-20/15",
+      "Alte_Bezeichnung": "200.01.014.02.145",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "182": {
+      "Neue_Bezeichnung": "RÖ-20/16",
+      "Alte_Bezeichnung": "200.01.014.02.173",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "183": {
+      "Neue_Bezeichnung": "RÖ-20/20",
+      "Alte_Bezeichnung": "200.01.014.02.054",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "184": {
+      "Neue_Bezeichnung": "RÖ-20/20/S1",
+      "Alte_Bezeichnung": "200.01.014.02.128",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "185": {
+      "Neue_Bezeichnung": "RÖ-20/20/S2",
+      "Alte_Bezeichnung": "200.01.014.02.178",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "186": {
+      "Neue_Bezeichnung": "RÖ-20/8",
+      "Alte_Bezeichnung": "200.01.014.02.159",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "187": {
+      "Neue_Bezeichnung": "RÖ-29,9/15",
+      "Alte_Bezeichnung": "200.01.014.02.177",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "188": {
+      "Neue_Bezeichnung": "RÖ-30/12",
+      "Alte_Bezeichnung": "200.01.014.02.036",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "189": {
+      "Neue_Bezeichnung": "RÖ-30/15",
+      "Alte_Bezeichnung": "200.01.014.02.160",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "190": {
+      "Neue_Bezeichnung": "RÖ-30/20",
+      "Alte_Bezeichnung": "200.01.014.02.161",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "191": {
+      "Neue_Bezeichnung": "RÖ-30/8",
+      "Alte_Bezeichnung": "200.01.014.02.033",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "192": {
+      "Neue_Bezeichnung": "RÖ-30/8/A",
+      "Alte_Bezeichnung": "200.01.014.02.033A",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "193": {
+      "Neue_Bezeichnung": "RÖ-6/6",
+      "Alte_Bezeichnung": "200.01.014.02.011",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "194": {
+      "Neue_Bezeichnung": "RÖ-8/6",
+      "Alte_Bezeichnung": "200.01.014.02.012",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "195": {
+      "Neue_Bezeichnung": "RÖ-8/8",
+      "Alte_Bezeichnung": "200.01.014.02.039",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "196": {
+      "Neue_Bezeichnung": "RÖ-8/8/S1",
+      "Alte_Bezeichnung": "200.01.014.02.040",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "197": {
+      "Neue_Bezeichnung": "RÖ-8/8/S2",
+      "Alte_Bezeichnung": "200.01.014.02.154A",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "198": {
+      "Neue_Bezeichnung": "RÖ-8/8/S3",
+      "Alte_Bezeichnung": "200.01.014.02.154",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "199": {
+      "Neue_Bezeichnung": "RÖ-8/8/S4",
+      "Alte_Bezeichnung": "200.01.014.02.008",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "200": {
+      "Neue_Bezeichnung": "SR-110,1",
+      "Alte_Bezeichnung": "200.01.006.01.072",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "201": {
+      "Neue_Bezeichnung": "SR-110,1/S1",
+      "Alte_Bezeichnung": "200.01.020.04.001",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "202": {
+      "Neue_Bezeichnung": "SR-140",
+      "Alte_Bezeichnung": "200.01.006.01.004",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "203": {
+      "Neue_Bezeichnung": "SR-96",
+      "Alte_Bezeichnung": "200.01.006.01.001",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "204": {
+      "Neue_Bezeichnung": "SR-96,5/SM",
+      "Alte_Bezeichnung": "200.01.006.01.110",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "205": {
+      "Neue_Bezeichnung": "SR-98,2",
+      "Alte_Bezeichnung": "200.01.006.01.112",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "206": {
+      "Neue_Bezeichnung": "SR-98,2/S1",
+      "Alte_Bezeichnung": "200.01.006.01.046",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "207": {
+      "Neue_Bezeichnung": "SR-98,2/S2",
+      "Alte_Bezeichnung": "200.01.006.01.094",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Spannring"
+   },
+   "208": {
+      "Neue_Bezeichnung": "TO-40/60",
+      "Alte_Bezeichnung": "200.01.012.01.001",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Torpedo"
+   },
+   "209": {
+      "Neue_Bezeichnung": "ÜM-30F",
+      "Alte_Bezeichnung": "200.01.014.04.004",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Überwurfmutter-Coex"
+   },
+   "210": {
+      "Neue_Bezeichnung": "ÜM-40F",
+      "Alte_Bezeichnung": "200.01.014.04.008",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Überwurfmutter-Coex"
+   },
+   "211": {
+      "Neue_Bezeichnung": "VA-50/2x15",
+      "Alte_Bezeichnung": "200.01.005.01.017",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verteileranschluss"
+   },
+   "212": {
+      "Neue_Bezeichnung": "VR-220/90x3",
+      "Alte_Bezeichnung": "",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "213": {
+      "Neue_Bezeichnung": "VR-124/78x0,2",
+      "Alte_Bezeichnung": "200.01.006.01.012",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "214": {
+      "Neue_Bezeichnung": "VR-220/150x4",
+      "Alte_Bezeichnung": "200.01.006.01.073",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "215": {
+      "Neue_Bezeichnung": "VR-260/150x4",
+      "Alte_Bezeichnung": "200.01.006.01.102",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "216": {
+      "Neue_Bezeichnung": "VR-300/105x3",
+      "Alte_Bezeichnung": "200.01.006.01.109",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "217": {
+      "Neue_Bezeichnung": "VR-300/130x4",
+      "Alte_Bezeichnung": "200.01.006.01.113",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "218": {
+      "Neue_Bezeichnung": "VR-300/150x4",
+      "Alte_Bezeichnung": "200.01.006.01.105",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "219": {
+      "Neue_Bezeichnung": "VR-300/175x5",
+      "Alte_Bezeichnung": "200.01.006.01.083",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "220": {
+      "Neue_Bezeichnung": "VR-300/198x4",
+      "Alte_Bezeichnung": "200.01.006.01.080",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "221": {
+      "Neue_Bezeichnung": "VR-300/198x4",
+      "Alte_Bezeichnung": "200.01.006.01.088",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "222": {
+      "Neue_Bezeichnung": "VR-300/220x5",
+      "Alte_Bezeichnung": "200.01.006.01.021",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   },
+   "223": {
+      "Neue_Bezeichnung": "ZH-35/35",
+      "Alte_Bezeichnung": "200.01.007.01.062",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "224": {
+      "Neue_Bezeichnung": "ZH-35/35/S1",
+      "Alte_Bezeichnung": "200.01.007.01.068",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "225": {
+      "Neue_Bezeichnung": "ZH-35/40",
+      "Alte_Bezeichnung": "200.01.007.01.061",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "226": {
+      "Neue_Bezeichnung": "ZH-45/45",
+      "Alte_Bezeichnung": "200.01.007.01.067",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "227": {
+      "Neue_Bezeichnung": "ZH-50/30",
+      "Alte_Bezeichnung": "200.01.007.01.028",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "228": {
+      "Neue_Bezeichnung": "ZH-50/35",
+      "Alte_Bezeichnung": "200.01.007.01.041",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "229": {
+      "Neue_Bezeichnung": "ZH-50/35/S1",
+      "Alte_Bezeichnung": "200.01.007.01.030",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "230": {
+      "Neue_Bezeichnung": "ZH-50/40",
+      "Alte_Bezeichnung": "200.01.007.01.035",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "231": {
+      "Neue_Bezeichnung": "ZH-50/50",
+      "Alte_Bezeichnung": "200.01.007.01.060",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "232": {
+      "Neue_Bezeichnung": "ZH-50/50/S1",
+      "Alte_Bezeichnung": "200.01.007.01.039",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "233": {
+      "Neue_Bezeichnung": "ZH-50/50/S2",
+      "Alte_Bezeichnung": "200.01.007.01.065",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "234": {
+      "Neue_Bezeichnung": "ZH-50/50/S3",
+      "Alte_Bezeichnung": "200.01.007.01.063",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "235": {
+      "Neue_Bezeichnung": "ZH-50/50/S4",
+      "Alte_Bezeichnung": "200.01.007.01.066",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "236": {
+      "Neue_Bezeichnung": "ZH-80/50",
+      "Alte_Bezeichnung": "200.01.007.01.056",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "237": {
+      "Neue_Bezeichnung": "ZH-80/80",
+      "Alte_Bezeichnung": "200.01.007.01.069",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Zwischenhülse"
+   },
+   "238": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.011.01.021",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Aufnahmehülse"
+   },
+   "239": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.011.01.027",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Aufnahmehülse"
+   },
+   "240": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.014.02.036 1",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Coexröhrhen"
+   },
+   "241": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.014.02.095 1",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "242": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.014.02.150 1",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Röhrchen"
+   },
+   "243": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.012.01.001",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Torpedo"
+   },
+   "244": {
+      "Neue_Bezeichnung": "",
+      "Alte_Bezeichnung": "200.01.009.01.008",
+      "Beschreibung": "Anbauteile",
+      "Bauteilgruppe": "Verschraubungsringe"
+   }
+}
