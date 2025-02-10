@@ -64,7 +64,7 @@ jobs:
         run: ls -R build/app/outputs
 
       #
-      # ---------- DISABLED iOS STEPS ----------
+      # ---------- DISABLED iOS STEPS ---------
       #
       # - name: Build IPA
       #   run: flutter build ipa --release
