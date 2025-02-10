@@ -17,8 +17,10 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-OutputBaseFilename=ttpApp   ; <-- This is the final installer name: ttp_App.exe
-OutputDir=installer          ; <-- The compiled installer goes into windows\installer by default
+OutputBaseFilename=ttpApp
+;This is the final installer name: ttp_App.exe
+OutputDir=installer      
+;The compiled installer goes into windows\installer by default
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
