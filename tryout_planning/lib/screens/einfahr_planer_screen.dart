@@ -1320,7 +1320,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
   Color _getStatusColor(String status) {
     switch (status) {
       case 'In Arbeit':
-        return Colors.orange;
+        return Colors.cyan.shade600;
       case 'In Änderung':
         return Colors.yellow;
       case 'Erledigt':
@@ -1364,9 +1364,15 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           ),
         ),
         const SizedBox(width: 4),
+        // Legend text is always white.
+        const Text(
+          '', // Temporary placeholder.
+          style: TextStyle(fontSize: 12, color: Colors.white),
+        ),
+        // Replace with the actual status text:
         Text(
           status,
-          style: const TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: 12, color: Colors.white),
         ),
       ],
     );
@@ -1388,12 +1394,13 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           child: _buildLegend(),
         ),
         actions: [
-          // Undo button
+          // Undo button: always white if we can undo something; otherwise light grey.
           IconButton(
             icon: const Icon(Icons.undo),
             tooltip: 'Rückgängig',
             onPressed: _actionHistory.isNotEmpty ? _undoLastAction : null,
-            color: _actionHistory.isNotEmpty ? Colors.white : Colors.grey,
+            color:
+                _actionHistory.isNotEmpty ? Colors.white : Colors.grey.shade300,
           ),
           // Lock/unlock
           IconButton(
@@ -1460,6 +1467,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
           // Refresh
           IconButton(
             icon: const Icon(Icons.refresh),
+            tooltip: 'Daten aktualisieren',
             onPressed: () => _fetchDataForWeek(_selectedWeek, _selectedYear,
                 forceRedownload: true),
           ),
@@ -1558,9 +1566,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                       tryoutIndex: 5, // Index for "Werkzeuge in Änderung"
                       width: 210,
                       height: (days.length * 172).toDouble() + 35,
-                      bgColor: Colors.red[100],
+                      bgColor: Colors.grey.shade100,
                       dayName: null, // indicates "no specific day"
-                      title: '     Werkzeuge in Änderung',
+                      title: '    Werkzeuge in Änderung',
                       onAdd:
                           _editModeEnabled ? () => _addToSeparateBox(5) : null,
                       itemsSupplier: () => schedule.entries
@@ -1573,9 +1581,9 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                       tryoutIndex: 6, // Index for "Bereit für Einfahrversuch"
                       width: 210,
                       height: (days.length * 172).toDouble() + 35,
-                      bgColor: Colors.green[100],
+                      bgColor: Colors.grey.shade100,
                       dayName: null,
-                      title: '     Bereit für Einfahrversuch',
+                      title: '   Bereit für Einfahrversuch',
                       onAdd:
                           _editModeEnabled ? () => _addToSeparateBox(6) : null,
                       itemsSupplier: () => schedule.entries
@@ -1864,8 +1872,10 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
                 'Maschine: Unbekannt',
                 style: TextStyle(color: Colors.black),
               ),
-            Text('Status: ${item.status}',
-                style: const TextStyle(color: Colors.black)),
+            Text(
+              'Status: ${item.status}',
+              style: const TextStyle(color: Colors.black),
+            ),
           ],
         ),
         // Edit button if in edit mode
