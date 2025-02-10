@@ -36,7 +36,7 @@ jobs:
         run: flutter pub get
 
       # [Debug] Print environment variables
-      - name: Debug: Print Environment
+      - name: "Debug: Print Environment"
         run: env
 
       # 5. Prepare Android signing
@@ -60,7 +60,7 @@ jobs:
         run: flutter build appbundle --release
 
       # [Debug] List Android build outputs
-      - name: Debug: List Android Build Output
+      - name: "Debug: List Android Build Output"
         run: ls -R build/app/outputs
 
       #
@@ -169,7 +169,7 @@ jobs:
         run: flutter pub get
 
       # [Debug] Print environment variables
-      - name: Debug: Print Environment
+      - name: "Debug: Print Environment"
         run: echo "=== ENV VARIABLES ===" ; env
 
       # 4. Build Windows release
@@ -177,7 +177,7 @@ jobs:
         run: flutter build windows --release
 
       # [Debug] List Windows build outputs
-      - name: Debug: List Windows Build Output
+      - name: "Debug: List Windows Build Output"
         run: dir build\windows\x64\runner\Release
         shell: cmd
 
