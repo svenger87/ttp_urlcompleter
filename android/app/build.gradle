@@ -1,32 +1,26 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
 
 def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file("android/key.properties")
+def keystorePropertiesFile = rootProject.file("key.properties")
+println("Looking for key.properties at " + keystorePropertiesFile)
 if (keystorePropertiesFile.exists()) {
+    println("key.properties found, loading...")
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+} else {
+    println("key.properties not found! Check your path.")
 }
 
 android {
-    namespace = "com.app.ttp_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion "27.2.12479018" // Corrected line
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
-    }
+    namespace = "com.app.ttp_app"
+    ndkVersion "27.2.12479018"
 
     defaultConfig {
-        applicationId = "com.app.ttp_app"
+        applicationId "com.app.ttp_app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -35,18 +29,26 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties["storeFile"])
+            storePassword keystoreProperties["storePassword"]
+            keyAlias keystoreProperties["keyAlias"]
+            keyPassword keystoreProperties["keyPassword"]
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            signingConfig = signingConfigs.release
+            signingConfig signingConfigs.release
+            // ...
         }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
     }
 }
 
