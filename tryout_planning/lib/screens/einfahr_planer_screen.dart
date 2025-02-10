@@ -1328,7 +1328,7 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
       case 'Materialversuch':
         return Colors.purple.shade200;
       default:
-        return Colors.grey.shade300;
+        return Colors.grey.shade400;
     }
   }
 
