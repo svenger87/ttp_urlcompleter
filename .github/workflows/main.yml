@@ -26,7 +26,7 @@ jobs:
 
       # 3. Set up Flutter
       - name: Set Up Flutter
-        uses: subosito/flutter-action@v4
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.3'
           channel: 'stable'
@@ -67,7 +67,7 @@ jobs:
 
       # 10. Upload artifacts to GitHub (for reference, as a Release asset)
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Releases
           path: |
@@ -143,7 +143,7 @@ jobs:
 
       # 2. Set up Flutter on Windows
       - name: Set Up Flutter
-        uses: subosito/flutter-action@v4
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.3'
           channel: 'stable'
