@@ -124,7 +124,7 @@ jobs:
             # build/ios_build.tar.gz,            # iOS artifact disabled
             # build/ios/ipa/Runner.ipa           # iOS artifact disabled
           tag: v${{ env.VERSION }}
-          token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       #
       # ---------- DISABLED FASTLANE iOS UPLOAD ----------

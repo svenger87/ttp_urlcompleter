@@ -6,12 +6,6 @@
 #define MyAppURL "https://ttp-kunststoffprofile.de"
 #define MyAppExeName "ttp_urlcompleter.exe"
 
-; -- Debug Preprocessor Variables --
-#expr Echo("Debug: MyAppName = " + MyAppName)
-#expr Echo("Debug: MyAppVersion = " + MyAppVersion)
-#expr Echo("Debug: MyAppPublisher = " + MyAppPublisher)
-#expr Echo("Debug: MyAppExeName = " + MyAppExeName)
-
 [Code]
 procedure InitializeSetup;
 begin
@@ -49,8 +43,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ;  1) Use relative paths from the .iss file to the release folder
 ;  2) Check your actual output path from "flutter build windows --release". 
 ;     Usually: build\windows\x64\runner\Release
-Source: "..\..\build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\build\windows\x64\runner\Release\*";         DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\build\windows\x64\runner\Release\*";         DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
