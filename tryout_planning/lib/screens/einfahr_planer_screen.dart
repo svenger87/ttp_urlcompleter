@@ -1356,8 +1356,8 @@ class _EinfahrPlanerScreenState extends State<EinfahrPlanerScreen>
     return Row(
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 16,
+          height: 16,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
