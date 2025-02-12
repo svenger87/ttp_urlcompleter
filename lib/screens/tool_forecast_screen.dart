@@ -10,11 +10,13 @@ import 'edit_tool_screen.dart';
 
 class ToolForecastScreen extends StatefulWidget {
   final List<Map<String, dynamic>> forecastData;
+  final List<Map<String, dynamic>> ordersData; // New parameter
   final String lastUpdated;
 
   const ToolForecastScreen({
     super.key,
     required this.forecastData,
+    required this.ordersData,
     required this.lastUpdated,
   });
 
@@ -47,25 +49,66 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Split forecast data into provided and non‑provided lists.
     _providedData =
         widget.forecastData.where((tool) => tool['provided'] == true).toList();
     _forecastData =
         widget.forecastData.where((tool) => tool['provided'] != true).toList();
 
-    final twoWeeksFromNow = DateTime.now().add(const Duration(days: 14));
-    _providedWithoutOrdersData = _providedData.where((tool) {
-      bool hasOrder = tool.containsKey('Auftragsnummer') &&
-          tool['Auftragsnummer'] != null &&
-          tool['Auftragsnummer'].toString().trim().isNotEmpty;
+    // Define the time window:
+    // Starting at today's date at midnight (i.e. today) and ending 21 days later.
+    final DateTime now = DateTime.now();
+    final DateTime todayDate = DateTime(now.year, now.month, now.day);
+    final DateTime windowEnd = todayDate.add(Duration(days: 21));
 
-      final String? planStartDatum = tool['PlanStartDatum'];
-      if (planStartDatum == null || planStartDatum.isEmpty) {
-        return !hasOrder;
+    // Build the list of provided tools that do NOT have any upcoming order in the window.
+    // A provided tool is included if no order exists for it in the all-orders API
+    // with a PlanStartDatum >= today and < windowEnd.
+    _providedWithoutOrdersData = _providedData.where((tool) {
+      final String? equipment = tool['Equipment']?.toString().trim();
+
+      // If the tool has no Equipment value, include it by default.
+      if (equipment == null || equipment.isEmpty) {
+        if (kDebugMode) {
+          print("Tool with no equipment, including it by default.");
+        }
+        return true;
       }
-      final toolDate = _tryParseDate(planStartDatum);
-      return !hasOrder && toolDate.isAfter(twoWeeksFromNow);
+
+      // Find all orders for this equipment (from the all-orders API)
+      final matchingOrders = widget.ordersData.where((order) {
+        final String? orderEquipment = order['Equipment']?.toString().trim();
+        // Only consider orders for which the Equipment exactly matches.
+        if (orderEquipment != equipment) return false;
+
+        // Check if the order has a valid PlanStartDatum.
+        final String? orderPlanStart = order['PlanStartDatum'];
+        if (orderPlanStart == null || orderPlanStart.isEmpty) return false;
+
+        final DateTime orderDate = _tryParseDate(orderPlanStart);
+
+        // We want to exclude tools if any order is scheduled for today or later,
+        // up to (but not including) windowEnd.
+        final bool inWindow = orderDate.compareTo(todayDate) >= 0 &&
+            orderDate.isBefore(windowEnd);
+
+        if (kDebugMode) {
+          print(
+              "Order for tool $equipment with date $orderDate in window? $inWindow");
+        }
+        return inWindow;
+      });
+
+      // If any matching order is found, then the tool is actively needed and we exclude it.
+      final bool includeTool = matchingOrders.isEmpty;
+      if (kDebugMode) {
+        print("Tool $equipment has upcoming order in window? ${!includeTool}");
+      }
+      return includeTool;
     }).toList();
 
+    // Sort the lists as before.
     _sortProvidedData(_sortColumnIndexProvided, _sortAscendingProvided);
     _sortForecastData(_sortColumnIndexForecast, _sortAscendingForecast);
     _sortProvidedWithoutOrdersData(_sortColumnIndexProvidedWithoutOrders,
@@ -74,8 +117,7 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // NOTE: We removed the Scaffold wrapper so that the ToolForecastWrapper’s
-    // Scaffold (with the app bar and bottom nav) is used.
+    // Using the Scaffold from the wrapper (with the app bar) so we only use SingleChildScrollView here.
     return SingleChildScrollView(
       controller: _verticalController,
       child: Column(
@@ -311,7 +353,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     setState(() {
       _sortColumnIndexProvided = columnIndex;
       _sortAscendingProvided = ascending;
-
       _providedData.sort((a, b) => _compareCells(a, b, columnIndex, ascending));
     });
   }
@@ -320,7 +361,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     setState(() {
       _sortColumnIndexForecast = columnIndex;
       _sortAscendingForecast = ascending;
-
       _forecastData.sort((a, b) => _compareCells(a, b, columnIndex, ascending));
     });
   }
@@ -329,7 +369,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     setState(() {
       _sortColumnIndexProvidedWithoutOrders = columnIndex;
       _sortAscendingProvidedWithoutOrders = ascending;
-
       _providedWithoutOrdersData
           .sort((a, b) => _compareCells(a, b, columnIndex, ascending));
     });
@@ -342,7 +381,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     bool ascending,
   ) {
     late int compareResult;
-
     switch (columnIndex) {
       case 0:
         final dateA = _tryParseDate(a['PlanStartDatum']);
@@ -391,7 +429,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
       default:
         compareResult = 0;
     }
-
     return ascending ? compareResult : -compareResult;
   }
 
@@ -515,12 +552,10 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         equipmentNumber == 'N/A') {
       return;
     }
-
     try {
       _showLoadingDialog(context);
       final Tool? tool = await _toolService.fetchToolByNumber(equipmentNumber);
       Navigator.pop(context);
-
       if (tool != null) {
         Navigator.push(
           context,

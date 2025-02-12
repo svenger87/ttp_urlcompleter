@@ -16,6 +16,7 @@ class _ToolForecastWrapperState extends State<ToolForecastWrapper> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Map<String, dynamic>>? _forecastData;
+  List<Map<String, dynamic>>? _ordersData;
   String? _lastUpdated;
 
   @override
@@ -26,10 +27,16 @@ class _ToolForecastWrapperState extends State<ToolForecastWrapper> {
 
   Future<void> _loadForecast() async {
     try {
+      // Fetch forecast data from /tool-forecast
       final forecastResponse = await toolService.fetchToolForecast();
+      // Fetch all orders (unfiltered) from /all-orders
+      final ordersResponse = await toolService.fetchAllOrders();
+
       setState(() {
-        _forecastData = forecastResponse['data'];
+        _forecastData =
+            List<Map<String, dynamic>>.from(forecastResponse['data']);
         _lastUpdated = forecastResponse['lastUpdated'];
+        _ordersData = List<Map<String, dynamic>>.from(ordersResponse['orders']);
         _isLoading = false;
       });
     } catch (e) {
@@ -61,6 +68,7 @@ class _ToolForecastWrapperState extends State<ToolForecastWrapper> {
               ? Center(child: Text(_errorMessage!))
               : ToolForecastScreen(
                   forecastData: _forecastData!,
+                  ordersData: _ordersData!,
                   lastUpdated: _lastUpdated!,
                 ),
     );

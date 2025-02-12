@@ -12,6 +12,8 @@ class ToolService {
       'http://wim-solution:3000/storage-utilization';
   final String users = 'http://wim-solution:3000/users';
   final String toolForecastApiUrl = 'http://wim-solution:3000/tool-forecast';
+  final String allOrdersApiUrl =
+      'http://wim-solution.sip.local:3000/all-orders';
 
   // Fetch tools from local API and separate them into has_storage and has_no_storage
   Future<Map<String, List<Tool>>> fetchTools() async {
@@ -164,6 +166,35 @@ class ToolService {
       'data': filteredList,
       'lastUpdated': lastUpdated,
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // NEW: Fetch all orders without any filtering with debugging.
+  // -------------------------------------------------------------------------
+  Future<Map<String, dynamic>> fetchAllOrders() async {
+    if (kDebugMode) {
+      print("Fetching all orders from URL: $allOrdersApiUrl");
+    }
+    try {
+      final response = await http.get(Uri.parse(allOrdersApiUrl));
+      if (kDebugMode) {
+        print("All Orders response status: ${response.statusCode}");
+      }
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return decoded;
+      } else {
+        if (kDebugMode) {
+          print("Error: All orders response status is ${response.statusCode}");
+        }
+        throw Exception('Failed to load all orders');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Exception in fetchAllOrders: $e");
+      }
+      rethrow;
+    }
   }
 
   // -------------------------------------------------------------------------
