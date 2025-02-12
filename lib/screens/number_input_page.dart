@@ -205,7 +205,8 @@ class _NumberInputPageState extends State<NumberInputPage>
     WidgetsBinding.instance.addObserver(this);
     _loadRecentItems();
     _loadFavorites();
-    _preloadData();
+    // Schedule _preloadData to run after the first frame is rendered.
+    Future.delayed(Duration.zero, _preloadData);
   }
 
   @override
@@ -242,12 +243,16 @@ class _NumberInputPageState extends State<NumberInputPage>
   /// Preload all necessary data.
   void _preloadData() async {
     try {
-      final fetchedAreaCenters = await _fetchAreaCenters();
-      final fetchedLines = await _fetchLines();
-      final fetchedTools = await _fetchTools();
-      final fetchedMachines = await _fetchMachines();
-      final fetchedEmployees = await _fetchEmployees();
-      final fetchedMaterials = await _fetchMaterials();
+      final fetchedAreaCenters =
+          await _fetchAreaCenters().timeout(Duration(seconds: 10));
+      final fetchedLines = await _fetchLines().timeout(Duration(seconds: 10));
+      final fetchedTools = await _fetchTools().timeout(Duration(seconds: 10));
+      final fetchedMachines =
+          await _fetchMachines().timeout(Duration(seconds: 10));
+      final fetchedEmployees =
+          await _fetchEmployees().timeout(Duration(seconds: 10));
+      final fetchedMaterials =
+          await _fetchMaterials().timeout(Duration(seconds: 10));
 
       setState(() {
         areaCenters = fetchedAreaCenters;
@@ -258,16 +263,23 @@ class _NumberInputPageState extends State<NumberInputPage>
         materials = fetchedMaterials;
         isDataLoaded = true;
 
-        // Build the machine->line map.
+        // Build the machine-to-line map.
         machinePitchToLineMap = _buildMachineToLineMap(lines, machines);
-        if (kDebugMode) {
-          print('Machine to Line Map: $machinePitchToLineMap');
-        }
       });
     } catch (e) {
       if (kDebugMode) {
         print('Error preloading data: $e');
       }
+      // Provide fallback values so the app doesn't remain stuck loading.
+      setState(() {
+        areaCenters = [];
+        lines = [];
+        tools = [];
+        machines = [];
+        employees = [];
+        materials = [];
+        isDataLoaded = true;
+      });
     }
   }
 
@@ -984,8 +996,18 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Störfall anlegen',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Störfall anlegen',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Alle Felder sind erforderlich. '
+              'Mindestens eines der Felder "Maschine / Anlage", "Werkzeug" oder "Material" muss ausgefüllt sein, '
+              'aber Sie können auch mehr als eines auswählen.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -1323,7 +1345,9 @@ class _CreateIssueModalState extends State<CreateIssueModal> {
       materialBreakdown: materialController.text,
       workCardComment: workCardComment,
     )) {
-      _showOverlayMessage('Bitte alle erforderlichen Felder ausfüllen.');
+      _showOverlayMessage(
+          'Alle Felder sind erforderlich. Bitte füllen Sie alle Felder aus und stellen Sie sicher, dass '
+          'mindestens eines der Felder "Maschine / Anlage", "Werkzeug" oder "Material" ausgefüllt ist.');
       return;
     }
 

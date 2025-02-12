@@ -62,6 +62,19 @@ class _WebViewModuleState extends State<WebViewModule> {
     }
   }
 
+  String getInitialUrl(String url) {
+    // Parse the URL to extract its components
+    final Uri uri = Uri.parse(url);
+
+    // Check if the platform is Android and if the path ends with '.pdf'
+    if (defaultTargetPlatform == TargetPlatform.android &&
+        uri.path.toLowerCase().endsWith('.pdf')) {
+      // Wrap the original URL with the Google Docs viewer URL.
+      return "https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(url)}";
+    }
+    return url;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,8 +118,9 @@ class _WebViewModuleState extends State<WebViewModule> {
               child: Stack(
                 children: [
                   InAppWebView(
-                    initialUrlRequest:
-                        URLRequest(url: WebUri.uri(Uri.parse(widget.url))),
+                    initialUrlRequest: URLRequest(
+                      url: WebUri.uri(Uri.parse(getInitialUrl(widget.url))),
+                    ),
                     pullToRefreshController: pullToRefreshController,
                     initialSettings: InAppWebViewSettings(
                       javaScriptEnabled: true,
@@ -118,26 +132,26 @@ class _WebViewModuleState extends State<WebViewModule> {
                     },
                     onLoadStart: (controller, url) {
                       setState(() {
-                        _isLoading =
-                            true; // Start showing the loading indicator
+                        _isLoading = true;
                       });
                     },
                     onLoadStop: (controller, url) async {
                       setState(() {
-                        _isLoading =
-                            false; // Hide the loading indicator when done
+                        _isLoading = false;
                       });
                       pullToRefreshController?.endRefreshing();
                     },
                     onReceivedServerTrustAuthRequest:
                         (controller, challenge) async {
                       return ServerTrustAuthResponse(
-                          action: ServerTrustAuthResponseAction.PROCEED);
+                        action: ServerTrustAuthResponseAction.PROCEED,
+                      );
                     },
                     shouldOverrideUrlLoading:
                         (controller, navigationAction) async {
                       var uri = navigationAction.request.url!;
 
+                      // For other non-standard URL schemes, try launching externally
                       if (![
                         "http",
                         "https",
@@ -166,6 +180,7 @@ class _WebViewModuleState extends State<WebViewModule> {
                       }
                     },
                   ),
+
                   if (_isLoading)
                     const Center(
                         child:

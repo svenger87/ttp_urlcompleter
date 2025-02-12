@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ttp_app/modules/pdf_reader_module.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -98,7 +99,7 @@ List<ModuleCategory> getModuleCategories(BuildContext context) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => WebViewModule(url: prodPlan1w),
+                builder: (context) => PDFReaderModule(pdfUrl: prodPlan1w),
               ),
             );
           },
@@ -110,7 +111,7 @@ List<ModuleCategory> getModuleCategories(BuildContext context) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => WebViewModule(url: prodPlan3w),
+                builder: (context) => PDFReaderModule(pdfUrl: prodPlan3w),
               ),
             );
           },
@@ -122,7 +123,7 @@ List<ModuleCategory> getModuleCategories(BuildContext context) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => WebViewModule(url: matplan),
+                builder: (context) => PDFReaderModule(pdfUrl: matplan),
               ),
             );
           },
