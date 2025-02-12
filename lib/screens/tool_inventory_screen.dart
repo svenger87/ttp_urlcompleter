@@ -1,12 +1,11 @@
+// tool_inventory_screen.dart
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:ttp_app/screens/tool_forecast_screen.dart';
 import 'pin_entry_screen.dart';
 import '../services/tool_service.dart';
 import '../models/tool.dart';
 import 'edit_tool_screen.dart';
-import 'storage_utilization_screen.dart';
 
 class ToolInventoryScreen extends StatefulWidget {
   const ToolInventoryScreen({super.key});
@@ -133,44 +132,6 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
     super.dispose();
   }
 
-  Future<void> _loadToolForecast() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final forecastResponse = await toolService.fetchToolForecast();
-      final forecastData = forecastResponse['data'];
-      final lastUpdated = forecastResponse['lastUpdated'];
-
-      if (mounted) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ToolForecastScreen(
-              forecastData: forecastData,
-              lastUpdated: lastUpdated,
-            ),
-          ),
-        );
-
-        setState(() {
-          _isLoading = false;
-          _toolsLoaded = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage =
-              'Fehler beim Laden der Werkzeugbereitstellungsvorhersage: $e';
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -182,26 +143,11 @@ class ToolInventoryScreenState extends State<ToolInventoryScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: _loadTools,
           ),
-          IconButton(
-            icon: const Icon(Icons.storage),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StorageUtilizationScreen(),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.pending_actions),
-            onPressed: _loadToolForecast,
-          ),
         ],
         titleTextStyle: const TextStyle(
-          color: Colors.white, // Set the text color to white
-          fontSize: 20, // Optionally adjust the font size
-          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
       ),
       body: _isLoading

@@ -1,20 +1,21 @@
+// tool_forecast_screen.dart
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:intl/intl.dart';
 import 'package:ttp_app/models/tool.dart';
 import '../services/tool_service.dart';
 import 'edit_tool_screen.dart';
 
 class ToolForecastScreen extends StatefulWidget {
   final List<Map<String, dynamic>> forecastData;
-  final String lastUpdated; // Add lastUpdated to the screen
+  final String lastUpdated;
 
   const ToolForecastScreen({
     super.key,
     required this.forecastData,
-    required this.lastUpdated, // Accept lastUpdated as a required argument
+    required this.lastUpdated,
   });
 
   @override
@@ -28,60 +29,43 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
 
   bool _isProvidedCollapsed = true;
   bool _isForecastCollapsed = false;
-  bool _isProvidedWithoutOrdersCollapsed =
-      true; // New panel is collapsed by default
+  bool _isProvidedWithoutOrdersCollapsed = true;
 
-  // We store the separated data for Provided, Forecast and Provided Without Orders in state,
-  // so we can sort them as needed.
   late List<Map<String, dynamic>> _providedData;
   late List<Map<String, dynamic>> _forecastData;
   late List<Map<String, dynamic>> _providedWithoutOrdersData;
 
-  // Track which column is sorted and ascending/descending for provided data
-  int _sortColumnIndexProvided = 0; // Default to Starttermin column index
-  bool _sortAscendingProvided = true; // Default ascending
+  int _sortColumnIndexProvided = 0;
+  bool _sortAscendingProvided = true;
 
-  // Track which column is sorted and ascending/descending for forecast data
-  int _sortColumnIndexForecast = 0; // Default to Starttermin column index
-  bool _sortAscendingForecast = true; // Default ascending
+  int _sortColumnIndexForecast = 0;
+  bool _sortAscendingForecast = true;
 
-  // Track which column is sorted and ascending/descending for provided without orders data
   int _sortColumnIndexProvidedWithoutOrders = 0;
   bool _sortAscendingProvidedWithoutOrders = true;
 
   @override
   void initState() {
     super.initState();
-    // Separate providedData and forecastData
     _providedData =
         widget.forecastData.where((tool) => tool['provided'] == true).toList();
     _forecastData =
         widget.forecastData.where((tool) => tool['provided'] != true).toList();
 
-    // Create the new list: provided tools without production orders.
-    // Here we assume that if the tool contains a non-empty 'Auftragsnummer' key, it has a production order.
-    // Also, exclude tools whose PlanStartDatum falls into the current week.
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
-
+    final twoWeeksFromNow = DateTime.now().add(const Duration(days: 14));
     _providedWithoutOrdersData = _providedData.where((tool) {
-      // Check for a production order
       bool hasOrder = tool.containsKey('Auftragsnummer') &&
           tool['Auftragsnummer'] != null &&
           tool['Auftragsnummer'].toString().trim().isNotEmpty;
 
-      // Check if the tool's PlanStartDatum falls in the current week
-      final toolDate = _tryParseDate(tool['PlanStartDatum']);
-      bool inCurrentWeek =
-          toolDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
-              toolDate.isBefore(endOfWeek.add(const Duration(days: 1)));
-
-      // Include the tool only if it does NOT have a production order and is not in the current week.
-      return !hasOrder && !inCurrentWeek;
+      final String? planStartDatum = tool['PlanStartDatum'];
+      if (planStartDatum == null || planStartDatum.isEmpty) {
+        return !hasOrder;
+      }
+      final toolDate = _tryParseDate(planStartDatum);
+      return !hasOrder && toolDate.isAfter(twoWeeksFromNow);
     }).toList();
 
-    // Default sort by Starttermin (column index 0) ascending for all tables
     _sortProvidedData(_sortColumnIndexProvided, _sortAscendingProvided);
     _sortForecastData(_sortColumnIndexForecast, _sortAscendingForecast);
     _sortProvidedWithoutOrdersData(_sortColumnIndexProvidedWithoutOrders,
@@ -90,33 +74,20 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Werkzeugvorschau (Letzte Aktualisierung: ${widget.lastUpdated})',
-        ),
-        backgroundColor: const Color(0xFF104382),
-        titleTextStyle: const TextStyle(
-          color: Colors.white, // Set the text color to white
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      body: SingleChildScrollView(
-        controller: _verticalController,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProvidedSection(),
-            _buildForecastSection(),
-            _buildProvidedWithoutOrdersSection(), // New section added here
-          ],
-        ),
+    // NOTE: We removed the Scaffold wrapper so that the ToolForecastWrapper’s
+    // Scaffold (with the app bar and bottom nav) is used.
+    return SingleChildScrollView(
+      controller: _verticalController,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildProvidedSection(),
+          _buildForecastSection(),
+          _buildProvidedWithoutOrdersSection(),
+        ],
       ),
     );
   }
-
-  // -- Provided Section
 
   Widget _buildProvidedSection() {
     if (kDebugMode) {
@@ -169,8 +140,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     );
   }
 
-  // -- Forecast Section
-
   Widget _buildForecastSection() {
     if (kDebugMode) {
       print(
@@ -222,8 +191,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     );
   }
 
-  // -- Provided Without Orders Section
-
   Widget _buildProvidedWithoutOrdersSection() {
     if (kDebugMode) {
       print(
@@ -244,7 +211,7 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
             headerBuilder: (BuildContext context, bool isExpanded) {
               return const ListTile(
                 title: Text(
-                  'Bereitgestellte Werkzeuge ohne Produktionsaufträge\nab nächster Woche',
+                  'Bereitgestellte Werkzeuge ohne Produktionsaufträge',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               );
@@ -276,9 +243,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     );
   }
 
-  // -- Build Columns
-
-  /// Build columns and accept an onSort callback.
   List<DataColumn> _buildColumns({
     required bool isProvidedTable,
     required void Function(int columnIndex, bool ascending) onSort,
@@ -343,9 +307,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     ];
   }
 
-  // -- Sort Logic
-
-  /// Sort the Provided Data
   void _sortProvidedData(int columnIndex, bool ascending) {
     setState(() {
       _sortColumnIndexProvided = columnIndex;
@@ -355,7 +316,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     });
   }
 
-  /// Sort the Forecast Data
   void _sortForecastData(int columnIndex, bool ascending) {
     setState(() {
       _sortColumnIndexForecast = columnIndex;
@@ -365,7 +325,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     });
   }
 
-  /// Sort the Provided Without Orders Data
   void _sortProvidedWithoutOrdersData(int columnIndex, bool ascending) {
     setState(() {
       _sortColumnIndexProvidedWithoutOrders = columnIndex;
@@ -376,7 +335,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     });
   }
 
-  /// A helper method to compare row data based on which column was tapped.
   int _compareCells(
     Map<String, dynamic> a,
     Map<String, dynamic> b,
@@ -386,42 +344,31 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     late int compareResult;
 
     switch (columnIndex) {
-      // Starttermin
       case 0:
         final dateA = _tryParseDate(a['PlanStartDatum']);
         final dateB = _tryParseDate(b['PlanStartDatum']);
         compareResult = dateA.compareTo(dateB);
         break;
-
-      // Bereitstellung (boolean comparison)
       case 1:
         final bool valA = (a['provided'] == true);
         final bool valB = (b['provided'] == true);
         compareResult = valA == valB ? 0 : (valA ? 1 : -1);
         break;
-
-      // Hauptartikel
       case 2:
         final String valA = a['Hauptartikel'] ?? '';
         final String valB = b['Hauptartikel'] ?? '';
         compareResult = valA.compareTo(valB);
         break;
-
-      // Werkzeug (Equipment)
       case 3:
         final String valA = a['Equipment'] ?? '';
         final String valB = b['Equipment'] ?? '';
         compareResult = valA.compareTo(valB);
         break;
-
-      // Arbeitsplatz
       case 4:
         final String valA = a['Arbeitsplatz'] ?? '';
         final String valB = b['Arbeitsplatz'] ?? '';
         compareResult = valA.compareTo(valB);
         break;
-
-      // Längswzgr
       case 5:
         final String valA =
             (a['lengthcuttoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
@@ -429,8 +376,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
             (b['lengthcuttoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
         compareResult = valA.compareTo(valB);
         break;
-
-      // Verpwzgr
       case 6:
         final String valA =
             (a['packagingtoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
@@ -438,14 +383,11 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
             (b['packagingtoolgroup']?.toString().split(' ')[0]) ?? 'Ohne';
         compareResult = valA.compareTo(valB);
         break;
-
-      // Status
       case 7:
         final String valA = a['internalstatus'] ?? 'N/A';
         final String valB = b['internalstatus'] ?? 'N/A';
         compareResult = valA.compareTo(valB);
         break;
-
       default:
         compareResult = 0;
     }
@@ -455,18 +397,14 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
 
   DateTime _tryParseDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) {
-      // Return a default fallback date
       return DateTime(1900);
     }
     try {
       return DateTime.parse(dateString);
     } catch (_) {
-      // Return a default fallback if parse fails
       return DateTime(1900);
     }
   }
-
-  // -- Build Each Data Row
 
   DataRow _buildDataRow(Map<String, dynamic> tool) {
     String lengthcuttoolgroup =
@@ -498,30 +436,16 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
     ]);
   }
 
-  /// Updated method to handle the blueAccent case (freestatus_id == 37 or 133).
   DataRow _buildPulsatingRow(
     Map<String, dynamic> tool,
     bool highlightRow,
     bool isInactive,
     List<DataCell> cells,
   ) {
-    if (kDebugMode) {
-      print(
-        '[DEBUG] _buildPulsatingRow called. '
-        'Equipment: ${tool['Equipment']} | '
-        'freestatus_id: ${tool['freestatus_id']} | '
-        'isInactive: $isInactive | '
-        'highlightRow: $highlightRow',
-      );
-    }
-
     final bool isFreeStatusBlue =
         (tool['freestatus_id'] == 37 || tool['freestatus_id'] == 133);
 
     if (isInactive) {
-      if (kDebugMode) {
-        print('[DEBUG] --> Using RED pulsating row (tool is inactive).');
-      }
       return DataRow(
         cells: cells.map((cell) {
           return DataCell(
@@ -550,9 +474,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         ),
       );
     } else if (isFreeStatusBlue) {
-      if (kDebugMode) {
-        print('[DEBUG] --> Using BLUE accent row (freestatus_id = 37 or 133).');
-      }
       return DataRow(
         color: MaterialStateProperty.resolveWith<Color?>(
           (Set<MaterialState> states) {
@@ -562,9 +483,6 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         cells: cells,
       );
     } else if (highlightRow) {
-      if (kDebugMode) {
-        print('[DEBUG] --> Using ORANGE highlight row (highlightRow=true).');
-      }
       return DataRow(
         color: MaterialStateProperty.resolveWith<Color?>(
           (Set<MaterialState> states) {
@@ -574,16 +492,11 @@ class _ToolForecastScreenState extends State<ToolForecastScreen> {
         cells: cells,
       );
     } else {
-      if (kDebugMode) {
-        print('[DEBUG] --> Using NO special highlight.');
-      }
       return DataRow(
         cells: cells,
       );
     }
   }
-
-  // -- Utility Methods
 
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'N/A';

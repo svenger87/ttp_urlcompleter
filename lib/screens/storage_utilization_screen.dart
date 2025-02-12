@@ -1,3 +1,4 @@
+// storage_utilization_screen.dart
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/foundation.dart';
@@ -30,24 +31,21 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
   Future<void> _loadStorageData() async {
     try {
       final response = await http.get(
-          Uri.parse('http://wim-solution.sip.local:3000/storage-utilization'));
+        Uri.parse('http://wim-solution.sip.local:3000/storage-utilization'),
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
         setState(() {
-          // Handle maxCapacity and freeCapacity by casting them as double and converting to int
           _maxCapacity =
               double.tryParse(data['maxCapacity'].toString())?.toInt() ?? 0;
           _freeCapacity =
               double.tryParse(data['freeCapacity'].toString())?.toInt() ?? 0;
           _usedCapacity =
               double.tryParse(data['usedCapacity'].toString())?.toInt() ?? 0;
-
-          // Handle usagePercentage as double
           _usagePercentage =
               double.tryParse(data['usagePercentage'].toString()) ?? 0.0;
-
           _isLoading = false;
         });
 
@@ -80,15 +78,17 @@ class _StorageUtilizationScreenState extends State<StorageUtilizationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Use the same AppBar style as other screens
       appBar: AppBar(
         title: const Text('Lagerauslastung'),
         backgroundColor: const Color(0xFF104382),
         titleTextStyle: const TextStyle(
-          color: Colors.white, // Set the text color to white
-          fontSize: 20, // Optionally adjust the font size
-          fontWeight: FontWeight.bold, // Optionally adjust the font weight
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
       ),
+      // No bottomNavigationBar here—it's handled by the main container.
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _hasError

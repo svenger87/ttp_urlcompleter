@@ -5,7 +5,6 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:flutter_svg/flutter_svg.dart';
 import '../constants.dart';
 import '../modules/webview_module.dart';
-import '../screens/tool_ui.dart';
 import '../screens/pickists_screen.dart';
 import '../modules/torsteuerung_module.dart';
 import '../modules/converter_module.dart';
@@ -16,6 +15,7 @@ import 'package:tryout_planning/screens/einfahr_planer_screen.dart';
 import 'package:sap2worldship/main.dart';
 import 'package:kistenqrcodegenerator/pages/qrcode_generator_page.dart';
 import '../modules/suggestions_manager.dart';
+import 'package:ttp_app/screens/tools_main_screen.dart';
 
 /// A common class for module items used in the side menu and favorites.
 class ModuleItem {
@@ -254,7 +254,7 @@ List<ModuleCategory> getModuleCategories(BuildContext context) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const ToolInventoryScreen(),
+                builder: (context) => const ToolsMainScreen(),
               ),
             );
           },
