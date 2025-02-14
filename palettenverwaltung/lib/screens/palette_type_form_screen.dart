@@ -34,6 +34,7 @@ class _PaletteTypeFormScreenState extends State<PaletteTypeFormScreen> {
   late TextEditingController _buchungsKzController;
   late TextEditingController _lhmKuehneNagelController;
   late TextEditingController _globalInventoryController;
+  late TextEditingController _minAvailableController;
   String? _photoPath;
 
   final ImagePicker _picker = ImagePicker();
@@ -70,6 +71,9 @@ class _PaletteTypeFormScreenState extends State<PaletteTypeFormScreen> {
         TextEditingController(text: paletteType?.lhmKuehneNagel ?? '');
     _globalInventoryController = TextEditingController(
         text: paletteType?.globalInventory.toString() ?? '0');
+    _minAvailableController = TextEditingController(
+        text: paletteType?.minAvailable.toString() ??
+            '0'); // Initialize new field
     _photoPath = paletteType?.photo;
   }
 
@@ -89,6 +93,7 @@ class _PaletteTypeFormScreenState extends State<PaletteTypeFormScreen> {
     _buchungsKzController.dispose();
     _lhmKuehneNagelController.dispose();
     _globalInventoryController.dispose();
+    _minAvailableController.dispose();
     super.dispose();
   }
 
@@ -102,8 +107,6 @@ class _PaletteTypeFormScreenState extends State<PaletteTypeFormScreen> {
   }
 
   void _submit() async {
-    // If no field is required, you can simply call validate()
-    // (it will always pass) or remove the validator entirely.
     if (_formKey.currentState!.validate()) {
       final paletteType = PaletteType(
         id: widget.paletteType?.id,
@@ -123,6 +126,8 @@ class _PaletteTypeFormScreenState extends State<PaletteTypeFormScreen> {
         photo: _photoPath ?? '',
         globalInventory: int.tryParse(_globalInventoryController.text) ?? 0,
         bookedQuantity: widget.paletteType?.bookedQuantity ?? 0,
+        minAvailable: int.tryParse(_minAvailableController.text) ??
+            0, // Set the min available value
       );
       try {
         if (widget.paletteType == null) {
@@ -157,7 +162,6 @@ class _PaletteTypeFormScreenState extends State<PaletteTypeFormScreen> {
               TextFormField(
                 controller: _lhmNummerController,
                 decoration: const InputDecoration(labelText: 'LHM-Nummer'),
-                // Remove validator or return null to make field optional:
                 validator: (value) => null,
               ),
               TextFormField(
@@ -229,6 +233,13 @@ class _PaletteTypeFormScreenState extends State<PaletteTypeFormScreen> {
               TextFormField(
                 controller: _globalInventoryController,
                 decoration: const InputDecoration(labelText: 'Gesamtmenge'),
+                keyboardType: TextInputType.number,
+                validator: (value) => null,
+              ),
+              TextFormField(
+                controller: _minAvailableController,
+                decoration:
+                    const InputDecoration(labelText: 'Minimale Verfügbarkeit'),
                 keyboardType: TextInputType.number,
                 validator: (value) => null,
               ),

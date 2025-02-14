@@ -200,7 +200,7 @@ class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
     }
   }
 
-// Drill-down for Beim Kunden:
+  // Drill-down for Beim Kunden:
   Future<void> _selectWithCustomerDetail() async {
     Customer? selectedCustomer = await showDialog<Customer>(
       context: context,
@@ -285,6 +285,33 @@ class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
     );
   }
 
+  /// Build a notification area based on palette types whose available
+  /// (globalInventory - bookedQuantity) falls below their defined minAvailable.
+  Widget _buildNotificationArea() {
+    // Filter palette types that need a warning.
+    final notifications = _allPaletteTypes.where((pt) {
+      final available = pt.globalInventory - pt.bookedQuantity;
+      return available < pt.minAvailable;
+    }).toList();
+
+    if (notifications.isEmpty) {
+      return const Center(child: Text("Keine Benachrichtigungen"));
+    }
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: notifications.length,
+      itemBuilder: (context, index) {
+        final pt = notifications[index];
+        final available = pt.globalInventory - pt.bookedQuantity;
+        return ListTile(
+          leading: const Icon(Icons.warning, color: Colors.red),
+          title: Text("Warnung: ${pt.bezeichnung}"),
+          subtitle: Text("Verfügbar: $available (min. ${pt.minAvailable})"),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Overview>(
@@ -361,21 +388,24 @@ class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Chart placeholder
-              Text("Palettenverteilung",
+              // Notification Area in place of a graph
+              Text("Benachrichtigungen",
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Container(
                 height: 200,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: const [
                     BoxShadow(color: Colors.black12, blurRadius: 4)
                   ],
                 ),
-                child: const Center(child: Text("Diagramm-Platzhalter")),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: _buildNotificationArea(),
+                ),
               ),
               const SizedBox(height: 16),
               // Navigation ListTiles for in-depth views
