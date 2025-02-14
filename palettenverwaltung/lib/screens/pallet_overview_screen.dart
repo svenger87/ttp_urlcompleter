@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:palettenverwaltung/models/customer.dart';
 import '../services/api_service.dart';
 import '../models/overview.dart';
 import '../models/palette_type.dart';
+import '../models/customer_inventory_item.dart';
 import '../screens/booking_screen.dart';
 import '../screens/customer_inventory_selector_screen.dart';
 import '../screens/palette_type_inventory_selector_screen.dart';
@@ -10,32 +13,46 @@ class PalletOverviewScreen extends StatefulWidget {
   const PalletOverviewScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _PalletOverviewScreenState createState() => _PalletOverviewScreenState();
 }
 
 class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
   final ApiService _apiService = ApiService();
   late Future<Overview> _futureOverview;
+  List<PaletteType> _allPaletteTypes = [];
+  List<Customer> _allCustomers = [];
+
+  Customer? _selectedCustomerDetail;
+  List<CustomerInventoryItem>? _selectedCustomerInventory;
 
   // Drill-down state for each card:
   PaletteType? _selectedGlobalDetail;
-  int? _availableGlobal; // from fetchPaletteTypeAvailability
+  int? _availableGlobal;
 
   PaletteType? _selectedOnSiteDetail;
   int? _availableOnSite;
-
-  PaletteType? _selectedWithCustomerDetail;
-  int? _bookedForSelected;
 
   @override
   void initState() {
     super.initState();
     _futureOverview = _apiService.fetchOverview();
+    _apiService.fetchPaletteTypes().then((types) {
+      setState(() {
+        _allPaletteTypes = types;
+      });
+    });
+    _apiService.fetchCustomers().then((customers) {
+      setState(() {
+        _allCustomers = customers;
+      });
+    });
   }
 
   void _goToCustomerDetails() async {
     final customers = await _apiService.fetchCustomers();
     Navigator.push(
+      // ignore: use_build_context_synchronously
       context,
       MaterialPageRoute(
         builder: (context) => CustomerInventorySelectorScreen(
@@ -47,13 +64,12 @@ class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
   }
 
   void _goToPaletteTypeDetails() async {
-    final paletteTypes = await _apiService.fetchPaletteTypes();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PaletteTypeInventorySelectorScreen(
           apiService: _apiService,
-          paletteTypes: paletteTypes,
+          paletteTypes: _allPaletteTypes,
         ),
       ),
     );
@@ -70,157 +86,176 @@ class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
 
   // Drill-down for Gesamtpaletten:
   Future<void> _selectGlobalDetail() async {
-    final paletteTypes = await _apiService.fetchPaletteTypes();
-    PaletteType? tempSelected;
-    await showDialog(
+    PaletteType? selected = await showDialog<PaletteType>(
       context: context,
       builder: (context) {
-        return StatefulBuilder(builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: const Text("Gesamtpaletten - Typ auswählen"),
-            content: DropdownButton<PaletteType>(
-              isExpanded: true,
-              value: tempSelected,
-              items: paletteTypes.map((pt) {
-                return DropdownMenuItem<PaletteType>(
-                  value: pt,
-                  child: Text(pt.bezeichnung),
+        return AlertDialog(
+          title: const Text("Gesamtpaletten – Typ auswählen"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: TypeAheadField<PaletteType>(
+              suggestionsCallback: (pattern) async {
+                return _allPaletteTypes
+                    .where((pt) =>
+                        pt.globalInventory > 0 &&
+                        pt.bezeichnung
+                            .toLowerCase()
+                            .contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              itemBuilder: (context, PaletteType suggestion) {
+                return ListTile(
+                  title: Text(suggestion.bezeichnung),
+                  subtitle: Text("Global: ${suggestion.globalInventory}"),
                 );
-              }).toList(),
-              hint: const Text("Typ auswählen"),
-              onChanged: (pt) {
-                setStateDialog(() {
-                  tempSelected = pt;
-                });
+              },
+              onSelected: (PaletteType suggestion) {
+                Navigator.pop(context, suggestion);
+              },
+              builder: (context, controller, focusNode) {
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: "Typ eingeben",
+                  ),
+                );
               },
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Abbrechen"),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (tempSelected != null) {
-                    int avail = await _apiService
-                        .fetchPaletteTypeAvailability(tempSelected!.id!);
-                    setState(() {
-                      _selectedGlobalDetail = tempSelected;
-                      _availableGlobal = avail;
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text("Auswählen"),
-              ),
-            ],
-          );
-        });
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text("Abbrechen"),
+            ),
+          ],
+        );
       },
     );
+    if (selected != null) {
+      int avail = await _apiService.fetchPaletteTypeAvailability(selected.id!);
+      setState(() {
+        _selectedGlobalDetail = selected;
+        _availableGlobal = avail;
+      });
+    }
   }
 
   // Drill-down for Vor Ort:
   Future<void> _selectOnSiteDetail() async {
-    final paletteTypes = await _apiService.fetchPaletteTypes();
-    PaletteType? tempSelected;
-    await showDialog(
+    PaletteType? selected = await showDialog<PaletteType>(
       context: context,
       builder: (context) {
-        return StatefulBuilder(builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: const Text("Vor Ort - Typ auswählen"),
-            content: DropdownButton<PaletteType>(
-              isExpanded: true,
-              value: tempSelected,
-              items: paletteTypes.map((pt) {
-                return DropdownMenuItem<PaletteType>(
-                  value: pt,
-                  child: Text(pt.bezeichnung),
+        return AlertDialog(
+          title: const Text("Vor Ort – Typ auswählen"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: TypeAheadField<PaletteType>(
+              suggestionsCallback: (pattern) async {
+                return _allPaletteTypes.where((pt) {
+                  final available = pt.globalInventory - pt.bookedQuantity;
+                  return available > 0 &&
+                      pt.bezeichnung
+                          .toLowerCase()
+                          .contains(pattern.toLowerCase());
+                }).toList();
+              },
+              itemBuilder: (context, PaletteType suggestion) {
+                final available =
+                    suggestion.globalInventory - suggestion.bookedQuantity;
+                return ListTile(
+                  title: Text(suggestion.bezeichnung),
+                  subtitle: Text("Vor Ort: $available"),
                 );
-              }).toList(),
-              hint: const Text("Typ auswählen"),
-              onChanged: (pt) {
-                setStateDialog(() {
-                  tempSelected = pt;
-                });
+              },
+              onSelected: (PaletteType suggestion) {
+                Navigator.pop(context, suggestion);
+              },
+              builder: (context, controller, focusNode) {
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: "Typ eingeben",
+                  ),
+                );
               },
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Abbrechen"),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (tempSelected != null) {
-                    int avail = await _apiService
-                        .fetchPaletteTypeAvailability(tempSelected!.id!);
-                    setState(() {
-                      _selectedOnSiteDetail = tempSelected;
-                      _availableOnSite = avail;
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text("Auswählen"),
-              ),
-            ],
-          );
-        });
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text("Abbrechen"),
+            ),
+          ],
+        );
       },
     );
+    if (selected != null) {
+      int avail = await _apiService.fetchPaletteTypeAvailability(selected.id!);
+      setState(() {
+        _selectedOnSiteDetail = selected;
+        _availableOnSite = avail;
+      });
+    }
   }
 
-  // Drill-down for Beim Kunden:
+// Drill-down for Beim Kunden:
   Future<void> _selectWithCustomerDetail() async {
-    final paletteTypes = await _apiService.fetchPaletteTypes();
-    PaletteType? tempSelected;
-    await showDialog(
+    Customer? selectedCustomer = await showDialog<Customer>(
       context: context,
       builder: (context) {
-        return StatefulBuilder(builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: const Text("Beim Kunden - Typ auswählen"),
-            content: DropdownButton<PaletteType>(
-              isExpanded: true,
-              value: tempSelected,
-              items: paletteTypes.map((pt) {
-                return DropdownMenuItem<PaletteType>(
-                  value: pt,
-                  child: Text(pt.bezeichnung),
+        return AlertDialog(
+          title: const Text("Beim Kunden – Kunde auswählen"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: TypeAheadField<Customer>(
+              debounceDuration: const Duration(milliseconds: 300),
+              suggestionsCallback: (pattern) async {
+                return _allCustomers
+                    .where((customer) => customer.name
+                        .toLowerCase()
+                        .contains(pattern.toLowerCase()))
+                    .toList();
+              },
+              builder: (context, controller, focusNode) {
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: "Kunde eingeben",
+                  ),
                 );
-              }).toList(),
-              hint: const Text("Typ auswählen"),
-              onChanged: (pt) {
-                setStateDialog(() {
-                  tempSelected = pt;
-                });
+              },
+              itemBuilder: (context, Customer suggestion) {
+                return ListTile(
+                  title: Text(suggestion.name),
+                );
+              },
+              onSelected: (Customer suggestion) {
+                Navigator.pop(context, suggestion);
               },
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Abbrechen"),
-              ),
-              TextButton(
-                onPressed: () {
-                  if (tempSelected != null) {
-                    // Here, we assume that the booked_quantity is available in the PaletteType object.
-                    setState(() {
-                      _selectedWithCustomerDetail = tempSelected;
-                      _bookedForSelected = tempSelected?.bookedQuantity;
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text("Auswählen"),
-              ),
-            ],
-          );
-        });
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text("Abbrechen"),
+            ),
+          ],
+        );
       },
     );
+
+    if (selectedCustomer != null) {
+      final inventory =
+          await _apiService.fetchCustomerInventory(selectedCustomer.id!);
+
+      setState(() {
+        _selectedCustomerDetail = selectedCustomer;
+        _selectedCustomerInventory = inventory;
+      });
+    }
   }
 
   Widget _buildSummaryCard(String title, String value,
@@ -279,7 +314,10 @@ class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
                     extraContent: _selectedGlobalDetail != null &&
                             _availableGlobal != null
                         ? Text(
-                            "Typ: ${_selectedGlobalDetail!.bezeichnung}\nGlobal: ${_selectedGlobalDetail!.globalInventory}\nBuchungen: ${_selectedGlobalDetail!.bookedQuantity}\nVerfügbar: ${_availableGlobal!}",
+                            "Typ: ${_selectedGlobalDetail!.bezeichnung}\n"
+                            "Global: ${_selectedGlobalDetail!.globalInventory}\n"
+                            "Buchungen: ${_selectedGlobalDetail!.bookedQuantity}\n"
+                            "Verfügbar: ${_availableGlobal!}",
                             textAlign: TextAlign.center,
                           )
                         : const Text("Tippen zum Drill-Down",
@@ -304,11 +342,18 @@ class _PalletOverviewScreenState extends State<PalletOverviewScreen> {
                     "Beim Kunden",
                     overview.withCustomer.toString(),
                     onTap: _selectWithCustomerDetail,
-                    extraContent: _selectedWithCustomerDetail != null &&
-                            _bookedForSelected != null
-                        ? Text(
-                            "Typ: ${_selectedWithCustomerDetail!.bezeichnung}\nBeim Kunden: ${_bookedForSelected!}",
-                            textAlign: TextAlign.center,
+                    extraContent: _selectedCustomerDetail != null
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Kunde: ${_selectedCustomerDetail!.name}"),
+                              if (_selectedCustomerInventory != null &&
+                                  _selectedCustomerInventory!.isNotEmpty)
+                                ..._selectedCustomerInventory!.map((item) => Text(
+                                    "${item.paletteTypeName}: ${item.totalQuantity}"))
+                              else
+                                const Text("Keine Paletten für diesen Kunden."),
+                            ],
                           )
                         : const Text("Tippen zum Drill-Down",
                             textAlign: TextAlign.center),

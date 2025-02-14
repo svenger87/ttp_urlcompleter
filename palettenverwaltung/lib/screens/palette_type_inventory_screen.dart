@@ -1,4 +1,6 @@
 // palette_type_inventory_screen.dart
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import '../models/palette_type.dart';
 import '../models/palette_type_inventory_item.dart';
@@ -9,8 +11,7 @@ class PaletteTypeInventoryScreen extends StatefulWidget {
   final PaletteType paletteType;
 
   const PaletteTypeInventoryScreen(
-      {Key? key, required this.apiService, required this.paletteType})
-      : super(key: key);
+      {super.key, required this.apiService, required this.paletteType});
 
   @override
   _PaletteTypeInventoryScreenState createState() =>

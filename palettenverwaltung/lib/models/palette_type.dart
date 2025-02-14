@@ -16,6 +16,7 @@ class PaletteType {
   final String photo;
   final int globalInventory;
   final int bookedQuantity;
+  final int minAvailable; // New property
 
   PaletteType({
     this.id,
@@ -35,6 +36,7 @@ class PaletteType {
     required this.photo,
     this.globalInventory = 0,
     this.bookedQuantity = 0,
+    this.minAvailable = 0, // default to 0 if not set
   });
 
   factory PaletteType.fromJson(Map<String, dynamic> json) {
@@ -60,6 +62,7 @@ class PaletteType {
       photo: json['photo'] ?? '',
       globalInventory: json['global_inventory'] ?? 0,
       bookedQuantity: json['booked_quantity'] ?? 0,
+      minAvailable: json['min_available'] ?? 0,
     );
   }
 
@@ -80,8 +83,8 @@ class PaletteType {
       'lhm_kuehne_nagel': lhmKuehneNagel,
       'photo': photo,
       'global_inventory': globalInventory,
-      // We typically do not send bookedQuantity in updates,
-      // as it is computed from bookings.
+      // Note: bookedQuantity is computed from bookings
+      'min_available': minAvailable,
     };
   }
 

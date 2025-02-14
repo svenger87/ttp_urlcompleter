@@ -1,4 +1,6 @@
 // customer_inventory_screen.dart
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
 import '../models/customer.dart';
 import '../models/customer_inventory_item.dart';
@@ -9,8 +11,7 @@ class CustomerInventoryScreen extends StatefulWidget {
   final Customer customer;
 
   const CustomerInventoryScreen(
-      {Key? key, required this.apiService, required this.customer})
-      : super(key: key);
+      {super.key, required this.apiService, required this.customer});
 
   @override
   _CustomerInventoryScreenState createState() =>
